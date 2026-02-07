@@ -1,10 +1,10 @@
 //! ValidationEngine — implements IValidator, runs all 4 dimensions,
-//! aggregates results, and triggers healing actions.
+//! aggregates results, triggers healing actions, and promotes epistemic status.
 
 use chrono::Utc;
 use cortex_core::errors::CortexResult;
 use cortex_core::memory::BaseMemory;
-use cortex_core::models::{DimensionScores, HealingAction, ValidationResult};
+use cortex_core::models::{DimensionScores, EpistemicStatus, HealingAction, ValidationResult};
 use cortex_core::traits::IValidator;
 
 use crate::contradiction::SimilarityFn;
@@ -19,6 +19,8 @@ pub struct ValidationConfig {
     pub adjustment_strength: f64,
     /// Archival threshold — memories below this confidence get archived.
     pub archival_threshold: f64,
+    /// Whether to automatically promote epistemic status on validation pass.
+    pub epistemic_auto_promote: bool,
 }
 
 impl Default for ValidationConfig {
@@ -27,6 +29,7 @@ impl Default for ValidationConfig {
             pass_threshold: 0.5,
             adjustment_strength: 0.3,
             archival_threshold: 0.15,
+            epistemic_auto_promote: true,
         }
     }
 }
@@ -142,6 +145,37 @@ impl ValidationEngine {
     /// Get the engine configuration.
     pub fn config(&self) -> &ValidationConfig {
         &self.config
+    }
+
+    /// Promote epistemic status based on validation result.
+    ///
+    /// - If validation passes and memory is Conjecture → promote to Provisional.
+    /// - If validation passes and memory is Provisional + user_confirmed → promote to Verified.
+    /// - Validation failure does NOT demote — epistemic status only degrades via evidence decay.
+    pub fn promote_epistemic_status(
+        &self,
+        current_status: &EpistemicStatus,
+        validation_passed: bool,
+        user_confirmed: bool,
+    ) -> Option<EpistemicStatus> {
+        if !self.config.epistemic_auto_promote || !validation_passed {
+            return None;
+        }
+
+        match current_status {
+            EpistemicStatus::Conjecture { .. } => Some(EpistemicStatus::Provisional {
+                evidence_count: 1,
+                last_validated: Utc::now(),
+            }),
+            EpistemicStatus::Provisional { evidence_count, .. } if user_confirmed => {
+                Some(EpistemicStatus::Verified {
+                    verified_by: vec!["validation_engine".to_string()],
+                    verified_at: Utc::now(),
+                    evidence_refs: vec![format!("validation_pass_count:{}", evidence_count + 1)],
+                })
+            }
+            _ => None,
+        }
     }
 }
 

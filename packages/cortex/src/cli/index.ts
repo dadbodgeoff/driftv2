@@ -32,6 +32,9 @@ import { importCommand } from "./import.js";
 import { gcCommand } from "./gc.js";
 import { metricsCommand } from "./metrics.js";
 import { reembedCommand } from "./reembed.js";
+import { timelineCommand } from "./timeline.js";
+import { diffCommand } from "./diff.js";
+import { replayCommand } from "./replay.js";
 
 interface ParsedArgs {
   command: string;
@@ -78,6 +81,9 @@ function printHelp(): void {
     gc                              Garbage collection
     metrics                         System metrics
     reembed [--type <type>]         Re-embed memories
+    timeline [--from --to]          Knowledge evolution over time
+    diff --from <time> --to <time>  Compare knowledge between times
+    replay <decision-id>            Replay decision context
     help                            Show this help
 `);
 }
@@ -167,6 +173,27 @@ async function main(): Promise<void> {
         break;
       case "reembed":
         await reembedCommand(client, flags.type);
+        break;
+      case "timeline":
+        await timelineCommand(client, flags.from, flags.to, flags.type, flags.module);
+        break;
+      case "diff":
+        if (!flags.from || !flags.to) {
+          console.error("  Error: diff requires --from <time> --to <time>");
+          process.exit(1);
+        }
+        await diffCommand(client, flags.from, flags.to, flags.scope);
+        break;
+      case "replay":
+        if (!positional[0]) {
+          console.error("  Error: replay requires a decision-id argument.");
+          process.exit(1);
+        }
+        await replayCommand(
+          client,
+          positional[0],
+          flags.budget ? parseInt(flags.budget) : undefined,
+        );
         break;
       default:
         console.error(`  Unknown command: ${command}`);

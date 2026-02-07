@@ -8,8 +8,9 @@ use cortex_core::config::TemporalConfig;
 use cortex_core::errors::CortexResult;
 use cortex_core::memory::BaseMemory;
 use cortex_core::models::{
-    AsOfQuery, DecisionReplay, DecisionReplayQuery, MemoryEvent, TemporalCausalQuery, TemporalDiff,
-    TemporalDiffQuery, TemporalRangeQuery,
+    AsOfQuery, DecisionReplay, DecisionReplayQuery, DriftAlert, DriftSnapshot,
+    MaterializedTemporalView, MemoryEvent, TemporalCausalQuery, TemporalDiff, TemporalDiffQuery,
+    TemporalRangeQuery,
 };
 use cortex_core::traits::{ITemporalEngine, TemporalTraversalNode, TemporalTraversalResult};
 use cortex_storage::pool::{ReadPool, WriteConnection};
@@ -23,10 +24,10 @@ use crate::snapshot;
 /// Holds references to WriteConnection (event appends, snapshot creation)
 /// and ReadPool (all temporal queries) per CR5.
 pub struct TemporalEngine {
-    pub(crate) writer: Arc<WriteConnection>,
-    pub(crate) readers: Arc<ReadPool>,
+    pub writer: Arc<WriteConnection>,
+    pub readers: Arc<ReadPool>,
     #[allow(dead_code)]
-    pub(crate) config: TemporalConfig,
+    pub config: TemporalConfig,
 }
 
 impl TemporalEngine {
@@ -88,7 +89,7 @@ impl ITemporalEngine for TemporalEngine {
 
     async fn query_diff(&self, query: &TemporalDiffQuery) -> CortexResult<TemporalDiff> {
         let readers = self.readers.clone();
-        readers.with_conn(|conn| query::diff::execute_diff(conn, query))
+        query::diff::execute_diff_reconstructed(&readers, query)
     }
 
     // Phase C: Decision replay + temporal causal
@@ -118,5 +119,60 @@ impl ITemporalEngine for TemporalEngine {
                 .collect(),
             max_depth_reached: causal_result.max_depth_reached,
         })
+    }
+
+    // Phase D1: Drift metrics + alerting
+    async fn compute_drift_metrics(
+        &self,
+        window_hours: u64,
+    ) -> CortexResult<DriftSnapshot> {
+        let readers = self.readers.clone();
+        let now = Utc::now();
+        let window_start = now - chrono::Duration::hours(window_hours as i64);
+        crate::drift::metrics::compute_all_metrics(&readers, window_start, now)
+    }
+
+    async fn get_drift_alerts(&self) -> CortexResult<Vec<DriftAlert>> {
+        let readers = self.readers.clone();
+        let config = self.config.clone();
+        let now = Utc::now();
+        let window_start = now - chrono::Duration::hours(168); // 1 week default
+
+        let snapshot =
+            crate::drift::metrics::compute_all_metrics(&readers, window_start, now)?;
+
+        // Get recent alerts for dampening
+        let recent_alerts = match crate::drift::snapshots::get_latest_drift_snapshot(&readers)? {
+            Some(_) => vec![], // In production, we'd store alerts separately
+            None => vec![],
+        };
+
+        Ok(crate::drift::alerting::evaluate_drift_alerts(
+            &snapshot,
+            &config,
+            &recent_alerts,
+        ))
+    }
+
+    // Phase D2: Materialized views
+    async fn create_view(
+        &self,
+        label: &str,
+        timestamp: DateTime<Utc>,
+    ) -> CortexResult<MaterializedTemporalView> {
+        crate::views::create::create_materialized_view(
+            &self.writer,
+            &self.readers,
+            label,
+            timestamp,
+        )
+        .await
+    }
+
+    async fn get_view(
+        &self,
+        label: &str,
+    ) -> CortexResult<Option<MaterializedTemporalView>> {
+        crate::views::query::get_view(&self.readers, label)
     }
 }

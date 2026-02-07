@@ -8,6 +8,9 @@ use rusqlite::Connection;
 
 use super::integrity::enforce_temporal_integrity;
 
+/// Warning threshold for range query result size.
+const MAX_RESULT_MEMORIES: usize = 10_000;
+
 /// Execute a temporal range query.
 ///
 /// Uses Allen's interval algebra to find memories whose validity period
@@ -29,6 +32,20 @@ pub fn execute_range(
     // This ensures references are valid during the query period
     let midpoint = query.from + (query.to - query.from) / 2;
     let memories = enforce_temporal_integrity(memories, midpoint)?;
+
+    if memories.len() > MAX_RESULT_MEMORIES {
+        tracing::warn!(
+            result_count = memories.len(),
+            limit = MAX_RESULT_MEMORIES,
+            from = %query.from,
+            to = %query.to,
+            mode = ?query.mode,
+            "Range query returned {} memories, exceeding {} threshold. \
+             Consider narrowing the time range or using a more specific mode.",
+            memories.len(),
+            MAX_RESULT_MEMORIES,
+        );
+    }
 
     Ok(memories)
 }

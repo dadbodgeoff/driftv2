@@ -19,6 +19,8 @@ pub struct TemporalValidationResult {
     pub expired: bool,
     /// Ratio of age to expected lifetime (>1.0 means past expected lifetime).
     pub age_ratio: f64,
+    /// Whether referenced memories are temporally consistent.
+    pub temporally_consistent: bool,
 }
 
 /// Validate temporal aspects of a memory.
@@ -94,5 +96,59 @@ pub fn validate(memory: &BaseMemory, now: DateTime<Utc>) -> TemporalValidationRe
         healing_actions,
         expired,
         age_ratio,
+        temporally_consistent: true,
     }
+}
+
+/// Validate temporal aspects of a memory including temporal consistency of references.
+///
+/// Referenced memories (via supersedes, linked_patterns, etc.) must have existed
+/// when the referencing memory was created. This is a temporal consistency check.
+///
+/// `now`: current timestamp (injectable for testing).
+/// `reference_creation_times`: map of referenced memory IDs to their creation times.
+pub fn validate_with_references(
+    memory: &BaseMemory,
+    now: DateTime<Utc>,
+    reference_creation_times: &dyn Fn(&str) -> Option<DateTime<Utc>>,
+) -> TemporalValidationResult {
+    let mut base_result = validate(memory, now);
+    let memory_created_at = memory.transaction_time;
+
+    let mut inconsistent_refs = Vec::new();
+
+    // Check supersedes reference.
+    if let Some(ref supersedes_id) = memory.supersedes {
+        if let Some(ref_created) = reference_creation_times(supersedes_id) {
+            if ref_created > memory_created_at {
+                inconsistent_refs.push(supersedes_id.clone());
+            }
+        }
+    }
+
+    // Check superseded_by reference.
+    if let Some(ref superseded_by_id) = memory.superseded_by {
+        if let Some(ref_created) = reference_creation_times(superseded_by_id) {
+            if ref_created > memory_created_at {
+                inconsistent_refs.push(superseded_by_id.clone());
+            }
+        }
+    }
+
+    if !inconsistent_refs.is_empty() {
+        base_result.temporally_consistent = false;
+        // Apply a penalty but don't zero out the score.
+        let penalty = 0.1 * inconsistent_refs.len() as f64;
+        base_result.score = (base_result.score - penalty).max(0.0);
+        base_result.healing_actions.push(HealingAction {
+            action_type: HealingActionType::HumanReviewFlag,
+            description: format!(
+                "Temporal inconsistency: {} referenced memories were created after this memory",
+                inconsistent_refs.len()
+            ),
+            applied: false,
+        });
+    }
+
+    base_result
 }

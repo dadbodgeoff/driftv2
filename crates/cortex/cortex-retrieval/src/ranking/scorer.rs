@@ -1,17 +1,18 @@
-//! Multi-factor relevance scorer (8 factors).
+//! Multi-factor relevance scorer (10 factors).
 //!
 //! Factors: semantic similarity, keyword match, file proximity, pattern alignment,
-//! recency, confidence, importance, intent-type match.
+//! recency, confidence, importance, intent-type match, evidence freshness, epistemic status.
 
 use chrono::Utc;
 
 use cortex_core::intent::Intent;
 use cortex_core::memory::BaseMemory;
+use cortex_core::models::EpistemicStatus;
 
 use crate::intent::IntentEngine;
 use crate::search::rrf_fusion::RrfCandidate;
 
-/// Weights for the 8 scoring factors.
+/// Weights for the 10 scoring factors.
 #[derive(Debug, Clone)]
 pub struct ScorerWeights {
     pub semantic_similarity: f64,
@@ -22,19 +23,23 @@ pub struct ScorerWeights {
     pub confidence: f64,
     pub importance: f64,
     pub intent_type_match: f64,
+    pub evidence_freshness: f64,
+    pub epistemic_status: f64,
 }
 
 impl Default for ScorerWeights {
     fn default() -> Self {
         Self {
-            semantic_similarity: 0.25,
-            keyword_match: 0.10,
+            semantic_similarity: 0.22,
+            keyword_match: 0.13,
             file_proximity: 0.10,
-            pattern_alignment: 0.10,
+            pattern_alignment: 0.08,
             recency: 0.10,
             confidence: 0.10,
-            importance: 0.15,
-            intent_type_match: 0.10,
+            importance: 0.08,
+            intent_type_match: 0.08,
+            evidence_freshness: 0.06,
+            epistemic_status: 0.05,
         }
     }
 }
@@ -49,13 +54,43 @@ pub struct ScoredCandidate {
     pub rrf_score: f64,
 }
 
-/// Score a list of RRF candidates using 8 factors.
+/// Score a list of RRF candidates using 10 factors.
 pub fn score(
     candidates: &[RrfCandidate],
     intent: Intent,
     active_files: &[String],
     intent_engine: &IntentEngine,
     weights: &ScorerWeights,
+) -> Vec<ScoredCandidate> {
+    score_with_temporal(candidates, intent, active_files, intent_engine, weights, None)
+}
+
+/// Temporal context for scoring — provides evidence freshness and epistemic status.
+pub struct TemporalScoringContext {
+    /// Evidence freshness per memory ID [0.0, 1.0]. Missing entries default to 0.5.
+    pub evidence_freshness: std::collections::HashMap<String, f64>,
+    /// Epistemic status per memory ID. Missing entries default to Conjecture.
+    pub epistemic_statuses: std::collections::HashMap<String, EpistemicStatus>,
+}
+
+/// Map an epistemic status to a score value.
+pub fn epistemic_status_score(status: &EpistemicStatus) -> f64 {
+    match status {
+        EpistemicStatus::Verified { .. } => 1.0,
+        EpistemicStatus::Provisional { .. } => 0.7,
+        EpistemicStatus::Conjecture { .. } => 0.4,
+        EpistemicStatus::Stale { .. } => 0.2,
+    }
+}
+
+/// Score a list of RRF candidates using 10 factors, with optional temporal context.
+pub fn score_with_temporal(
+    candidates: &[RrfCandidate],
+    intent: Intent,
+    active_files: &[String],
+    intent_engine: &IntentEngine,
+    weights: &ScorerWeights,
+    temporal_ctx: Option<&TemporalScoringContext>,
 ) -> Vec<ScoredCandidate> {
     let now = Utc::now();
     let max_rrf = candidates
@@ -103,6 +138,18 @@ pub fn score(
             // Factor 8: Intent-type match boost.
             let f_intent = intent_engine.boost(intent, m.memory_type) / 2.0; // Normalize.
 
+            // Factor 9: Evidence freshness [0.0, 1.0].
+            let f_evidence_freshness = temporal_ctx
+                .and_then(|ctx| ctx.evidence_freshness.get(&m.id))
+                .copied()
+                .unwrap_or(0.5);
+
+            // Factor 10: Epistemic status score.
+            let f_epistemic = temporal_ctx
+                .and_then(|ctx| ctx.epistemic_statuses.get(&m.id))
+                .map(epistemic_status_score)
+                .unwrap_or(0.4); // Default to Conjecture score.
+
             let score = weights.semantic_similarity * f_semantic
                 + weights.keyword_match * f_keyword
                 + weights.file_proximity * f_file
@@ -110,7 +157,9 @@ pub fn score(
                 + weights.recency * f_recency
                 + weights.confidence * f_confidence
                 + weights.importance * f_importance
-                + weights.intent_type_match * f_intent;
+                + weights.intent_type_match * f_intent
+                + weights.evidence_freshness * f_evidence_freshness
+                + weights.epistemic_status * f_epistemic;
 
             ScoredCandidate {
                 memory: m.clone(),

@@ -657,6 +657,7 @@ dependencies = [
  "cortex-retrieval",
  "cortex-session",
  "cortex-storage",
+ "cortex-temporal",
  "cortex-tokens",
  "cortex-validation",
  "napi",

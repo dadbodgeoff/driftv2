@@ -6,7 +6,11 @@ mod consolidation_result;
 mod contradiction;
 mod decision_replay;
 mod degradation_event;
+mod drift_alert;
+mod drift_snapshot;
 mod embedding_info;
+mod epistemic_status;
+mod materialized_view;
 mod generation_context;
 mod health_report;
 mod learning_result;
@@ -27,7 +31,13 @@ pub use consolidation_result::ConsolidationResult;
 pub use contradiction::{Contradiction, ContradictionType, DetectionStrategy};
 pub use decision_replay::{CausalEdgeSnapshot, CausalGraphSnapshot, DecisionReplay, HindsightItem};
 pub use degradation_event::DegradationEvent;
+pub use drift_alert::{AlertSeverity, DriftAlert, DriftAlertCategory};
+pub use drift_snapshot::{
+    DriftSnapshot, GlobalDriftMetrics, ModuleDriftMetrics, TypeDriftMetrics,
+};
 pub use embedding_info::{EmbeddingModelInfo, EmbeddingModelStatus};
+pub use epistemic_status::{AggregationStrategy, EpistemicStatus};
+pub use materialized_view::MaterializedTemporalView;
 pub use generation_context::{BudgetAllocation, GenerationContext};
 pub use health_report::{HealthMetrics, HealthReport, HealthStatus, SubsystemHealth};
 pub use learning_result::LearningResult;

@@ -9,6 +9,7 @@ pub mod temporal_causal;
 
 pub use as_of::execute_as_of;
 pub use diff::execute_diff;
+pub use diff::execute_diff_reconstructed;
 pub use integrity::enforce_temporal_integrity;
 pub use range::execute_range;
 pub use replay::execute_replay;
@@ -103,7 +104,7 @@ impl TemporalQueryDispatcher {
                 Ok(TemporalQueryResult::Memories(memories))
             }
             TemporalQuery::Diff(q) => {
-                let diff = readers.with_conn(|conn| diff::execute_diff(conn, &q))?;
+                let diff = diff::execute_diff_reconstructed(readers, &q)?;
                 Ok(TemporalQueryResult::Diff(diff))
             }
             TemporalQuery::Replay(q) => {

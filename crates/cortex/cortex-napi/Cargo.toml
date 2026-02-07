@@ -27,6 +27,7 @@ cortex-session = { workspace = true }
 cortex-reclassification = { workspace = true }
 cortex-observability = { workspace = true }
 cortex-cloud = { workspace = true }
+cortex-temporal = { workspace = true }
 napi = { workspace = true }
 napi-derive = { workspace = true }
 tokio = { workspace = true }

@@ -3,6 +3,7 @@
 pub mod aggregation;
 pub mod audit_ops;
 pub mod causal_ops;
+pub mod drift_ops;
 pub mod event_ops;
 pub mod link_ops;
 pub mod maintenance;
@@ -15,3 +16,4 @@ pub mod snapshot_ops;
 pub mod temporal_ops;
 pub mod vector_search;
 pub mod version_ops;
+pub mod view_ops;

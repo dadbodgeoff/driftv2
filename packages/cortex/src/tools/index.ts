@@ -1,5 +1,5 @@
 /**
- * Tool registry — registers all 33 MCP tools.
+ * Tool registry — registers all 38 MCP tools.
  *
  * Each tool is a thin JSON-RPC wrapper over CortexClient methods.
  * Tools are grouped by domain and registered in a flat map for MCP dispatch.
@@ -52,7 +52,14 @@ import { driftCortexReembed } from "./system/drift_cortex_reembed.js";
 import { driftPredict } from "./prediction/drift_predict.js";
 import { driftPreload } from "./prediction/drift_preload.js";
 
-/** All 33 tool factory functions. */
+// Temporal (5)
+import { driftTimeTravel } from "./temporal/drift_time_travel.js";
+import { driftTimeDiff } from "./temporal/drift_time_diff.js";
+import { driftTimeReplay } from "./temporal/drift_time_replay.js";
+import { driftKnowledgeHealth } from "./temporal/drift_knowledge_health.js";
+import { driftKnowledgeTimeline } from "./temporal/drift_knowledge_timeline.js";
+
+/** All 38 tool factory functions. */
 const TOOL_FACTORIES: ((client: CortexClient) => McpToolDefinition)[] = [
   // Memory (8)
   driftMemoryAdd,
@@ -91,6 +98,12 @@ const TOOL_FACTORIES: ((client: CortexClient) => McpToolDefinition)[] = [
   // Prediction (2)
   driftPredict,
   driftPreload,
+  // Temporal (5)
+  driftTimeTravel,
+  driftTimeDiff,
+  driftTimeReplay,
+  driftKnowledgeHealth,
+  driftKnowledgeTimeline,
 ];
 
 /** Immutable map of tool name → tool definition. */

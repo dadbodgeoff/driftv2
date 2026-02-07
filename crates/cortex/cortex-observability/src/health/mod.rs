@@ -12,7 +12,7 @@ use cortex_core::models::HealthReport;
 use cortex_core::traits::IHealthReporter;
 
 pub use recommendations::{Recommendation, Severity};
-pub use reporter::{HealthReporter, HealthSnapshot};
+pub use reporter::{DriftSummary, HealthReporter, HealthSnapshot, TrendIndicator};
 
 /// Top-level health checker that implements [`IHealthReporter`].
 ///

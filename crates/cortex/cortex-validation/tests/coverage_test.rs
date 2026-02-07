@@ -386,6 +386,7 @@ fn engine_validate_with_context_all_dimensions() {
         pass_threshold: 0.5,
         adjustment_strength: 0.3,
         archival_threshold: 0.15,
+        epistemic_auto_promote: true,
     });
 
     let mem = make_memory("ctx1", "context test", MemoryType::Semantic);
@@ -425,6 +426,7 @@ fn engine_custom_pass_threshold() {
         pass_threshold: 0.99,
         adjustment_strength: 0.3,
         archival_threshold: 0.15,
+        epistemic_auto_promote: true,
     });
     let mem = make_memory("th1", "threshold test", MemoryType::Semantic);
     let result = engine.validate_basic(&mem, &[]).unwrap();

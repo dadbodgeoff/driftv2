@@ -2,6 +2,8 @@
 
 use serde::{Deserialize, Serialize};
 
+use crate::models::AggregationStrategy;
+
 /// Configuration for the temporal reasoning subsystem.
 #[derive(Debug, Clone, Serialize, Deserialize)]
 #[serde(default)]
@@ -31,6 +33,8 @@ pub struct TemporalConfig {
 
     // Epistemic settings (TR11)
     pub epistemic_auto_promote: bool,
+    /// Confidence aggregation strategy (TR11).
+    pub confidence_aggregation: AggregationStrategy,
 
     // Materialized views (TR9)
     pub materialized_view_auto_interval_days: u64,
@@ -55,6 +59,7 @@ impl Default for TemporalConfig {
             alert_cooldown_warning_hours: 24,
             alert_cooldown_critical_hours: 1,
             epistemic_auto_promote: true,
+            confidence_aggregation: AggregationStrategy::WeightedAverage,
             materialized_view_auto_interval_days: 14,
         }
     }

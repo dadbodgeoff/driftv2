@@ -41,6 +41,7 @@ pub fn cortex_health_get_health() -> napi::Result<serde_json::Value> {
         unresolved_contradictions: 0,
         consolidation_count: 0,
         memories_needing_validation: 0,
+        drift_summary: None,
     };
 
     let report = obs

@@ -19,11 +19,15 @@ pub async fn create_snapshot(
     reason: SnapshotReason,
 ) -> CortexResult<u64> {
     let state_json = serde_json::to_vec(current_state).map_err(|e| {
-        CortexError::TemporalError(TemporalError::SnapshotCreationFailed(e.to_string()))
+        CortexError::TemporalError(TemporalError::SnapshotCreationFailed(format!(
+            "failed to serialize snapshot for memory_id='{}': {}",
+            memory_id, e
+        )))
     })?;
     let compressed = zstd::encode_all(state_json.as_slice(), 3).map_err(|e| {
         CortexError::TemporalError(TemporalError::SnapshotCreationFailed(format!(
-            "zstd compress: {e}"
+            "zstd compress failed for memory_id='{}': {}",
+            memory_id, e
         )))
     })?;
 

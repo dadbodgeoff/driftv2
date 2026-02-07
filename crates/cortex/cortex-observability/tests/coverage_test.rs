@@ -24,6 +24,7 @@ fn health_report_healthy_system() {
         unresolved_contradictions: 0,
         consolidation_count: 5,
         memories_needing_validation: 3,
+        drift_summary: None,
     };
     let report = HealthReporter::build(&snapshot).unwrap();
     assert_eq!(report.overall_status, HealthStatus::Healthy);
@@ -45,6 +46,7 @@ fn health_report_degraded_system() {
         unresolved_contradictions: 15,
         consolidation_count: 0,
         memories_needing_validation: 40,
+        drift_summary: None,
     };
     let report = HealthReporter::build(&snapshot).unwrap();
     assert!(
@@ -67,6 +69,7 @@ fn health_recommendations_for_stale_memories() {
         unresolved_contradictions: 5,
         consolidation_count: 0,
         memories_needing_validation: 20,
+        drift_summary: None,
     };
     let recs = HealthReporter::recommendations(&snapshot);
     // Should have at least one recommendation for stale memories or contradictions.
@@ -87,6 +90,7 @@ fn health_recommendations_empty_for_healthy() {
         unresolved_contradictions: 0,
         consolidation_count: 10,
         memories_needing_validation: 0,
+        drift_summary: None,
     };
     let recs = HealthReporter::recommendations(&snapshot);
     // Healthy system may still have minor recommendations, but should be few.
@@ -153,6 +157,7 @@ fn engine_health_report() {
         unresolved_contradictions: 0,
         consolidation_count: 3,
         memories_needing_validation: 2,
+        drift_summary: None,
     };
     let report = engine.health_report(snapshot).unwrap();
     assert_eq!(report.metrics.total_memories, 50);

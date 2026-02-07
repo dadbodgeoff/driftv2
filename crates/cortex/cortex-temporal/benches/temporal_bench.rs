@@ -231,7 +231,7 @@ criterion_group!(
     bench_snapshot_creation_single,
     bench_snapshot_batch_100,
 );
-criterion_main!(benches, phase_b_benches, phase_c_benches);
+criterion_main!(benches, phase_b_benches, phase_c_benches, phase_d1_benches);
 
 // ── Phase B Benchmarks ───────────────────────────────────────────────────
 
@@ -623,4 +623,135 @@ criterion_group!(
     bench_decision_replay,
     bench_temporal_causal_traversal,
     bench_graph_reconstruction_1k,
+);
+
+// ── Phase D1 Benchmarks ──────────────────────────────────────────────────
+
+// TTD1-18: KSI computation 10K memories < 100ms
+fn bench_ksi_10k_memories(c: &mut Criterion) {
+    let (_writer, readers) = setup();
+    let now = chrono::Utc::now();
+    let now_str = now.to_rfc3339();
+
+    // Insert 10K memories
+    readers
+        .with_conn(|conn| {
+            for i in 0..10_000 {
+                insert_memory_with_times(
+                    conn,
+                    &format!("bench-ksi-{}", i),
+                    "episodic",
+                    &now_str,
+                    &now_str,
+                    None,
+                    0.8,
+                );
+            }
+            Ok::<_, cortex_core::errors::CortexError>(())
+        })
+        .unwrap();
+
+    let window_start = now - chrono::Duration::hours(168);
+
+    c.bench_function("ksi_10k_memories", |b| {
+        b.iter(|| {
+            cortex_temporal::drift::compute_ksi(&readers, None, window_start, now).unwrap();
+        });
+    });
+}
+
+// TTD1-19: full drift metrics 10K memories < 500ms
+fn bench_drift_metrics_10k(c: &mut Criterion) {
+    let (_writer, readers) = setup();
+    let now = chrono::Utc::now();
+    let now_str = now.to_rfc3339();
+
+    readers
+        .with_conn(|conn| {
+            for i in 0..10_000 {
+                insert_memory_with_times(
+                    conn,
+                    &format!("bench-drift-{}", i),
+                    "episodic",
+                    &now_str,
+                    &now_str,
+                    None,
+                    0.8,
+                );
+            }
+            Ok::<_, cortex_core::errors::CortexError>(())
+        })
+        .unwrap();
+
+    let window_start = now - chrono::Duration::hours(168);
+
+    c.bench_function("drift_metrics_10k_memories", |b| {
+        b.iter(|| {
+            cortex_temporal::drift::metrics::compute_all_metrics(&readers, window_start, now)
+                .unwrap();
+        });
+    });
+}
+
+// TTD1-20: evidence freshness single memory < 1ms
+fn bench_evidence_freshness_single(c: &mut Criterion) {
+    c.bench_function("evidence_freshness_single", |b| {
+        let factors = vec![1.0, 0.8, 0.9, 0.7, 1.0];
+        b.iter(|| {
+            cortex_temporal::drift::evidence_freshness::compute_evidence_freshness(&factors);
+        });
+    });
+}
+
+// TTD1-21: alert evaluation (100 metrics) < 10ms
+fn bench_alert_evaluation(c: &mut Criterion) {
+    use std::collections::HashMap;
+
+    let config = cortex_core::config::TemporalConfig::default();
+
+    // Build a snapshot with metrics for multiple types
+    let mut type_metrics = HashMap::new();
+    for mt in cortex_core::memory::MemoryType::ALL.iter().take(10) {
+        type_metrics.insert(
+            *mt,
+            cortex_core::models::TypeDriftMetrics {
+                count: 100,
+                avg_confidence: 0.7,
+                ksi: 0.5,
+                contradiction_density: 0.05,
+                consolidation_efficiency: 0.4,
+                evidence_freshness_index: 0.6,
+            },
+        );
+    }
+
+    let snapshot = cortex_core::models::DriftSnapshot {
+        timestamp: chrono::Utc::now(),
+        window_hours: 168,
+        type_metrics,
+        module_metrics: HashMap::new(),
+        global: cortex_core::models::GlobalDriftMetrics {
+            total_memories: 1000,
+            active_memories: 800,
+            archived_memories: 200,
+            avg_confidence: 0.7,
+            overall_ksi: 0.5,
+            overall_contradiction_density: 0.05,
+            overall_evidence_freshness: 0.6,
+        },
+    };
+
+    c.bench_function("alert_evaluation_10_types", |b| {
+        b.iter(|| {
+            cortex_temporal::drift::alerting::evaluate_drift_alerts(&snapshot, &config, &[]);
+        });
+    });
+}
+
+criterion_group!(
+    phase_d1_benches,
+    bench_ksi_10k_memories,
+    bench_drift_metrics_10k,
+    bench_evidence_freshness_single,
+    bench_alert_evaluation,
 );

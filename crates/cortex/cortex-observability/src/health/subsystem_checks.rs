@@ -11,12 +11,17 @@ pub struct SubsystemChecker;
 impl SubsystemChecker {
     /// Run all subsystem checks and return their statuses.
     pub fn check_all(snapshot: &HealthSnapshot) -> Vec<SubsystemHealth> {
-        vec![
+        let mut checks = vec![
             Self::check_storage(snapshot),
             Self::check_embeddings(snapshot),
             Self::check_causal(snapshot),
             Self::check_privacy(snapshot),
-        ]
+        ];
+        // Temporal subsystem check is additive — only included when drift data exists.
+        if snapshot.drift_summary.is_some() {
+            checks.push(Self::check_temporal(snapshot));
+        }
+        checks
     }
 
     /// Storage: degraded if >80% archived, unhealthy if db_size > 1 GB.
@@ -92,6 +97,46 @@ impl SubsystemChecker {
             name: "privacy".into(),
             status: HealthStatus::Healthy,
             message: None,
+        }
+    }
+
+    /// Temporal: checks drift alert count, KSI health, and EFI health.
+    pub fn check_temporal(snapshot: &HealthSnapshot) -> SubsystemHealth {
+        let drift = match &snapshot.drift_summary {
+            Some(d) => d,
+            None => {
+                return SubsystemHealth {
+                    name: "temporal".into(),
+                    status: HealthStatus::Healthy,
+                    message: Some("temporal system not yet initialized".into()),
+                }
+            }
+        };
+
+        let (status, message) = if drift.active_alerts > 5 || drift.overall_ksi < 0.2 {
+            (
+                HealthStatus::Unhealthy,
+                Some(format!(
+                    "{} active drift alerts, KSI={:.2}, EFI={:.2}",
+                    drift.active_alerts, drift.overall_ksi, drift.overall_efi
+                )),
+            )
+        } else if drift.active_alerts > 2 || drift.overall_ksi < 0.4 || drift.overall_efi < 0.4 {
+            (
+                HealthStatus::Degraded,
+                Some(format!(
+                    "{} active drift alerts, KSI={:.2}, EFI={:.2}",
+                    drift.active_alerts, drift.overall_ksi, drift.overall_efi
+                )),
+            )
+        } else {
+            (HealthStatus::Healthy, None)
+        };
+
+        SubsystemHealth {
+            name: "temporal".into(),
+            status,
+            message,
         }
     }
 }

@@ -14,10 +14,16 @@ import type {
   CausalNarrative,
   HealthReport,
   ConsolidationResult,
+  DecisionReplay,
+  DriftAlert,
+  DriftSnapshot,
+  MaterializedTemporalView,
   PredictionResult,
   SessionAnalytics,
   CacheStats,
   SanitizeResult,
+  TemporalDiff,
+  TraversalResult,
 } from "../src/bridge/types.js";
 
 // ─── Mock Native Module ──────────────────────────────────────────────────────
@@ -210,6 +216,121 @@ function createMockBindings(): NativeBindings {
       tokens_sent: 1024,
       queries_made: 4,
     })),
+
+    // Temporal (10)
+    cortexTemporalQueryAsOf: vi.fn(() => [
+      {
+        id: "mem-1",
+        memory_type: "episodic",
+        content: { type: "episodic", data: { interaction: "test", context: "ctx", outcome: null } },
+        summary: "Test memory at time T",
+        transaction_time: "2026-01-01T00:00:00Z",
+        valid_time: "2026-01-01T00:00:00Z",
+        valid_until: null,
+        confidence: 0.85,
+        importance: "normal",
+        last_accessed: "2026-01-01T00:00:00Z",
+        access_count: 1,
+        linked_patterns: [],
+        linked_constraints: [],
+        linked_files: [],
+        linked_functions: [],
+        tags: [],
+        archived: false,
+        superseded_by: null,
+        supersedes: null,
+        content_hash: "abc",
+      },
+    ]),
+    cortexTemporalQueryRange: vi.fn(() => []),
+    cortexTemporalQueryDiff: vi.fn(() => ({
+      created: [],
+      archived: [],
+      modified: [],
+      confidence_shifts: [],
+      new_contradictions: [],
+      resolved_contradictions: [],
+      reclassifications: [],
+      stats: {
+        memories_at_a: 10,
+        memories_at_b: 12,
+        net_change: 2,
+        avg_confidence_at_a: 0.8,
+        avg_confidence_at_b: 0.82,
+        confidence_trend: 0.02,
+        knowledge_churn_rate: 0.1,
+      },
+    })),
+    cortexTemporalReplayDecision: vi.fn(() => ({
+      decision: {
+        id: "dec-1",
+        memory_type: "decision",
+        content: { type: "decision", data: { decision: "Use JWT", rationale: "Standard", alternatives: [] } },
+        summary: "Use JWT for auth",
+        transaction_time: "2026-01-01T00:00:00Z",
+        valid_time: "2026-01-01T00:00:00Z",
+        valid_until: null,
+        confidence: 0.9,
+        importance: "high",
+        last_accessed: "2026-01-01T00:00:00Z",
+        access_count: 3,
+        linked_patterns: [],
+        linked_constraints: [],
+        linked_files: [],
+        linked_functions: [],
+        tags: ["auth"],
+        archived: false,
+        superseded_by: null,
+        supersedes: null,
+        content_hash: "dec123",
+      },
+      available_context: [],
+      retrieved_context: [],
+      causal_state: { nodes: ["dec-1"], edges: [] },
+      hindsight: [],
+    })),
+    cortexTemporalQueryTemporalCausal: vi.fn(() => ({
+      origin_id: "mem-1",
+      max_depth_reached: 2,
+      nodes: [{ memory_id: "mem-2", depth: 1, path_strength: 0.8 }],
+    })),
+    cortexTemporalGetDriftMetrics: vi.fn(() => ({
+      timestamp: "2026-01-01T00:00:00Z",
+      window_hours: 168,
+      type_metrics: {},
+      module_metrics: {},
+      global: {
+        total_memories: 100,
+        active_memories: 90,
+        archived_memories: 10,
+        avg_confidence: 0.85,
+        overall_ksi: 0.92,
+        overall_contradiction_density: 0.02,
+        overall_evidence_freshness: 0.88,
+      },
+    })),
+    cortexTemporalGetDriftAlerts: vi.fn(() => []),
+    cortexTemporalCreateMaterializedView: vi.fn(() => ({
+      view_id: 1,
+      label: "sprint-12",
+      timestamp: "2026-01-01T00:00:00Z",
+      memory_count: 90,
+      snapshot_ids: [1, 2, 3],
+      drift_snapshot_id: 1,
+      created_by: { system: "test" },
+      auto_refresh: false,
+    })),
+    cortexTemporalGetMaterializedView: vi.fn(() => ({
+      view_id: 1,
+      label: "sprint-12",
+      timestamp: "2026-01-01T00:00:00Z",
+      memory_count: 90,
+      snapshot_ids: [1, 2, 3],
+      drift_snapshot_id: 1,
+      created_by: { system: "test" },
+      auto_refresh: false,
+    })),
+    cortexTemporalListMaterializedViews: vi.fn(() => []),
   };
 }
 
@@ -269,6 +390,37 @@ function createTestClient(bindings: NativeBindings) {
     },
     async shutdown(): Promise<void> {
       bindings.cortexShutdown();
+    },
+    // Temporal
+    async queryAsOf(systemTime: string, validTime: string, filter?: string): Promise<BaseMemory[]> {
+      return bindings.cortexTemporalQueryAsOf(systemTime, validTime, filter ?? null) as BaseMemory[];
+    },
+    async queryRange(from: string, to: string, mode: string): Promise<BaseMemory[]> {
+      return bindings.cortexTemporalQueryRange(from, to, mode) as BaseMemory[];
+    },
+    async queryDiff(timeA: string, timeB: string, scope?: string): Promise<TemporalDiff> {
+      return bindings.cortexTemporalQueryDiff(timeA, timeB, scope ?? null) as TemporalDiff;
+    },
+    async replayDecision(decisionId: string, budget?: number): Promise<DecisionReplay> {
+      return bindings.cortexTemporalReplayDecision(decisionId, budget ?? null) as DecisionReplay;
+    },
+    async queryTemporalCausal(memoryId: string, asOf: string, direction: string, maxDepth: number): Promise<TraversalResult> {
+      return bindings.cortexTemporalQueryTemporalCausal(memoryId, asOf, direction, maxDepth) as TraversalResult;
+    },
+    async getDriftMetrics(windowHours?: number): Promise<DriftSnapshot> {
+      return bindings.cortexTemporalGetDriftMetrics(windowHours ?? null) as DriftSnapshot;
+    },
+    async getDriftAlerts(): Promise<DriftAlert[]> {
+      return bindings.cortexTemporalGetDriftAlerts() as DriftAlert[];
+    },
+    async createMaterializedView(label: string, timestamp: string): Promise<MaterializedTemporalView> {
+      return bindings.cortexTemporalCreateMaterializedView(label, timestamp) as MaterializedTemporalView;
+    },
+    async getMaterializedView(label: string): Promise<MaterializedTemporalView | null> {
+      return bindings.cortexTemporalGetMaterializedView(label) as MaterializedTemporalView | null;
+    },
+    async listMaterializedViews(): Promise<MaterializedTemporalView[]> {
+      return bindings.cortexTemporalListMaterializedViews() as MaterializedTemporalView[];
     },
   };
 }
@@ -364,6 +516,110 @@ describe("CortexClient (via mock bindings)", () => {
     await client.memoryList("tribal");
     expect(bindings.cortexMemoryList).toHaveBeenCalledWith("tribal");
   });
+
+  // ─── Temporal Tests ──────────────────────────────────────────────────────
+
+  it("should query as-of a point in time (TTD4-01)", async () => {
+    const memories = await client.queryAsOf("2026-01-01T00:00:00Z", "2026-01-01T00:00:00Z");
+    expect(Array.isArray(memories)).toBe(true);
+    expect(memories.length).toBe(1);
+    expect(memories[0].id).toBe("mem-1");
+    expect(memories[0].confidence).toBe(0.85);
+    expect(bindings.cortexTemporalQueryAsOf).toHaveBeenCalledWith(
+      "2026-01-01T00:00:00Z",
+      "2026-01-01T00:00:00Z",
+      null,
+    );
+  });
+
+  it("should query temporal diff (TTD4-02)", async () => {
+    const diff = await client.queryDiff("2026-01-01T00:00:00Z", "2026-02-01T00:00:00Z");
+    expect(diff.stats.memories_at_a).toBe(10);
+    expect(diff.stats.memories_at_b).toBe(12);
+    expect(diff.stats.net_change).toBe(2);
+    expect(diff.stats.confidence_trend).toBe(0.02);
+    expect(bindings.cortexTemporalQueryDiff).toHaveBeenCalledWith(
+      "2026-01-01T00:00:00Z",
+      "2026-02-01T00:00:00Z",
+      null,
+    );
+  });
+
+  it("should replay a decision (TTD4-03)", async () => {
+    const replay = await client.replayDecision("dec-1", 2000);
+    expect(replay.decision.id).toBe("dec-1");
+    expect(replay.decision.memory_type).toBe("decision");
+    expect(replay.causal_state.nodes).toContain("dec-1");
+    expect(replay.hindsight).toEqual([]);
+    expect(bindings.cortexTemporalReplayDecision).toHaveBeenCalledWith("dec-1", 2000);
+  });
+
+  it("should get drift metrics (TTD4-04)", async () => {
+    const metrics = await client.getDriftMetrics(168);
+    expect(metrics.global.overall_ksi).toBe(0.92);
+    expect(metrics.global.avg_confidence).toBe(0.85);
+    expect(metrics.global.overall_evidence_freshness).toBe(0.88);
+    expect(metrics.global.total_memories).toBe(100);
+    expect(bindings.cortexTemporalGetDriftMetrics).toHaveBeenCalledWith(168);
+  });
+
+  it("should create a materialized view (TTD4-05)", async () => {
+    const view = await client.createMaterializedView("sprint-12", "2026-01-01T00:00:00Z");
+    expect(view.view_id).toBe(1);
+    expect(view.label).toBe("sprint-12");
+    expect(view.memory_count).toBe(90);
+    expect(bindings.cortexTemporalCreateMaterializedView).toHaveBeenCalledWith(
+      "sprint-12",
+      "2026-01-01T00:00:00Z",
+    );
+  });
+
+  it("should get drift alerts", async () => {
+    const alerts = await client.getDriftAlerts();
+    expect(Array.isArray(alerts)).toBe(true);
+    expect(alerts.length).toBe(0);
+    expect(bindings.cortexTemporalGetDriftAlerts).toHaveBeenCalled();
+  });
+
+  it("should query temporal causal", async () => {
+    const result = await client.queryTemporalCausal("mem-1", "2026-01-01T00:00:00Z", "both", 3);
+    expect(result.origin_id).toBe("mem-1");
+    expect(result.nodes.length).toBe(1);
+    expect(result.nodes[0].memory_id).toBe("mem-2");
+    expect(bindings.cortexTemporalQueryTemporalCausal).toHaveBeenCalledWith(
+      "mem-1",
+      "2026-01-01T00:00:00Z",
+      "both",
+      3,
+    );
+  });
+
+  it("should query range", async () => {
+    const memories = await client.queryRange(
+      "2026-01-01T00:00:00Z",
+      "2026-02-01T00:00:00Z",
+      "overlaps",
+    );
+    expect(Array.isArray(memories)).toBe(true);
+    expect(bindings.cortexTemporalQueryRange).toHaveBeenCalledWith(
+      "2026-01-01T00:00:00Z",
+      "2026-02-01T00:00:00Z",
+      "overlaps",
+    );
+  });
+
+  it("should get a materialized view by label", async () => {
+    const view = await client.getMaterializedView("sprint-12");
+    expect(view).not.toBeNull();
+    expect(view!.label).toBe("sprint-12");
+    expect(bindings.cortexTemporalGetMaterializedView).toHaveBeenCalledWith("sprint-12");
+  });
+
+  it("should list materialized views", async () => {
+    const views = await client.listMaterializedViews();
+    expect(Array.isArray(views)).toBe(true);
+    expect(bindings.cortexTemporalListMaterializedViews).toHaveBeenCalled();
+  });
 });
 
 describe("CortexError", () => {
@@ -457,5 +713,17 @@ describe("NativeBindings interface", () => {
     expect(typeof bindings.cortexSessionGet).toBe("function");
     expect(typeof bindings.cortexSessionCleanup).toBe("function");
     expect(typeof bindings.cortexSessionAnalytics).toBe("function");
+
+    // Temporal (10)
+    expect(typeof bindings.cortexTemporalQueryAsOf).toBe("function");
+    expect(typeof bindings.cortexTemporalQueryRange).toBe("function");
+    expect(typeof bindings.cortexTemporalQueryDiff).toBe("function");
+    expect(typeof bindings.cortexTemporalReplayDecision).toBe("function");
+    expect(typeof bindings.cortexTemporalQueryTemporalCausal).toBe("function");
+    expect(typeof bindings.cortexTemporalGetDriftMetrics).toBe("function");
+    expect(typeof bindings.cortexTemporalGetDriftAlerts).toBe("function");
+    expect(typeof bindings.cortexTemporalCreateMaterializedView).toBe("function");
+    expect(typeof bindings.cortexTemporalGetMaterializedView).toBe("function");
+    expect(typeof bindings.cortexTemporalListMaterializedViews).toBe("function");
   });
 });

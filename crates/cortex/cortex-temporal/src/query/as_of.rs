@@ -11,6 +11,9 @@ use rusqlite::Connection;
 
 use super::integrity::enforce_temporal_integrity;
 
+/// Warning threshold for AS OF query result size.
+const MAX_RESULT_MEMORIES: usize = 10_000;
+
 /// Execute an AS OF query to reconstruct knowledge state at a specific point in time.
 ///
 /// Uses bitemporal semantics:
@@ -41,6 +44,19 @@ pub fn execute_as_of(conn: &Connection, query: &AsOfQuery) -> CortexResult<Vec<B
     } else {
         memories
     };
+
+    if memories.len() > MAX_RESULT_MEMORIES {
+        tracing::warn!(
+            result_count = memories.len(),
+            limit = MAX_RESULT_MEMORIES,
+            system_time = %query.system_time,
+            valid_time = %query.valid_time,
+            "AS OF query returned {} memories, exceeding {} threshold. \
+             Consider adding a filter or narrowing the time window.",
+            memories.len(),
+            MAX_RESULT_MEMORIES,
+        );
+    }
 
     Ok(memories)
 }

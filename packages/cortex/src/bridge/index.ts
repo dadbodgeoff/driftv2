@@ -105,6 +105,27 @@ export interface NativeBindings {
   cortexSessionGet(sessionId: string): unknown;
   cortexSessionCleanup(): number;
   cortexSessionAnalytics(sessionId: string): unknown;
+
+  // Temporal
+  cortexTemporalQueryAsOf(
+    systemTime: string,
+    validTime: string,
+    filter: string | null,
+  ): unknown;
+  cortexTemporalQueryRange(from: string, to: string, mode: string): unknown;
+  cortexTemporalQueryDiff(timeA: string, timeB: string, scope: string | null): unknown;
+  cortexTemporalReplayDecision(decisionId: string, budget: number | null): unknown;
+  cortexTemporalQueryTemporalCausal(
+    memoryId: string,
+    asOf: string,
+    direction: string,
+    depth: number,
+  ): unknown;
+  cortexTemporalGetDriftMetrics(windowHours: number | null): unknown;
+  cortexTemporalGetDriftAlerts(): unknown;
+  cortexTemporalCreateMaterializedView(label: string, timestamp: string): unknown;
+  cortexTemporalGetMaterializedView(label: string): unknown;
+  cortexTemporalListMaterializedViews(): unknown;
 }
 
 /**

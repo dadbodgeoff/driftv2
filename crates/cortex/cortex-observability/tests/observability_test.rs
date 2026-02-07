@@ -32,6 +32,7 @@ fn health_report_includes_all_subsystem_statuses() {
         unresolved_contradictions: 0,
         consolidation_count: 5,
         memories_needing_validation: 0,
+        drift_summary: None,
     };
 
     let mut checker = HealthChecker::new();
@@ -513,6 +514,7 @@ fn engine_full_workflow() {
         unresolved_contradictions: 1,
         consolidation_count: 10,
         memories_needing_validation: 3,
+        drift_summary: None,
     };
 
     let report = engine.health_report(snapshot).unwrap();

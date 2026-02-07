@@ -12,9 +12,11 @@ pub mod snapshot;
 pub mod dual_time;
 pub mod query;
 
-// Phase D+
-// pub mod drift;
-// pub mod epistemic;
-// pub mod views;
+// Phase D1
+pub mod drift;
+
+// Phase D2
+pub mod epistemic;
+pub mod views;
 
 pub use engine::TemporalEngine;

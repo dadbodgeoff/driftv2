@@ -608,7 +608,211 @@ export interface WhyContext {
   warnings: string[];
 }
 
-// ─── TS-Only Types (not generated from Rust) ─────────────────────────────────
+// ─── Temporal ─────────────────────────────────────────────────────────────────
+
+/** Epistemic status of a memory — its verification lifecycle state. */
+export type EpistemicStatus =
+  | { status: "conjecture"; source: string; created_at: string }
+  | { status: "provisional"; evidence_count: number; last_validated: string }
+  | { status: "verified"; verified_by: string[]; verified_at: string; evidence_refs: string[] }
+  | { status: "stale"; was_verified_at: string; staleness_detected_at: string; reason: string };
+
+/** Alert severity levels. */
+export type AlertSeverity = "info" | "warning" | "critical";
+
+/** Categories of drift that can trigger alerts. */
+export type DriftAlertCategory =
+  | "knowledge_churn"
+  | "confidence_erosion"
+  | "contradiction_spike"
+  | "stale_evidence"
+  | "knowledge_explosion"
+  | "coverage_gap";
+
+/** A drift alert fired when a metric crosses a threshold. */
+export interface DriftAlert {
+  severity: AlertSeverity;
+  category: DriftAlertCategory;
+  message: string;
+  affected_memories: string[];
+  recommended_action: string;
+  detected_at: string;
+}
+
+/** Per-memory-type drift metrics. */
+export interface TypeDriftMetrics {
+  count: number;
+  avg_confidence: number;
+  ksi: number;
+  contradiction_density: number;
+  consolidation_efficiency: number;
+  evidence_freshness_index: number;
+}
+
+/** Per-module drift metrics. */
+export interface ModuleDriftMetrics {
+  memory_count: number;
+  coverage_ratio: number;
+  avg_confidence: number;
+  churn_rate: number;
+}
+
+/** Global aggregate drift metrics. */
+export interface GlobalDriftMetrics {
+  total_memories: number;
+  active_memories: number;
+  archived_memories: number;
+  avg_confidence: number;
+  overall_ksi: number;
+  overall_contradiction_density: number;
+  overall_evidence_freshness: number;
+}
+
+/** Point-in-time capture of all drift metrics. */
+export interface DriftSnapshot {
+  timestamp: string;
+  window_hours: number;
+  type_metrics: Record<string, TypeDriftMetrics>;
+  module_metrics: Record<string, ModuleDriftMetrics>;
+  global: GlobalDriftMetrics;
+}
+
+/** Summary statistics for a temporal diff. */
+export interface DiffStats {
+  memories_at_a: number;
+  memories_at_b: number;
+  net_change: number;
+  avg_confidence_at_a: number;
+  avg_confidence_at_b: number;
+  confidence_trend: number;
+  knowledge_churn_rate: number;
+}
+
+/** A modification to a specific field of a memory. */
+export interface MemoryModification {
+  memory_id: string;
+  field: string;
+  old_value: unknown;
+  new_value: unknown;
+  modified_at: string;
+}
+
+/** A significant confidence change. */
+export interface ConfidenceShift {
+  memory_id: string;
+  old_confidence: number;
+  new_confidence: number;
+  delta: number;
+}
+
+/** A memory type reclassification. */
+export interface Reclassification {
+  memory_id: string;
+  old_type: string;
+  new_type: string;
+  confidence: number;
+  reclassified_at: string;
+}
+
+/** Contradiction between memories. */
+export interface Contradiction {
+  memory_a_id: string;
+  memory_b_id: string;
+  contradiction_type: string;
+  confidence: number;
+  description: string;
+}
+
+/** Result of comparing two knowledge states at different times. */
+export interface TemporalDiff {
+  created: BaseMemory[];
+  archived: BaseMemory[];
+  modified: MemoryModification[];
+  confidence_shifts: ConfidenceShift[];
+  new_contradictions: Contradiction[];
+  resolved_contradictions: Contradiction[];
+  reclassifications: Reclassification[];
+  stats: DiffStats;
+}
+
+/** Snapshot of the causal graph at a specific point in time. */
+export interface CausalGraphSnapshot {
+  nodes: string[];
+  edges: CausalEdgeSnapshot[];
+}
+
+/** A single edge in the causal graph snapshot. */
+export interface CausalEdgeSnapshot {
+  source: string;
+  target: string;
+  relation_type: string;
+  strength: number;
+}
+
+/** A piece of knowledge that didn't exist at decision time but is relevant now. */
+export interface HindsightItem {
+  memory: BaseMemory;
+  relevance: number;
+  relationship: string;
+}
+
+/** Result of replaying a decision with historical context and hindsight. */
+export interface DecisionReplay {
+  decision: BaseMemory;
+  available_context: BaseMemory[];
+  retrieved_context: CompressedMemory[];
+  causal_state: CausalGraphSnapshot;
+  hindsight: HindsightItem[];
+}
+
+/** A materialized view of the knowledge base at a specific point in time. */
+export interface MaterializedTemporalView {
+  view_id: number;
+  label: string;
+  timestamp: string;
+  memory_count: number;
+  snapshot_ids: number[];
+  drift_snapshot_id: number | null;
+  created_by: unknown;
+  auto_refresh: boolean;
+}
+
+/** Query for memories as they existed at a specific point in time. */
+export interface AsOfQuery {
+  system_time: string;
+  valid_time: string;
+  filter?: string;
+}
+
+/** Query for memories valid during a time range. */
+export interface TemporalRangeQuery {
+  from: string;
+  to: string;
+  mode: "overlaps" | "contains" | "started_during" | "ended_during";
+}
+
+/** Query for differences between two knowledge states. */
+export interface TemporalDiffQuery {
+  time_a: string;
+  time_b: string;
+  scope?: string;
+}
+
+/** Query for replaying a decision with historical context. */
+export interface DecisionReplayQuery {
+  decision_memory_id: string;
+  budget?: number;
+}
+
+/** Query for temporal causal graph traversal. */
+export interface TemporalCausalQuery {
+  memory_id: string;
+  as_of: string;
+  direction: "forward" | "backward" | "both";
+  max_depth: number;
+}
+
+// ─── Error Codes ─────────────────────────────────────────────────────────────
 
 export const CortexErrorCode = {
   MEMORY_NOT_FOUND: "MEMORY_NOT_FOUND",

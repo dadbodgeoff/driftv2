@@ -21,6 +21,7 @@ pub mod codes {
     pub const CONFIG_ERROR: &str = "CONFIG_ERROR";
     pub const DEGRADED_MODE: &str = "DEGRADED_MODE";
     pub const RUNTIME_NOT_INITIALIZED: &str = "RUNTIME_NOT_INITIALIZED";
+    pub const TEMPORAL_ERROR: &str = "TEMPORAL_ERROR";
 }
 
 /// Map a CortexError to a structured napi::Error with an error code.
@@ -76,7 +77,9 @@ pub fn to_napi_error(err: CortexError) -> napi::Error {
             codes::DEGRADED_MODE,
             format!("Degraded mode: {component} using fallback: {fallback}"),
         ),
-        CortexError::TemporalError(ref e) => (codes::CONFIG_ERROR, format!("Temporal error: {e}")),
+        CortexError::TemporalError(ref e) => {
+            (codes::TEMPORAL_ERROR, format!("Temporal error: {e}"))
+        }
     };
 
     napi::Error::new(Status::GenericFailure, format!("[{code}] {message}"))

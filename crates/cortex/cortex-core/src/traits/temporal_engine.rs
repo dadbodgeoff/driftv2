@@ -7,8 +7,9 @@ use serde::{Deserialize, Serialize};
 use crate::errors::CortexResult;
 use crate::memory::BaseMemory;
 use crate::models::{
-    AsOfQuery, DecisionReplay, DecisionReplayQuery, MemoryEvent, TemporalCausalQuery, TemporalDiff,
-    TemporalDiffQuery, TemporalRangeQuery,
+    AsOfQuery, DecisionReplay, DecisionReplayQuery, DriftAlert, DriftSnapshot,
+    MaterializedTemporalView, MemoryEvent, TemporalCausalQuery, TemporalDiff, TemporalDiffQuery,
+    TemporalRangeQuery,
 };
 
 /// A node discovered during temporal causal traversal.
@@ -38,7 +39,8 @@ pub struct TemporalTraversalResult {
 /// Phase A implements: record_event, get_events, reconstruct_at, reconstruct_all_at.
 /// Phase B implements: query_as_of, query_range, query_diff.
 /// Phase C implements: replay_decision, query_temporal_causal.
-/// Other methods are filled in by subsequent phases.
+/// Phase D1 implements: compute_drift_metrics, get_drift_alerts.
+/// Phase D2 implements: create_view, get_view.
 #[allow(async_fn_in_trait)]
 pub trait ITemporalEngine: Send + Sync {
     // Event store (TR1)
@@ -68,4 +70,22 @@ pub trait ITemporalEngine: Send + Sync {
         &self,
         query: &TemporalCausalQuery,
     ) -> CortexResult<TemporalTraversalResult>;
+
+    // Drift metrics + alerting (TR6, TR7 - Phase D1)
+    async fn compute_drift_metrics(
+        &self,
+        window_hours: u64,
+    ) -> CortexResult<DriftSnapshot>;
+    async fn get_drift_alerts(&self) -> CortexResult<Vec<DriftAlert>>;
+
+    // Materialized views (TR9 - Phase D2)
+    async fn create_view(
+        &self,
+        label: &str,
+        timestamp: DateTime<Utc>,
+    ) -> CortexResult<MaterializedTemporalView>;
+    async fn get_view(
+        &self,
+        label: &str,
+    ) -> CortexResult<Option<MaterializedTemporalView>>;
 }

@@ -141,14 +141,9 @@ fn rrf_fuse_multiple_lists_boosts_overlap() {
 #[test]
 fn scorer_default_weights_sum_to_one() {
     let w = cortex_retrieval::ranking::scorer::ScorerWeights::default();
-    let sum = w.semantic_similarity
-        + w.keyword_match
-        + w.file_proximity
-        + w.pattern_alignment
-        + w.recency
-        + w.confidence
-        + w.importance
-        + w.intent_type_match;
+    let sum = w.semantic_similarity + w.keyword_match + w.file_proximity
+        + w.pattern_alignment + w.recency + w.confidence + w.importance + w.intent_type_match
+        + w.evidence_freshness + w.epistemic_status;
     assert!((sum - 1.0).abs() < 0.01);
 }
 

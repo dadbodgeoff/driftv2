@@ -9,6 +9,10 @@ use cortex_core::models::{EventActor, MemoryEvent, MemoryEventType};
 use cortex_storage::pool::ReadPool;
 use cortex_storage::queries::event_ops::{self, RawEvent};
 
+/// Maximum number of events returned from a single replay query.
+/// Queries exceeding this limit still succeed but emit a warning for monitoring.
+pub const MAX_REPLAY_EVENTS: usize = 10_000;
+
 /// Get all events for a memory, optionally before a timestamp.
 pub fn get_events(
     readers: &Arc<ReadPool>,
@@ -19,10 +23,20 @@ pub fn get_events(
     let before_str = before.map(|t| t.to_rfc3339());
     readers.with_conn(|conn| {
         let raw = event_ops::get_events_for_memory(conn, &mid, before_str.as_deref())?;
-        Ok(raw
-            .into_iter()
-            .filter_map(|r| raw_to_event(r).ok())
-            .collect())
+        let events: Vec<MemoryEvent> =
+            raw.into_iter().filter_map(|r| raw_to_event(r).ok()).collect();
+        if events.len() > MAX_REPLAY_EVENTS {
+            tracing::warn!(
+                memory_id = %mid,
+                event_count = events.len(),
+                limit = MAX_REPLAY_EVENTS,
+                "get_events returned {} events, exceeding MAX_REPLAY_EVENTS ({}). \
+                 Consider compacting old events or narrowing the query window.",
+                events.len(),
+                MAX_REPLAY_EVENTS,
+            );
+        }
+        Ok(events)
     })
 }
 
@@ -81,10 +95,21 @@ pub fn get_events_after_id(
     readers.with_conn(|conn| {
         let raw =
             event_ops::get_events_after_id(conn, &mid, after_event_id, before_str.as_deref())?;
-        Ok(raw
-            .into_iter()
-            .filter_map(|r| raw_to_event(r).ok())
-            .collect())
+        let events: Vec<MemoryEvent> =
+            raw.into_iter().filter_map(|r| raw_to_event(r).ok()).collect();
+        if events.len() > MAX_REPLAY_EVENTS {
+            tracing::warn!(
+                memory_id = %mid,
+                after_event_id = after_event_id,
+                event_count = events.len(),
+                limit = MAX_REPLAY_EVENTS,
+                "get_events_after_id returned {} events, exceeding MAX_REPLAY_EVENTS ({}). \
+                 Consider compacting old events or narrowing the query window.",
+                events.len(),
+                MAX_REPLAY_EVENTS,
+            );
+        }
+        Ok(events)
     })
 }
 

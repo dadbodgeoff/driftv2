@@ -68,10 +68,16 @@ pub fn reconstruct_all_at(
     readers: &Arc<ReadPool>,
     target_time: DateTime<Utc>,
 ) -> CortexResult<Vec<BaseMemory>> {
-    // Get all distinct memory_ids that had events before target_time
+    // Get all distinct memory_ids that had events before target_time,
+    // but only for memories that actually exist in the memories table.
+    // The INNER JOIN filters out orphaned events (events for deleted memories).
     let memory_ids = readers.with_conn(|conn| {
         let mut stmt = conn
-            .prepare("SELECT DISTINCT memory_id FROM memory_events WHERE recorded_at <= ?1")
+            .prepare(
+                "SELECT DISTINCT me.memory_id FROM memory_events me \
+                 INNER JOIN memories m ON me.memory_id = m.id \
+                 WHERE me.recorded_at <= ?1",
+            )
             .map_err(|e| cortex_storage::to_storage_err(e.to_string()))?;
 
         let rows = stmt
@@ -94,8 +100,14 @@ pub fn reconstruct_all_at(
 }
 
 /// Create an empty BaseMemory shell for replay.
+///
+/// Uses `DateTime::UNIX_EPOCH` for timestamps instead of `Utc::now()` so that
+/// reconstructed state doesn't leak the current wall-clock time. The Created
+/// event's delta is expected to overwrite these sentinel values.
 fn empty_memory_shell(memory_id: &str) -> BaseMemory {
+    use chrono::DateTime;
     use cortex_core::memory::*;
+    let epoch = DateTime::UNIX_EPOCH.with_timezone(&Utc);
     BaseMemory {
         id: memory_id.to_string(),
         memory_type: MemoryType::Episodic,
@@ -105,12 +117,12 @@ fn empty_memory_shell(memory_id: &str) -> BaseMemory {
             outcome: None,
         }),
         summary: String::new(),
-        transaction_time: Utc::now(),
-        valid_time: Utc::now(),
+        transaction_time: epoch,
+        valid_time: epoch,
         valid_until: None,
         confidence: Confidence::new(0.5),
         importance: Importance::Normal,
-        last_accessed: Utc::now(),
+        last_accessed: epoch,
         access_count: 0,
         linked_patterns: vec![],
         linked_constraints: vec![],

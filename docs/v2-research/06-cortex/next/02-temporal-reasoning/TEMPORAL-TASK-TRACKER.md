@@ -305,57 +305,57 @@
 
 ### cortex-core: Drift Models
 
-- [ ] `PTD1-CORE-01` — Create `cortex-core/src/models/drift_snapshot.rs` — DriftSnapshot struct (timestamp, window, type_metrics, module_metrics, global), TypeDriftMetrics, ModuleDriftMetrics, GlobalDriftMetrics
-- [ ] `PTD1-CORE-02` — Create `cortex-core/src/models/drift_alert.rs` — DriftAlert struct (severity, category, message, affected_memories, recommended_action, detected_at), AlertSeverity enum, DriftAlertCategory enum (6 variants)
-- [ ] `PTD1-CORE-03` — Modify `cortex-core/src/models/mod.rs` — add `mod drift_snapshot;` + `mod drift_alert;` + pub use re-exports
+- [x] `PTD1-CORE-01` — Create `cortex-core/src/models/drift_snapshot.rs` — DriftSnapshot struct (timestamp, window, type_metrics, module_metrics, global), TypeDriftMetrics, ModuleDriftMetrics, GlobalDriftMetrics
+- [x] `PTD1-CORE-02` — Create `cortex-core/src/models/drift_alert.rs` — DriftAlert struct (severity, category, message, affected_memories, recommended_action, detected_at), AlertSeverity enum, DriftAlertCategory enum (6 variants)
+- [x] `PTD1-CORE-03` — Modify `cortex-core/src/models/mod.rs` — add `mod drift_snapshot;` + `mod drift_alert;` + pub use re-exports
 
 ### cortex-storage: Drift Query Module
 
-- [ ] `PTD1-STOR-01` — Create `cortex-storage/src/queries/drift_ops.rs` — insert_drift_snapshot, get_drift_snapshots(from, to), get_latest_drift_snapshot (raw SQL)
-- [ ] `PTD1-STOR-02` — Modify `cortex-storage/src/queries/mod.rs` — add `pub mod drift_ops;`
+- [x] `PTD1-STOR-01` — Create `cortex-storage/src/queries/drift_ops.rs` — insert_drift_snapshot, get_drift_snapshots(from, to), get_latest_drift_snapshot (raw SQL)
+- [x] `PTD1-STOR-02` — Modify `cortex-storage/src/queries/mod.rs` — add `pub mod drift_ops;`
 
 ### cortex-temporal: Drift Module
 
-- [ ] `PTD1-TEMP-01` — Create `cortex-temporal/src/drift/mod.rs` — module declarations + re-exports
-- [ ] `PTD1-TEMP-02` — Create `cortex-temporal/src/drift/metrics.rs` — compute_ksi(reader, type, window), compute_confidence_trajectory(reader, type, window, points), compute_contradiction_density(reader, type, window), compute_consolidation_efficiency(reader, window), compute_all_metrics(reader, window) -> DriftSnapshot
-- [ ] `PTD1-TEMP-03` — Create `cortex-temporal/src/drift/evidence_freshness.rs` — compute_evidence_freshness(reader, memory) -> f64; freshness_factor per evidence type (file_link, pattern_link, supporting_memory, user_validation); product aggregation; compute_evidence_freshness_index(reader) -> f64
-- [ ] `PTD1-TEMP-04` — Create `cortex-temporal/src/drift/alerting.rs` — evaluate_drift_alerts(snapshot, config, recent_alerts) -> Vec<DriftAlert>; 6 alert categories with configurable thresholds; alert dampening (cooldown per category + entity dedup)
-- [ ] `PTD1-TEMP-05` — Create `cortex-temporal/src/drift/snapshots.rs` — store_drift_snapshot(writer, snapshot), get_drift_snapshots(reader, from, to), get_latest_drift_snapshot(reader); snapshot frequency: hourly/daily/weekly
-- [ ] `PTD1-TEMP-06` — Create `cortex-temporal/src/drift/patterns.rs` — detect_crystallization, detect_erosion, detect_explosion, detect_conflict_wave; each returns detection result + recommended action
-- [ ] `PTD1-TEMP-07` — Modify `cortex-temporal/src/engine.rs` — implement compute_drift_metrics and get_drift_alerts methods on TemporalEngine
+- [x] `PTD1-TEMP-01` — Create `cortex-temporal/src/drift/mod.rs` — module declarations + re-exports
+- [x] `PTD1-TEMP-02` — Create `cortex-temporal/src/drift/metrics.rs` — compute_ksi(reader, type, window), compute_confidence_trajectory(reader, type, window, points), compute_contradiction_density(reader, type, window), compute_consolidation_efficiency(reader, window), compute_all_metrics(reader, window) -> DriftSnapshot
+- [x] `PTD1-TEMP-03` — Create `cortex-temporal/src/drift/evidence_freshness.rs` — compute_evidence_freshness(reader, memory) -> f64; freshness_factor per evidence type (file_link, pattern_link, supporting_memory, user_validation); product aggregation; compute_evidence_freshness_index(reader) -> f64
+- [x] `PTD1-TEMP-04` — Create `cortex-temporal/src/drift/alerting.rs` — evaluate_drift_alerts(snapshot, config, recent_alerts) -> Vec<DriftAlert>; 6 alert categories with configurable thresholds; alert dampening (cooldown per category + entity dedup)
+- [x] `PTD1-TEMP-05` — Create `cortex-temporal/src/drift/snapshots.rs` — store_drift_snapshot(writer, snapshot), get_drift_snapshots(reader, from, to), get_latest_drift_snapshot(reader); snapshot frequency: hourly/daily/weekly
+- [x] `PTD1-TEMP-06` — Create `cortex-temporal/src/drift/patterns.rs` — detect_crystallization, detect_erosion, detect_explosion, detect_conflict_wave; each returns detection result + recommended action
+- [x] `PTD1-TEMP-07` — Modify `cortex-temporal/src/engine.rs` — implement compute_drift_metrics and get_drift_alerts methods on TemporalEngine
 
 ### Phase D1 Tests (≥80% coverage target per module)
 
-- [ ] `TTD1-01` — KSI = 1.0 for stable dataset: no changes in window → KSI = 1.0
-- [ ] `TTD1-02` — KSI bounds [0.0, 1.0]: property test with any input
-- [ ] `TTD1-03` — KSI per type is independent: change only episodic → core KSI unchanged
-- [ ] `TTD1-04` — Confidence trajectory tracks correctly: known changes → trajectory matches
-- [ ] `TTD1-05` — Contradiction density = 0 for clean dataset
-- [ ] `TTD1-06` — Consolidation efficiency computes correctly: known consolidation → ratio matches
-- [ ] `TTD1-07` — Evidence freshness = 1.0 for fresh evidence: all links valid
-- [ ] `TTD1-08` — Evidence freshness < 1.0 for stale links: file changed → freshness drops
-- [ ] `TTD1-09` — Evidence freshness bounds [0.0, 1.0]: property test
-- [ ] `TTD1-10` — Alert fires when KSI below threshold: KSI=0.2, threshold=0.3 → alert
-- [ ] `TTD1-11` — Alert dampening works: same alert within cooldown → not re-fired
-- [ ] `TTD1-12` — Critical alert has shorter cooldown: re-fires after 1h, not 24h
-- [ ] `TTD1-13` — Drift snapshot round-trip: store → retrieve → equals original
-- [ ] `TTD1-14` — Crystallization detection: known lifecycle → detected
-- [ ] `TTD1-15` — Erosion detection: declining confidence cluster → detected
-- [ ] `TTD1-16` — Explosion detection: spike above 3σ → detected
-- [ ] `TTD1-17` — Conflict wave detection: contradiction spike in module → detected
-- [ ] `TTD1-18` — Benchmark: KSI computation 10K memories < 100ms
-- [ ] `TTD1-19` — Benchmark: full drift metrics 10K memories < 500ms
-- [ ] `TTD1-20` — Benchmark: evidence freshness single memory < 1ms
-- [ ] `TTD1-21` — Benchmark: alert evaluation (100 metrics) < 10ms
+- [x] `TTD1-01` — KSI = 1.0 for stable dataset: no changes in window → KSI = 1.0
+- [x] `TTD1-02` — KSI bounds [0.0, 1.0]: property test with any input
+- [x] `TTD1-03` — KSI per type is independent: change only episodic → core KSI unchanged
+- [x] `TTD1-04` — Confidence trajectory tracks correctly: known changes → trajectory matches
+- [x] `TTD1-05` — Contradiction density = 0 for clean dataset
+- [x] `TTD1-06` — Consolidation efficiency computes correctly: known consolidation → ratio matches
+- [x] `TTD1-07` — Evidence freshness = 1.0 for fresh evidence: all links valid
+- [x] `TTD1-08` — Evidence freshness < 1.0 for stale links: file changed → freshness drops
+- [x] `TTD1-09` — Evidence freshness bounds [0.0, 1.0]: property test
+- [x] `TTD1-10` — Alert fires when KSI below threshold: KSI=0.2, threshold=0.3 → alert
+- [x] `TTD1-11` — Alert dampening works: same alert within cooldown → not re-fired
+- [x] `TTD1-12` — Critical alert has shorter cooldown: re-fires after 1h, not 24h
+- [x] `TTD1-13` — Drift snapshot round-trip: store → retrieve → equals original
+- [x] `TTD1-14` — Crystallization detection: known lifecycle → detected
+- [x] `TTD1-15` — Erosion detection: declining confidence cluster → detected
+- [x] `TTD1-16` — Explosion detection: spike above 3σ → detected
+- [x] `TTD1-17` — Conflict wave detection: contradiction spike in module → detected
+- [x] `TTD1-18` — Benchmark: KSI computation 10K memories < 100ms
+- [x] `TTD1-19` — Benchmark: full drift metrics 10K memories < 500ms
+- [x] `TTD1-20` — Benchmark: evidence freshness single memory < 1ms
+- [x] `TTD1-21` — Benchmark: alert evaluation (100 metrics) < 10ms
 
 ### QG-T3a: Drift Metrics + Alerting Quality Gate
 
-- [ ] All `TTD1-*` tests pass
-- [ ] Coverage ≥80% for cortex-temporal drift/metrics.rs
-- [ ] Coverage ≥80% for cortex-temporal drift/evidence_freshness.rs
-- [ ] Coverage ≥80% for cortex-temporal drift/alerting.rs
-- [ ] Coverage ≥80% for cortex-temporal drift/snapshots.rs
-- [ ] Coverage ≥80% for cortex-temporal drift/patterns.rs
+- [x] All `TTD1-*` tests pass
+- [x] Coverage ≥80% for cortex-temporal drift/metrics.rs
+- [x] Coverage ≥80% for cortex-temporal drift/evidence_freshness.rs
+- [x] Coverage ≥80% for cortex-temporal drift/alerting.rs
+- [x] Coverage ≥80% for cortex-temporal drift/snapshots.rs
+- [x] Coverage ≥80% for cortex-temporal drift/patterns.rs
 
 ---
 
@@ -365,51 +365,51 @@
 
 ### cortex-core: Epistemic + View Models
 
-- [ ] `PTD2-CORE-01` — Create `cortex-core/src/models/epistemic_status.rs` — EpistemicStatus enum (Conjecture, Provisional, Verified, Stale with per-variant metadata), AggregationStrategy enum (WeightedAverage, GodelTNorm)
-- [ ] `PTD2-CORE-02` — Create `cortex-core/src/models/materialized_view.rs` — MaterializedTemporalView struct (view_id, label, timestamp, memory_count, snapshot_ids, drift_snapshot_id, created_by, auto_refresh)
-- [ ] `PTD2-CORE-03` — Modify `cortex-core/src/models/mod.rs` — add `mod epistemic_status;` + `mod materialized_view;` + pub use re-exports
+- [x] `PTD2-CORE-01` — Create `cortex-core/src/models/epistemic_status.rs` — EpistemicStatus enum (Conjecture, Provisional, Verified, Stale with per-variant metadata), AggregationStrategy enum (WeightedAverage, GodelTNorm)
+- [x] `PTD2-CORE-02` — Create `cortex-core/src/models/materialized_view.rs` — MaterializedTemporalView struct (view_id, label, timestamp, memory_count, snapshot_ids, drift_snapshot_id, created_by, auto_refresh)
+- [x] `PTD2-CORE-03` — Modify `cortex-core/src/models/mod.rs` — add `mod epistemic_status;` + `mod materialized_view;` + pub use re-exports
 
 ### cortex-storage: View Query Module
 
-- [ ] `PTD2-STOR-01` — Create `cortex-storage/src/queries/view_ops.rs` — insert_materialized_view, get_view_by_label, list_views, delete_view (raw SQL)
-- [ ] `PTD2-STOR-02` — Modify `cortex-storage/src/queries/mod.rs` — add `pub mod view_ops;`
+- [x] `PTD2-STOR-01` — Create `cortex-storage/src/queries/view_ops.rs` — insert_materialized_view, get_view_by_label, list_views, delete_view (raw SQL)
+- [x] `PTD2-STOR-02` — Modify `cortex-storage/src/queries/mod.rs` — add `pub mod view_ops;`
 
 ### cortex-temporal: Epistemic Module
 
-- [ ] `PTD2-TEMP-01` — Create `cortex-temporal/src/epistemic/mod.rs` — module declarations + re-exports
-- [ ] `PTD2-TEMP-02` — Create `cortex-temporal/src/epistemic/status.rs` — determine_initial_status(source: &EventActor) -> EpistemicStatus (always Conjecture)
-- [ ] `PTD2-TEMP-03` — Create `cortex-temporal/src/epistemic/transitions.rs` — promote_to_provisional, promote_to_verified, demote_to_stale; validates promotion path (Conjecture→Provisional→Verified only; Stale only from Verified)
-- [ ] `PTD2-TEMP-04` — Create `cortex-temporal/src/epistemic/aggregation.rs` — aggregate_confidence(evidences, strategy) -> f64; WeightedAverage (mean) and GodelTNorm (min operator)
+- [x] `PTD2-TEMP-01` — Create `cortex-temporal/src/epistemic/mod.rs` — module declarations + re-exports
+- [x] `PTD2-TEMP-02` — Create `cortex-temporal/src/epistemic/status.rs` — determine_initial_status(source: &EventActor) -> EpistemicStatus (always Conjecture)
+- [x] `PTD2-TEMP-03` — Create `cortex-temporal/src/epistemic/transitions.rs` — promote_to_provisional, promote_to_verified, demote_to_stale; validates promotion path (Conjecture→Provisional→Verified only; Stale only from Verified)
+- [x] `PTD2-TEMP-04` — Create `cortex-temporal/src/epistemic/aggregation.rs` — aggregate_confidence(evidences, strategy) -> f64; WeightedAverage (mean) and GodelTNorm (min operator)
 
 ### cortex-temporal: Views Module
 
-- [ ] `PTD2-TEMP-05` — Create `cortex-temporal/src/views/mod.rs` — module declarations + re-exports
-- [ ] `PTD2-TEMP-06` — Create `cortex-temporal/src/views/create.rs` — create_materialized_view(writer, reader, label, timestamp) -> MaterializedTemporalView; snapshots all active memories, associates drift snapshot
-- [ ] `PTD2-TEMP-07` — Create `cortex-temporal/src/views/query.rs` — get_view(reader, label), list_views(reader), diff_views(reader, label_a, label_b) -> TemporalDiff
-- [ ] `PTD2-TEMP-08` — Create `cortex-temporal/src/views/auto_refresh.rs` — AutoRefreshScheduler: should_create_view() -> Option<String>; default 14-day interval; skips if no events since last view
-- [ ] `PTD2-TEMP-09` — Modify `cortex-temporal/src/engine.rs` — implement create_view and get_view methods on TemporalEngine
+- [x] `PTD2-TEMP-05` — Create `cortex-temporal/src/views/mod.rs` — module declarations + re-exports
+- [x] `PTD2-TEMP-06` — Create `cortex-temporal/src/views/create.rs` — create_materialized_view(writer, reader, label, timestamp) -> MaterializedTemporalView; snapshots all active memories, associates drift snapshot
+- [x] `PTD2-TEMP-07` — Create `cortex-temporal/src/views/query.rs` — get_view(reader, label), list_views(reader), diff_views(reader, label_a, label_b) -> TemporalDiff
+- [x] `PTD2-TEMP-08` — Create `cortex-temporal/src/views/auto_refresh.rs` — AutoRefreshScheduler: should_create_view() -> Option<String>; default 14-day interval; skips if no events since last view
+- [x] `PTD2-TEMP-09` — Modify `cortex-temporal/src/engine.rs` — implement create_view and get_view methods on TemporalEngine
 
 ### Phase D2 Tests (≥80% coverage target per module)
 
-- [ ] `TTD2-01` — New memory starts as Conjecture
-- [ ] `TTD2-02` — Conjecture → Provisional on validation pass
-- [ ] `TTD2-03` — Provisional → Verified on confirmation
-- [ ] `TTD2-04` — Verified → Stale on evidence decay
-- [ ] `TTD2-05` — Conjecture → Verified rejected (InvalidEpistemicTransition)
-- [ ] `TTD2-06` — Verified → Provisional rejected (InvalidEpistemicTransition)
-- [ ] `TTD2-07` — WeightedAverage aggregation correct: known inputs → expected output
-- [ ] `TTD2-08` — GodelTNorm aggregation = min: [0.9, 0.3, 0.8] → 0.3
-- [ ] `TTD2-09` — Property test: confidence aggregation bounds [0.0, 1.0] for both strategies
-- [ ] `TTD2-10` — Property test: epistemic ordering (only valid promotion paths succeed)
-- [ ] `TTD2-11` — Materialized view creation: create → view exists with correct memory count
-- [ ] `TTD2-12` — Materialized view lookup: create → lookup by label → found
-- [ ] `TTD2-13` — Diff between views: create A, create B → diff returns correct delta
-- [ ] `TTD2-14` — Auto-refresh scheduler fires: elapsed > interval → returns label
-- [ ] `TTD2-15` — Auto-refresh skips when no changes: no events since last → returns None
+- [x] `TTD2-01` — New memory starts as Conjecture
+- [x] `TTD2-02` — Conjecture → Provisional on validation pass
+- [x] `TTD2-03` — Provisional → Verified on confirmation
+- [x] `TTD2-04` — Verified → Stale on evidence decay
+- [x] `TTD2-05` — Conjecture → Verified rejected (InvalidEpistemicTransition)
+- [x] `TTD2-06` — Verified → Provisional rejected (InvalidEpistemicTransition)
+- [x] `TTD2-07` — WeightedAverage aggregation correct: known inputs → expected output
+- [x] `TTD2-08` — GodelTNorm aggregation = min: [0.9, 0.3, 0.8] → 0.3
+- [x] `TTD2-09` — Property test: confidence aggregation bounds [0.0, 1.0] for both strategies
+- [x] `TTD2-10` — Property test: epistemic ordering (only valid promotion paths succeed)
+- [x] `TTD2-11` — Materialized view creation: create → view exists with correct memory count
+- [x] `TTD2-12` — Materialized view lookup: create → lookup by label → found
+- [x] `TTD2-13` — Diff between views: create A, create B → diff returns correct delta
+- [x] `TTD2-14` — Auto-refresh scheduler fires: elapsed > interval → returns label
+- [x] `TTD2-15` — Auto-refresh skips when no changes: no events since last → returns None
 
 ### QG-T3b: Epistemic + Views Quality Gate
 
-- [ ] All `TTD2-*` tests pass
+- [x] All `TTD2-*` tests pass
 - [ ] Coverage ≥80% for cortex-temporal epistemic modules
 - [ ] Coverage ≥80% for cortex-temporal views modules
 
@@ -421,34 +421,34 @@
 
 ### cortex-retrieval: Temporal Scoring Factors (TR13, CR8)
 
-- [ ] `PTD3-RET-01` — Modify `cortex-retrieval/src/ranking/scorer.rs` — add evidence_freshness (0.06) and epistemic_status (0.05) as new additive scoring factors; redistribute existing weights (semantic 0.22, keyword 0.13, pattern 0.08, importance 0.08, intent 0.08); epistemic scoring: Verified=1.0, Provisional=0.7, Conjecture=0.4, Stale=0.2
-- [ ] `PTD3-RET-02` — Modify `cortex-retrieval/src/ranking/mod.rs` — update ScorerWeights default to include 10 factors summing to 1.0
+- [x] `PTD3-RET-01` — Modify `cortex-retrieval/src/ranking/scorer.rs` — add evidence_freshness (0.06) and epistemic_status (0.05) as new additive scoring factors; redistribute existing weights (semantic 0.22, keyword 0.13, pattern 0.08, importance 0.08, intent 0.08); epistemic scoring: Verified=1.0, Provisional=0.7, Conjecture=0.4, Stale=0.2
+- [x] `PTD3-RET-02` — Modify `cortex-retrieval/src/ranking/mod.rs` — update ScorerWeights default to include 10 factors summing to 1.0
 
 ### cortex-validation: Epistemic Promotion (TR11)
 
-- [ ] `PTD3-VALID-01` — Modify `cortex-validation/src/engine.rs` — after validation pass (all 4 dimensions), trigger epistemic promotion: Conjecture→Provisional; on user confirmation: Provisional→Verified; fail does NOT demote
-- [ ] `PTD3-VALID-02` — Modify `cortex-validation/src/dimensions/temporal.rs` — add temporal consistency check: referenced memories must have existed when referencing memory was created
+- [x] `PTD3-VALID-01` — Modify `cortex-validation/src/engine.rs` — after validation pass (all 4 dimensions), trigger epistemic promotion: Conjecture→Provisional; on user confirmation: Provisional→Verified; fail does NOT demote
+- [x] `PTD3-VALID-02` — Modify `cortex-validation/src/dimensions/temporal.rs` — add temporal consistency check: referenced memories must have existed when referencing memory was created
 
 ### cortex-observability: Drift in Health Reports (TR7)
 
-- [ ] `PTD3-OBS-01` — Modify `cortex-observability/src/health/reporter.rs` — add `drift_summary: Option<DriftSummary>` to HealthSnapshot; DriftSummary: active_alerts count, overall_ksi, overall_efi, trend indicators
-- [ ] `PTD3-OBS-02` — Modify `cortex-observability/src/health/subsystem_checks.rs` — add check_temporal(snapshot) -> SubsystemHealth; checks event store health, snapshot freshness, drift alert count
-- [ ] `PTD3-OBS-03` — Modify `cortex-observability/src/health/recommendations.rs` — add temporal recommendations: "Run snapshot compaction" if events > threshold, "Review stale evidence" if EFI < 0.5, "Investigate knowledge churn" if KSI < 0.3
+- [x] `PTD3-OBS-01` — Modify `cortex-observability/src/health/reporter.rs` — add `drift_summary: Option<DriftSummary>` to HealthSnapshot; DriftSummary: active_alerts count, overall_ksi, overall_efi, trend indicators
+- [x] `PTD3-OBS-02` — Modify `cortex-observability/src/health/subsystem_checks.rs` — add check_temporal(snapshot) -> SubsystemHealth; checks event store health, snapshot freshness, drift alert count
+- [x] `PTD3-OBS-03` — Modify `cortex-observability/src/health/recommendations.rs` — add temporal recommendations: "Run snapshot compaction" if events > threshold, "Review stale evidence" if EFI < 0.5, "Investigate knowledge churn" if KSI < 0.3
 
 ### Phase D3 Tests (≥80% coverage on changed code)
 
-- [ ] `TTD3-01` — Retrieval scorer includes temporal factors: score with temporal ≠ score without
-- [ ] `TTD3-02` — Verified memory scores higher than Conjecture
-- [ ] `TTD3-03` — Evidence freshness affects ranking: fresh > stale
-- [ ] `TTD3-04` — Weights sum to 1.0: assert all 10 weights sum to 1.0
-- [ ] `TTD3-05` — Validation promotes epistemic status: validate Conjecture → Provisional
-- [ ] `TTD3-06` — Validation does not demote on failure: fail Provisional → stays Provisional
-- [ ] `TTD3-07` — Health report includes drift summary: generate → drift_summary present
-- [ ] `TTD3-08` — Subsystem check reports temporal health
-- [ ] `TTD3-09` — Temporal recommendations generated: low KSI → "investigate churn"
-- [ ] `TTD3-10` — No retrieval test regressions: `cargo test -p cortex-retrieval` passes
-- [ ] `TTD3-11` — No validation test regressions: `cargo test -p cortex-validation` passes
-- [ ] `TTD3-12` — No observability test regressions: `cargo test -p cortex-observability` passes
+- [x] `TTD3-01` — Retrieval scorer includes temporal factors: score with temporal ≠ score without
+- [x] `TTD3-02` — Verified memory scores higher than Conjecture
+- [x] `TTD3-03` — Evidence freshness affects ranking: fresh > stale
+- [x] `TTD3-04` — Weights sum to 1.0: assert all 10 weights sum to 1.0
+- [x] `TTD3-05` — Validation promotes epistemic status: validate Conjecture → Provisional
+- [x] `TTD3-06` — Validation does not demote on failure: fail Provisional → stays Provisional
+- [x] `TTD3-07` — Health report includes drift summary: generate → drift_summary present
+- [x] `TTD3-08` — Subsystem check reports temporal health
+- [x] `TTD3-09` — Temporal recommendations generated: low KSI → "investigate churn"
+- [x] `TTD3-10` — No retrieval test regressions: `cargo test -p cortex-retrieval` passes
+- [x] `TTD3-11` — No validation test regressions: `cargo test -p cortex-validation` passes
+- [x] `TTD3-12` — No observability test regressions: `cargo test -p cortex-observability` passes
 
 ### QG-T3c: Existing Crate Integration Quality Gate
 
@@ -468,49 +468,49 @@
 
 ### cortex-napi: Temporal Bindings
 
-- [ ] `PTD4-NAPI-01` — Create `cortex-napi/src/bindings/temporal.rs` — 10 #[napi] functions: query_as_of, query_range, query_diff, replay_decision, query_temporal_causal, get_drift_metrics, get_drift_alerts, create_materialized_view, get_materialized_view, list_materialized_views
-- [ ] `PTD4-NAPI-02` — Create `cortex-napi/src/conversions/temporal_types.rs` — NapiMemoryEvent, NapiDriftSnapshot, NapiDriftAlert, NapiTemporalDiff, NapiDecisionReplay, NapiMaterializedView, NapiHindsightItem, NapiDiffStats; From/Into conversions
-- [ ] `PTD4-NAPI-03` — Modify `cortex-napi/src/bindings/mod.rs` — add `pub mod temporal;`
-- [ ] `PTD4-NAPI-04` — Modify `cortex-napi/src/conversions/mod.rs` — add `pub mod temporal_types;`
+- [x] `PTD4-NAPI-01` — Create `cortex-napi/src/bindings/temporal.rs` — 10 #[napi] functions: query_as_of, query_range, query_diff, replay_decision, query_temporal_causal, get_drift_metrics, get_drift_alerts, create_materialized_view, get_materialized_view, list_materialized_views
+- [x] `PTD4-NAPI-02` — Create `cortex-napi/src/conversions/temporal_types.rs` — NapiMemoryEvent, NapiDriftSnapshot, NapiDriftAlert, NapiTemporalDiff, NapiDecisionReplay, NapiMaterializedView, NapiHindsightItem, NapiDiffStats; From/Into conversions
+- [x] `PTD4-NAPI-03` — Modify `cortex-napi/src/bindings/mod.rs` — add `pub mod temporal;`
+- [x] `PTD4-NAPI-04` — Modify `cortex-napi/src/conversions/mod.rs` — add `pub mod temporal_types;`
 
 ### TypeScript Bridge
 
-- [ ] `PTD4-TS-01` — Modify `packages/cortex/src/bridge/types.ts` — add TypeScript interfaces: TemporalDiff, DiffStats, DecisionReplay, HindsightItem, DriftSnapshot, DriftAlert, MaterializedTemporalView, EpistemicStatus, AsOfQuery, TemporalRangeQuery, TemporalDiffQuery, DecisionReplayQuery, TemporalCausalQuery
-- [ ] `PTD4-TS-02` — Modify `packages/cortex/src/bridge/client.ts` — add 10 temporal methods: queryAsOf, queryRange, queryDiff, replayDecision, queryTemporalCausal, getDriftMetrics, getDriftAlerts, createMaterializedView, getMaterializedView, listMaterializedViews
+- [x] `PTD4-TS-01` — Modify `packages/cortex/src/bridge/types.ts` — add TypeScript interfaces: TemporalDiff, DiffStats, DecisionReplay, HindsightItem, DriftSnapshot, DriftAlert, MaterializedTemporalView, EpistemicStatus, AsOfQuery, TemporalRangeQuery, TemporalDiffQuery, DecisionReplayQuery, TemporalCausalQuery
+- [x] `PTD4-TS-02` — Modify `packages/cortex/src/bridge/client.ts` — add 10 temporal methods: queryAsOf, queryRange, queryDiff, replayDecision, queryTemporalCausal, getDriftMetrics, getDriftAlerts, createMaterializedView, getMaterializedView, listMaterializedViews
 
 ### TypeScript MCP Tools (5 new tools)
 
-- [ ] `PTD4-MCP-01` — Create `packages/cortex/src/tools/temporal/drift_time_travel.ts` — MCP tool: point-in-time knowledge query; input: system_time, valid_time, filter; calls bridge.queryAsOf()
-- [ ] `PTD4-MCP-02` — Create `packages/cortex/src/tools/temporal/drift_time_diff.ts` — MCP tool: compare knowledge between two times; input: time_a, time_b, scope; calls bridge.queryDiff()
-- [ ] `PTD4-MCP-03` — Create `packages/cortex/src/tools/temporal/drift_time_replay.ts` — MCP tool: replay decision context; input: decision_memory_id, budget; calls bridge.replayDecision()
-- [ ] `PTD4-MCP-04` — Create `packages/cortex/src/tools/temporal/drift_knowledge_health.ts` — MCP tool: drift metrics dashboard; input: window_hours; calls bridge.getDriftMetrics() + getDriftAlerts()
-- [ ] `PTD4-MCP-05` — Create `packages/cortex/src/tools/temporal/drift_knowledge_timeline.ts` — MCP tool: knowledge evolution visualization; input: from, to, granularity; calls bridge.getDriftMetrics() per time point
-- [ ] `PTD4-MCP-06` — Modify `packages/cortex/src/tools/index.ts` — register all 5 new temporal tools
+- [x] `PTD4-MCP-01` — Create `packages/cortex/src/tools/temporal/drift_time_travel.ts` — MCP tool: point-in-time knowledge query; input: system_time, valid_time, filter; calls bridge.queryAsOf()
+- [x] `PTD4-MCP-02` — Create `packages/cortex/src/tools/temporal/drift_time_diff.ts` — MCP tool: compare knowledge between two times; input: time_a, time_b, scope; calls bridge.queryDiff()
+- [x] `PTD4-MCP-03` — Create `packages/cortex/src/tools/temporal/drift_time_replay.ts` — MCP tool: replay decision context; input: decision_memory_id, budget; calls bridge.replayDecision()
+- [x] `PTD4-MCP-04` — Create `packages/cortex/src/tools/temporal/drift_knowledge_health.ts` — MCP tool: drift metrics dashboard; input: window_hours; calls bridge.getDriftMetrics() + getDriftAlerts()
+- [x] `PTD4-MCP-05` — Create `packages/cortex/src/tools/temporal/drift_knowledge_timeline.ts` — MCP tool: knowledge evolution visualization; input: from, to, granularity; calls bridge.getDriftMetrics() per time point
+- [x] `PTD4-MCP-06` — Modify `packages/cortex/src/tools/index.ts` — register all 5 new temporal tools
 
 ### TypeScript CLI Commands (3 new commands)
 
-- [ ] `PTD4-CLI-01` — Create `packages/cortex/src/cli/timeline.ts` — `drift cortex timeline` command; options: --from, --to, --type, --module; shows KSI, confidence, contradiction density, EFI over time
-- [ ] `PTD4-CLI-02` — Create `packages/cortex/src/cli/diff.ts` — `drift cortex diff` command; options: --from (required), --to (required), --scope; shows structured diff
-- [ ] `PTD4-CLI-03` — Create `packages/cortex/src/cli/replay.ts` — `drift cortex replay <decision-id>` command; options: --budget; shows decision context + hindsight
-- [ ] `PTD4-CLI-04` — Modify `packages/cortex/src/cli/index.ts` — register timeline, diff, replay commands
+- [x] `PTD4-CLI-01` — Create `packages/cortex/src/cli/timeline.ts` — `drift cortex timeline` command; options: --from, --to, --type, --module; shows KSI, confidence, contradiction density, EFI over time
+- [x] `PTD4-CLI-02` — Create `packages/cortex/src/cli/diff.ts` — `drift cortex diff` command; options: --from (required), --to (required), --scope; shows structured diff
+- [x] `PTD4-CLI-03` — Create `packages/cortex/src/cli/replay.ts` — `drift cortex replay <decision-id>` command; options: --budget; shows decision context + hindsight
+- [x] `PTD4-CLI-04` — Modify `packages/cortex/src/cli/index.ts` — register timeline, diff, replay commands
 
 ### TypeScript Tests
 
-- [ ] `PTD4-TEST-01` — Modify `packages/cortex/tests/bridge.test.ts` — add test cases for all 10 temporal bridge methods
+- [x] `PTD4-TEST-01` — Modify `packages/cortex/tests/bridge.test.ts` — add test cases for all 10 temporal bridge methods
 
 ### Phase D4 Tests
 
-- [ ] `TTD4-01` — NAPI query_as_of round-trip: TS → Rust → TS with correct shape
-- [ ] `TTD4-02` — NAPI query_diff round-trip: TS → Rust → TS with correct shape
-- [ ] `TTD4-03` — NAPI replay_decision round-trip: TS → Rust → TS with correct shape
-- [ ] `TTD4-04` — NAPI get_drift_metrics round-trip: TS → Rust → TS with correct shape
-- [ ] `TTD4-05` — NAPI create_materialized_view round-trip: TS → Rust → TS with correct shape
-- [ ] `TTD4-06` — All 10 NAPI functions compile: `cargo check -p cortex-napi` exits 0
-- [ ] `TTD4-07` — Type conversions are lossless: Rust → NAPI → Rust preserves all fields
-- [ ] `TTD4-08` — MCP tool drift_time_travel works: tool call → returns memories
-- [ ] `TTD4-09` — MCP tool drift_time_diff works: tool call → returns diff
-- [ ] `TTD4-10` — MCP tool drift_knowledge_health works: tool call → returns metrics + alerts
-- [ ] `TTD4-11` — Bridge test suite passes: `vitest run` in packages/cortex → temporal tests pass
+- [x] `TTD4-01` — NAPI query_as_of round-trip: TS → Rust → TS with correct shape
+- [x] `TTD4-02` — NAPI query_diff round-trip: TS → Rust → TS with correct shape
+- [x] `TTD4-03` — NAPI replay_decision round-trip: TS → Rust → TS with correct shape
+- [x] `TTD4-04` — NAPI get_drift_metrics round-trip: TS → Rust → TS with correct shape
+- [x] `TTD4-05` — NAPI create_materialized_view round-trip: TS → Rust → TS with correct shape
+- [x] `TTD4-06` — All 10 NAPI functions compile: `cargo check -p cortex-napi` exits 0
+- [x] `TTD4-07` — Type conversions are lossless: Rust → NAPI → Rust preserves all fields
+- [x] `TTD4-08` — MCP tool drift_time_travel works: tool call → returns memories
+- [x] `TTD4-09` — MCP tool drift_time_diff works: tool call → returns diff
+- [x] `TTD4-10` — MCP tool drift_knowledge_health works: tool call → returns metrics + alerts
+- [x] `TTD4-11` — Bridge test suite passes: `vitest run` in packages/cortex → temporal tests pass
 
 ### QG-T3d: NAPI + TypeScript Quality Gate
 
@@ -602,11 +602,11 @@ These fixtures are created as needed across phases but tracked here for complete
 | A: Event Store Foundation | 0/40 | 0/27 | ⬜ Not Started |
 | B: Temporal Queries | 0/15 | 0/30 | ⬜ Not Started |
 | C: Decision Replay + Temporal Causal | 7/7 | 16/16 | ✅ Complete |
-| D1: Drift Metrics + Alerting | 0/12 | 0/21 | ⬜ Not Started |
-| D2: Epistemic + Views | 0/14 | 0/15 | ⬜ Not Started |
-| D3: Existing Crate Integration | 0/7 | 0/12 | ⬜ Not Started |
-| D4: NAPI + TypeScript + CLI | 0/17 | 0/11 | ⬜ Not Started |
+| D1: Drift Metrics + Alerting | 12/12 | 21/21 | ✅ Complete |
+| D2: Epistemic + Views | 14/14 | 15/15 | ✅ Complete |
+| D3: Existing Crate Integration | 7/7 | 12/12 | ✅ Complete |
+| D4: NAPI + TypeScript + CLI | 17/17 | 11/11 | ✅ Complete |
 | Golden Fixtures + Test Files | 0/24 | — | ⬜ Not Started |
 | Quality Gates (QG-T0 → QG-T4) | 0/14 | 0/16 | ⬜ Not Started |
-| **TOTAL** | **0/150** | **0/148** | ⬜ **Not Started** |
+| **TOTAL** | **54/150** | **75/148** | 🟡 **In Progress** |
 

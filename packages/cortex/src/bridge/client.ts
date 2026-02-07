@@ -15,11 +15,15 @@ import type {
   ConsolidationDashboard,
   ConsolidationResult,
   ConsolidationStatus,
+  DecisionReplay,
   DegradationEvent,
+  DriftAlert,
+  DriftSnapshot,
   GenerationContext,
   HealthReport,
   InferenceResult,
   LearningResult,
+  MaterializedTemporalView,
   MemoryType,
   PatternStats,
   PredictionResult,
@@ -28,6 +32,7 @@ import type {
   SanitizeResult,
   SessionAnalytics,
   SyncResult,
+  TemporalDiff,
   TraversalResult,
 } from "./types.js";
 
@@ -362,5 +367,88 @@ export class CortexClient {
 
   async sessionAnalytics(sessionId: string): Promise<SessionAnalytics> {
     return wrap(() => this.native.cortexSessionAnalytics(sessionId) as SessionAnalytics);
+  }
+
+  // ─── Temporal ──────────────────────────────────────────────────────────────
+
+  async queryAsOf(
+    systemTime: string,
+    validTime: string,
+    filter?: string,
+  ): Promise<BaseMemory[]> {
+    return wrap(
+      () =>
+        this.native.cortexTemporalQueryAsOf(systemTime, validTime, filter ?? null) as BaseMemory[],
+    );
+  }
+
+  async queryRange(from: string, to: string, mode: string): Promise<BaseMemory[]> {
+    return wrap(() => this.native.cortexTemporalQueryRange(from, to, mode) as BaseMemory[]);
+  }
+
+  async queryDiff(timeA: string, timeB: string, scope?: string): Promise<TemporalDiff> {
+    return wrap(
+      () => this.native.cortexTemporalQueryDiff(timeA, timeB, scope ?? null) as TemporalDiff,
+    );
+  }
+
+  async replayDecision(decisionId: string, budget?: number): Promise<DecisionReplay> {
+    return wrap(
+      () =>
+        this.native.cortexTemporalReplayDecision(decisionId, budget ?? null) as DecisionReplay,
+    );
+  }
+
+  async queryTemporalCausal(
+    memoryId: string,
+    asOf: string,
+    direction: string,
+    maxDepth: number,
+  ): Promise<TraversalResult> {
+    return wrap(
+      () =>
+        this.native.cortexTemporalQueryTemporalCausal(
+          memoryId,
+          asOf,
+          direction,
+          maxDepth,
+        ) as TraversalResult,
+    );
+  }
+
+  async getDriftMetrics(windowHours?: number): Promise<DriftSnapshot> {
+    return wrap(
+      () => this.native.cortexTemporalGetDriftMetrics(windowHours ?? null) as DriftSnapshot,
+    );
+  }
+
+  async getDriftAlerts(): Promise<DriftAlert[]> {
+    return wrap(() => this.native.cortexTemporalGetDriftAlerts() as DriftAlert[]);
+  }
+
+  async createMaterializedView(
+    label: string,
+    timestamp: string,
+  ): Promise<MaterializedTemporalView> {
+    return wrap(
+      () =>
+        this.native.cortexTemporalCreateMaterializedView(
+          label,
+          timestamp,
+        ) as MaterializedTemporalView,
+    );
+  }
+
+  async getMaterializedView(label: string): Promise<MaterializedTemporalView | null> {
+    return wrap(
+      () =>
+        this.native.cortexTemporalGetMaterializedView(label) as MaterializedTemporalView | null,
+    );
+  }
+
+  async listMaterializedViews(): Promise<MaterializedTemporalView[]> {
+    return wrap(
+      () => this.native.cortexTemporalListMaterializedViews() as MaterializedTemporalView[],
+    );
   }
 }

@@ -12,3 +12,4 @@ pub mod prediction;
 pub mod privacy;
 pub mod retrieval;
 pub mod session;
+pub mod temporal;

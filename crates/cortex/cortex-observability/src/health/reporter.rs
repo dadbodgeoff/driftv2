@@ -2,9 +2,34 @@
 
 use cortex_core::errors::CortexResult;
 use cortex_core::models::{HealthMetrics, HealthReport, HealthStatus, SubsystemHealth};
+use serde::{Deserialize, Serialize};
 
 use super::recommendations::Recommendation;
 use super::subsystem_checks::SubsystemChecker;
+
+/// Trend indicator for drift metrics.
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]
+#[serde(rename_all = "lowercase")]
+pub enum TrendIndicator {
+    Improving,
+    Stable,
+    Declining,
+}
+
+/// Summary of drift metrics for inclusion in health reports.
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct DriftSummary {
+    /// Number of active drift alerts.
+    pub active_alerts: usize,
+    /// Overall Knowledge Stability Index [0.0, 1.0].
+    pub overall_ksi: f64,
+    /// Overall Evidence Freshness Index [0.0, 1.0].
+    pub overall_efi: f64,
+    /// Trend for KSI over recent windows.
+    pub ksi_trend: TrendIndicator,
+    /// Trend for EFI over recent windows.
+    pub efi_trend: TrendIndicator,
+}
 
 /// Snapshot of subsystem data used to build a health report.
 #[derive(Debug, Clone, Default)]
@@ -20,6 +45,8 @@ pub struct HealthSnapshot {
     pub unresolved_contradictions: usize,
     pub consolidation_count: usize,
     pub memories_needing_validation: usize,
+    /// Optional drift summary from the temporal subsystem.
+    pub drift_summary: Option<DriftSummary>,
 }
 
 /// Builds a [`HealthReport`] from a snapshot and subsystem checks.

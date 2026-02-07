@@ -89,5 +89,41 @@ pub fn generate(snapshot: &HealthSnapshot) -> Vec<Recommendation> {
         });
     }
 
+    // Temporal-specific recommendations (only when drift data is available).
+    if let Some(ref drift) = snapshot.drift_summary {
+        if drift.overall_ksi < 0.3 {
+            recs.push(Recommendation {
+                severity: Severity::Warning,
+                message: format!(
+                    "Knowledge Stability Index is {:.2}, below 0.30 threshold",
+                    drift.overall_ksi
+                ),
+                action: "investigate knowledge churn".into(),
+            });
+        }
+
+        if drift.overall_efi < 0.5 {
+            recs.push(Recommendation {
+                severity: Severity::Warning,
+                message: format!(
+                    "Evidence Freshness Index is {:.2}, below 0.50 threshold",
+                    drift.overall_efi
+                ),
+                action: "review stale evidence".into(),
+            });
+        }
+
+        if drift.active_alerts > 3 {
+            recs.push(Recommendation {
+                severity: Severity::Warning,
+                message: format!(
+                    "{} active drift alerts — temporal event store may need compaction",
+                    drift.active_alerts
+                ),
+                action: "run snapshot compaction".into(),
+            });
+        }
+    }
+
     recs
 }
