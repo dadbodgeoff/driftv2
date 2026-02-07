@@ -39,11 +39,7 @@ impl<S: IMemoryStorage> PredictionEngine<S> {
         signals: &AggregatedSignals,
     ) -> CortexResult<Vec<PredictionCandidate>> {
         // Check cache first using active file as key
-        let cache_key = signals
-            .file
-            .active_file
-            .as_deref()
-            .unwrap_or("__no_file__");
+        let cache_key = signals.file.active_file.as_deref().unwrap_or("__no_file__");
         if let Some(cached) = self.cache.get(cache_key) {
             return Ok(cached);
         }
@@ -118,14 +114,8 @@ impl<S: IMemoryStorage> IPredictor for PredictionEngine<S> {
 
         Ok(PredictionResult {
             memory_ids: candidates.iter().map(|c| c.memory_id.clone()).collect(),
-            signals: candidates
-                .iter()
-                .flat_map(|c| c.signals.clone())
-                .collect(),
-            confidence: candidates
-                .first()
-                .map(|c| c.confidence)
-                .unwrap_or(0.0),
+            signals: candidates.iter().flat_map(|c| c.signals.clone()).collect(),
+            confidence: candidates.first().map(|c| c.confidence).unwrap_or(0.0),
         })
     }
 }

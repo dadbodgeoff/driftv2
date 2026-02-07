@@ -41,34 +41,36 @@ impl<'a> HybridSearcher<'a> {
         }
 
         let candidate_limit = limit * 3; // Over-fetch for fusion.
-        let mut ranked_lists: Vec<Vec<(String, usize)>> = Vec::new();
+        let mut fts5_ranked: Option<Vec<(String, usize)>> = None;
+        let mut vector_ranked: Option<Vec<(String, usize)>> = None;
+        let mut entity_ranked: Option<Vec<(String, usize)>> = None;
         let mut memory_map: HashMap<String, BaseMemory> = HashMap::new();
 
         // Stage 1a: FTS5 full-text search.
         if !query.trim().is_empty() {
             let fts_results = fts5_search::search_fts5(self.storage, query, candidate_limit)?;
-            let fts_ranked: Vec<(String, usize)> = fts_results
+            let ranked: Vec<(String, usize)> = fts_results
                 .iter()
                 .map(|r| (r.memory.id.clone(), r.rank))
                 .collect();
             for r in fts_results {
                 memory_map.entry(r.memory.id.clone()).or_insert(r.memory);
             }
-            ranked_lists.push(fts_ranked);
+            fts5_ranked = Some(ranked);
         }
 
         // Stage 1b: Vector similarity search.
         if let Some(embedding) = query_embedding {
             let vec_results =
                 vector_search::search_vector(self.storage, embedding, candidate_limit)?;
-            let vec_ranked: Vec<(String, usize)> = vec_results
+            let ranked: Vec<(String, usize)> = vec_results
                 .iter()
                 .map(|r| (r.memory.id.clone(), r.rank))
                 .collect();
             for r in vec_results {
                 memory_map.entry(r.memory.id.clone()).or_insert(r.memory);
             }
-            ranked_lists.push(vec_ranked);
+            vector_ranked = Some(ranked);
         }
 
         // Stage 1c: Entity expansion from top FTS5/vector results.
@@ -81,21 +83,25 @@ impl<'a> HybridSearcher<'a> {
         if !seed_memories.is_empty() {
             let entity_results =
                 entity_search::expand_entities(self.storage, &seed_memories, candidate_limit)?;
-            let entity_ranked: Vec<(String, usize)> = entity_results
+            let ranked: Vec<(String, usize)> = entity_results
                 .iter()
                 .enumerate()
                 .map(|(rank, r)| (r.memory.id.clone(), rank))
                 .collect();
             for r in entity_results {
-                memory_map
-                    .entry(r.memory.id.clone())
-                    .or_insert(r.memory);
+                memory_map.entry(r.memory.id.clone()).or_insert(r.memory);
             }
-            ranked_lists.push(entity_ranked);
+            entity_ranked = Some(ranked);
         }
 
-        // Stage 2: RRF fusion.
-        let mut candidates = rrf_fusion::fuse(&ranked_lists, &memory_map, self.rrf_k);
+        // Stage 2: RRF fusion with labeled source lists.
+        let mut candidates = rrf_fusion::fuse(
+            fts5_ranked.as_ref(),
+            vector_ranked.as_ref(),
+            entity_ranked.as_ref(),
+            &memory_map,
+            self.rrf_k,
+        );
         candidates.truncate(limit);
 
         Ok(candidates)

@@ -88,18 +88,17 @@ impl OnnxProvider {
                 }
             })?;
 
-        let mask_tensor =
-            Tensor::from_array((vec![1i64, seq_len as i64], attention_mask)).map_err(|e| {
-                EmbeddingError::InferenceFailed {
-                    reason: format!("tensor creation error: {e}"),
-                }
+        let mask_tensor = Tensor::from_array((vec![1i64, seq_len as i64], attention_mask))
+            .map_err(|e| EmbeddingError::InferenceFailed {
+                reason: format!("tensor creation error: {e}"),
             })?;
 
-        let mut session = self.session.lock().map_err(|e| {
-            EmbeddingError::InferenceFailed {
+        let mut session = self
+            .session
+            .lock()
+            .map_err(|e| EmbeddingError::InferenceFailed {
                 reason: format!("session lock poisoned: {e}"),
-            }
-        })?;
+            })?;
 
         let outputs = session
             .run(ort::inputs![ids_tensor, mask_tensor])
@@ -108,15 +107,20 @@ impl OnnxProvider {
             })?;
 
         // Extract the first output tensor.
-        let (_name, output) = outputs.iter().next().ok_or_else(|| EmbeddingError::InferenceFailed {
-            reason: "no output tensor".to_string(),
-        })?;
+        let (_name, output) =
+            outputs
+                .iter()
+                .next()
+                .ok_or_else(|| EmbeddingError::InferenceFailed {
+                    reason: "no output tensor".to_string(),
+                })?;
 
-        let (shape, data) = output
-            .try_extract_tensor::<f32>()
-            .map_err(|e| EmbeddingError::InferenceFailed {
-                reason: format!("tensor extraction failed: {e}"),
-            })?;
+        let (shape, data) =
+            output
+                .try_extract_tensor::<f32>()
+                .map_err(|e| EmbeddingError::InferenceFailed {
+                    reason: format!("tensor extraction failed: {e}"),
+                })?;
 
         // Mean pool across the sequence dimension.
         let embedding = if shape.len() == 3 {

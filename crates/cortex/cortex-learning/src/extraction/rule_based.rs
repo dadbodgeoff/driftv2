@@ -33,9 +33,7 @@ pub fn extract_principle(correction_text: &str, context: &str) -> Option<String>
 fn extract_negation(text: &str) -> Option<String> {
     let lower = text.to_lowercase();
 
-    let negation_prefixes = [
-        "don't ", "dont ", "do not ", "never ", "avoid ", "stop ",
-    ];
+    let negation_prefixes = ["don't ", "dont ", "do not ", "never ", "avoid ", "stop "];
 
     for prefix in &negation_prefixes {
         if lower.starts_with(prefix) {

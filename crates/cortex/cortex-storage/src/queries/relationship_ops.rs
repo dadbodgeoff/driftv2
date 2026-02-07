@@ -9,8 +9,8 @@ use crate::to_storage_err;
 
 /// Add a relationship edge between two memories.
 pub fn add_relationship(conn: &Connection, edge: &RelationshipEdge) -> CortexResult<()> {
-    let rel_type_str =
-        serde_json::to_string(&edge.relationship_type).map_err(|e| to_storage_err(e.to_string()))?;
+    let rel_type_str = serde_json::to_string(&edge.relationship_type)
+        .map_err(|e| to_storage_err(e.to_string()))?;
     let evidence_json =
         serde_json::to_string(&edge.evidence).map_err(|e| to_storage_err(e.to_string()))?;
 
@@ -38,8 +38,7 @@ pub fn get_relationships(
 ) -> CortexResult<Vec<RelationshipEdge>> {
     let (sql, params_vec): (String, Vec<Box<dyn rusqlite::types::ToSql>>) = match rel_type {
         Some(rt) => {
-            let rt_str =
-                serde_json::to_string(&rt).map_err(|e| to_storage_err(e.to_string()))?;
+            let rt_str = serde_json::to_string(&rt).map_err(|e| to_storage_err(e.to_string()))?;
             (
                 "SELECT source_id, target_id, relationship_type, strength, evidence
                  FROM memory_relationships
@@ -60,8 +59,11 @@ pub fn get_relationships(
         ),
     };
 
-    let mut stmt = conn.prepare(&sql).map_err(|e| to_storage_err(e.to_string()))?;
-    let params_refs: Vec<&dyn rusqlite::types::ToSql> = params_vec.iter().map(|p| p.as_ref()).collect();
+    let mut stmt = conn
+        .prepare(&sql)
+        .map_err(|e| to_storage_err(e.to_string()))?;
+    let params_refs: Vec<&dyn rusqlite::types::ToSql> =
+        params_vec.iter().map(|p| p.as_ref()).collect();
 
     let rows = stmt
         .query_map(params_refs.as_slice(), |row| {

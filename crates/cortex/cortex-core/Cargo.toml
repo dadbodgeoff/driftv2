@@ -15,5 +15,8 @@ thiserror = { workspace = true }
 blake3 = { workspace = true }
 toml = { workspace = true }
 
+[dependencies.ts-rs]
+workspace = true
+
 [dev-dependencies]
 proptest = { workspace = true }

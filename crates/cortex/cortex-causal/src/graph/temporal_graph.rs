@@ -137,9 +137,7 @@ pub fn reconstruct_graph_at(events: &[MemoryEvent], as_of: DateTime<Utc>) -> Ind
 }
 
 /// Build an IndexedGraph from a map of reconstructed edges.
-fn build_graph_from_edges(
-    edges: HashMap<(String, String), ReconstructedEdge>,
-) -> IndexedGraph {
+fn build_graph_from_edges(edges: HashMap<(String, String), ReconstructedEdge>) -> IndexedGraph {
     let mut graph = IndexedGraph::new();
 
     for edge in edges.values() {
@@ -164,11 +162,7 @@ fn build_graph_from_edges(
 
 /// Convert an IndexedGraph to a serializable CausalGraphSnapshot.
 pub fn graph_to_snapshot(graph: &IndexedGraph) -> CausalGraphSnapshot {
-    let nodes: Vec<String> = graph
-        .node_index
-        .keys()
-        .cloned()
-        .collect();
+    let nodes: Vec<String> = graph.node_index.keys().cloned().collect();
 
     let mut edges = Vec::new();
     for edge_idx in graph.graph.edge_indices() {
@@ -407,19 +401,17 @@ mod tests {
         let t1 = Utc::now();
         let t2 = t1 + chrono::Duration::seconds(10);
 
-        let events = vec![
-            make_relationship_event(
-                1,
-                MemoryEventType::RelationshipAdded,
-                serde_json::json!({
-                    "source": "mem-a",
-                    "target": "mem-b",
-                    "relation_type": "caused",
-                    "strength": 0.8
-                }),
-                t2, // Future event
-            ),
-        ];
+        let events = vec![make_relationship_event(
+            1,
+            MemoryEventType::RelationshipAdded,
+            serde_json::json!({
+                "source": "mem-a",
+                "target": "mem-b",
+                "relation_type": "caused",
+                "strength": 0.8
+            }),
+            t2, // Future event
+        )];
 
         // At t1 (before the event), graph should be empty
         let graph = reconstruct_graph_at(&events, t1);
@@ -504,19 +496,17 @@ mod tests {
     #[test]
     fn test_temporal_traversal_backward() {
         let t1 = Utc::now();
-        let events = vec![
-            make_relationship_event(
-                1,
-                MemoryEventType::RelationshipAdded,
-                serde_json::json!({
-                    "source": "mem-a",
-                    "target": "mem-b",
-                    "relation_type": "caused",
-                    "strength": 0.8
-                }),
-                t1,
-            ),
-        ];
+        let events = vec![make_relationship_event(
+            1,
+            MemoryEventType::RelationshipAdded,
+            serde_json::json!({
+                "source": "mem-a",
+                "target": "mem-b",
+                "relation_type": "caused",
+                "strength": 0.8
+            }),
+            t1,
+        )];
 
         let result = temporal_traversal(
             &events,

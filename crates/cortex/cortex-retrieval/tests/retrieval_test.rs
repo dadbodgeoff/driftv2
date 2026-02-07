@@ -36,7 +36,12 @@ fn test_compressor() -> CompressionEngine {
     CompressionEngine::new()
 }
 
-fn make_memory(id: &str, summary: &str, mem_type: MemoryType, importance: Importance) -> BaseMemory {
+fn make_memory(
+    id: &str,
+    summary: &str,
+    mem_type: MemoryType,
+    importance: Importance,
+) -> BaseMemory {
     BaseMemory {
         id: id.to_string(),
         memory_type: mem_type,
@@ -67,7 +72,8 @@ fn make_memory(id: &str, summary: &str, mem_type: MemoryType, importance: Import
                 description: summary.to_string(),
                 metadata: serde_json::Value::Null,
             },
-        )),
+        ))
+        .unwrap(),
     }
 }
 
@@ -200,18 +206,21 @@ fn t5_ret_03_rrf_scores_monotonically_decreasing() {
     let mut memories = HashMap::new();
     for i in 0..10 {
         let id = format!("mem-{i}");
-        memories.insert(id.clone(), make_memory(
-            &id,
-            &format!("Memory {i}"),
-            MemoryType::Core,
-            Importance::Normal,
-        ));
+        memories.insert(
+            id.clone(),
+            make_memory(
+                &id,
+                &format!("Memory {i}"),
+                MemoryType::Core,
+                Importance::Normal,
+            ),
+        );
     }
 
     let list1: Vec<(String, usize)> = (0..10).map(|i| (format!("mem-{i}"), i)).collect();
     let list2: Vec<(String, usize)> = (0..10).rev().map(|i| (format!("mem-{i}"), 9 - i)).collect();
 
-    let candidates = rrf_fusion::fuse(&[list1, list2], &memories, 60);
+    let candidates = rrf_fusion::fuse(Some(&list1), Some(&list2), None, &memories, 60);
 
     for window in candidates.windows(2) {
         assert!(
@@ -231,12 +240,15 @@ fn t5_ret_04_no_results_lost_in_fusion() {
     let mut memories = HashMap::new();
     for i in 0..6 {
         let id = format!("mem-{i}");
-        memories.insert(id.clone(), make_memory(
-            &id,
-            &format!("Memory {i}"),
-            MemoryType::Core,
-            Importance::Normal,
-        ));
+        memories.insert(
+            id.clone(),
+            make_memory(
+                &id,
+                &format!("Memory {i}"),
+                MemoryType::Core,
+                Importance::Normal,
+            ),
+        );
     }
 
     let fts_list: Vec<(String, usize)> = vec![
@@ -250,7 +262,7 @@ fn t5_ret_04_no_results_lost_in_fusion() {
         ("mem-5".into(), 2),
     ];
 
-    let candidates = rrf_fusion::fuse(&[fts_list, vec_list], &memories, 60);
+    let candidates = rrf_fusion::fuse(Some(&fts_list), Some(&vec_list), None, &memories, 60);
     let fused_ids: Vec<&str> = candidates.iter().map(|c| c.memory.id.as_str()).collect();
 
     // All input IDs should appear in the fused results.
@@ -301,8 +313,18 @@ fn t5_ret_05_token_budget_never_exceeded() {
 fn t5_ret_06_higher_importance_ranks_above() {
     let storage = test_storage();
 
-    let low = make_memory("mem-low", "database query optimization", MemoryType::Core, Importance::Low);
-    let critical = make_memory("mem-crit", "database query optimization", MemoryType::Core, Importance::Critical);
+    let low = make_memory(
+        "mem-low",
+        "database query optimization",
+        MemoryType::Core,
+        Importance::Low,
+    );
+    let critical = make_memory(
+        "mem-crit",
+        "database query optimization",
+        MemoryType::Core,
+        Importance::Critical,
+    );
 
     storage.create(&low).unwrap();
     storage.create(&critical).unwrap();
@@ -391,9 +413,7 @@ fn t5_ret_09_generation_context_respects_budget() {
     let compressor = test_compressor();
 
     let orchestrator = GenerationOrchestrator::new(&storage, &compressor);
-    let output = orchestrator
-        .build("database security", &[], 2000)
-        .unwrap();
+    let output = orchestrator.build("database security", &[], 2000).unwrap();
 
     // Total tokens should not exceed budget.
     assert!(
@@ -440,7 +460,10 @@ fn t5_ret_10_empty_query_returns_empty() {
     };
 
     let results = engine.retrieve(&context, 2000).unwrap();
-    assert!(results.is_empty(), "empty query should return empty results");
+    assert!(
+        results.is_empty(),
+        "empty query should return empty results"
+    );
 }
 
 // ---------------------------------------------------------------------------
@@ -484,7 +507,10 @@ fn t5_ret_12_provenance_comments_generated() {
 
     // Inline comments should contain drift tags.
     let has_drift_tag = output.inline_comments.contains("[drift:");
-    assert!(has_drift_tag, "inline comments should contain [drift:*] tags");
+    assert!(
+        has_drift_tag,
+        "inline comments should contain [drift:*] tags"
+    );
 }
 
 // ---------------------------------------------------------------------------

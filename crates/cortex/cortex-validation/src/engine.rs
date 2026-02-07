@@ -72,8 +72,7 @@ impl ValidationEngine {
         let mut all_healing_actions: Vec<HealingAction> = Vec::new();
 
         // Dimension 1: Citation validation.
-        let citation_result =
-            citation::validate(memory, ctx.file_checker, ctx.rename_detector);
+        let citation_result = citation::validate(memory, ctx.file_checker, ctx.rename_detector);
         all_healing_actions.extend(citation_result.healing_actions);
 
         // Dimension 2: Temporal validation.

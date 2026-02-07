@@ -3,10 +3,10 @@
 //! Chain: ONNX → fallback model → cached embeddings → TF-IDF → error.
 //! Every fallback is logged to the degradation log.
 
+use chrono::Utc;
 use cortex_core::errors::{CortexResult, EmbeddingError};
 use cortex_core::models::DegradationEvent;
 use cortex_core::traits::IEmbeddingProvider;
-use chrono::Utc;
 use tracing::warn;
 
 /// A provider entry in the fallback chain.
@@ -187,9 +187,15 @@ mod tests {
             }
             .into())
         }
-        fn dimensions(&self) -> usize { 128 }
-        fn name(&self) -> &str { "failing-mock" }
-        fn is_available(&self) -> bool { true }
+        fn dimensions(&self) -> usize {
+            128
+        }
+        fn name(&self) -> &str {
+            "failing-mock"
+        }
+        fn is_available(&self) -> bool {
+            true
+        }
     }
 
     /// A mock provider that always succeeds.
@@ -204,9 +210,15 @@ mod tests {
         fn embed_batch(&self, texts: &[String]) -> CortexResult<Vec<Vec<f32>>> {
             Ok(texts.iter().map(|_| vec![1.0; self.dims]).collect())
         }
-        fn dimensions(&self) -> usize { self.dims }
-        fn name(&self) -> &str { &self.name }
-        fn is_available(&self) -> bool { true }
+        fn dimensions(&self) -> usize {
+            self.dims
+        }
+        fn name(&self) -> &str {
+            &self.name
+        }
+        fn is_available(&self) -> bool {
+            true
+        }
     }
 
     #[test]

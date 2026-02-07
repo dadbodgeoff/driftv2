@@ -12,10 +12,16 @@ pub fn score(source: &BaseMemory, target: &BaseMemory) -> f64 {
         return 0.0;
     }
 
-    let source_files: std::collections::HashSet<&str> =
-        source.linked_files.iter().map(|f| f.file_path.as_str()).collect();
-    let target_files: std::collections::HashSet<&str> =
-        target.linked_files.iter().map(|f| f.file_path.as_str()).collect();
+    let source_files: std::collections::HashSet<&str> = source
+        .linked_files
+        .iter()
+        .map(|f| f.file_path.as_str())
+        .collect();
+    let target_files: std::collections::HashSet<&str> = target
+        .linked_files
+        .iter()
+        .map(|f| f.file_path.as_str())
+        .collect();
 
     let shared = source_files.intersection(&target_files).count();
     let total = source_files.union(&target_files).count();

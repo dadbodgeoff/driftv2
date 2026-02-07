@@ -45,7 +45,14 @@ pub async fn create_snapshot(
                 )
                 .unwrap_or(0) as u64;
 
-            snapshot_ops::insert_snapshot(conn, &mid, &snapshot_at, &compressed, event_id, &reason_str)
+            snapshot_ops::insert_snapshot(
+                conn,
+                &mid,
+                &snapshot_at,
+                &compressed,
+                event_id,
+                &reason_str,
+            )
         })
         .await
 }

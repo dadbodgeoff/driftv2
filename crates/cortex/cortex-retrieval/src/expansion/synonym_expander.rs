@@ -8,20 +8,54 @@ use std::collections::HashMap;
 /// Code-aware synonym map. Maps common abbreviations and terms to related expansions.
 fn synonym_map() -> HashMap<&'static str, &'static [&'static str]> {
     let mut m = HashMap::new();
-    m.insert("auth", &["authentication", "authorization", "login", "session", "jwt", "oauth"][..]);
+    m.insert(
+        "auth",
+        &[
+            "authentication",
+            "authorization",
+            "login",
+            "session",
+            "jwt",
+            "oauth",
+        ][..],
+    );
     m.insert("db", &["database", "sql", "query", "migration", "schema"]);
     m.insert("api", &["endpoint", "route", "handler", "rest", "graphql"]);
-    m.insert("ui", &["frontend", "component", "render", "view", "template"]);
-    m.insert("test", &["spec", "assertion", "mock", "fixture", "coverage"]);
+    m.insert(
+        "ui",
+        &["frontend", "component", "render", "view", "template"],
+    );
+    m.insert(
+        "test",
+        &["spec", "assertion", "mock", "fixture", "coverage"],
+    );
     m.insert("deploy", &["release", "ci", "cd", "pipeline", "rollback"]);
-    m.insert("perf", &["performance", "latency", "throughput", "benchmark", "optimization"]);
+    m.insert(
+        "perf",
+        &[
+            "performance",
+            "latency",
+            "throughput",
+            "benchmark",
+            "optimization",
+        ],
+    );
     m.insert("err", &["error", "exception", "failure", "panic", "crash"]);
-    m.insert("config", &["configuration", "settings", "env", "environment"]);
+    m.insert(
+        "config",
+        &["configuration", "settings", "env", "environment"],
+    );
     m.insert("cache", &["caching", "memoize", "invalidation", "ttl"]);
     m.insert("log", &["logging", "trace", "debug", "observability"]);
     m.insert("sec", &["security", "vulnerability", "encryption", "tls"]);
-    m.insert("async", &["concurrent", "parallel", "future", "promise", "await"]);
-    m.insert("msg", &["message", "event", "queue", "pubsub", "notification"]);
+    m.insert(
+        "async",
+        &["concurrent", "parallel", "future", "promise", "await"],
+    );
+    m.insert(
+        "msg",
+        &["message", "event", "queue", "pubsub", "notification"],
+    );
     m
 }
 

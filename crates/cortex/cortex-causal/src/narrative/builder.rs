@@ -64,18 +64,17 @@ pub fn build_narrative(graph: &IndexedGraph, memory_id: &str) -> CausalNarrative
 
     // Process incoming edges (origins/support).
     use petgraph::Direction;
-    for neighbor in graph.graph.neighbors_directed(node_idx, Direction::Incoming) {
+    for neighbor in graph
+        .graph
+        .neighbors_directed(node_idx, Direction::Incoming)
+    {
         if let Some(edge_idx) = graph.graph.find_edge(neighbor, node_idx) {
             if let (Some(weight), Some(source_node)) = (
                 graph.graph.edge_weight(edge_idx),
                 graph.graph.node_weight(neighbor),
             ) {
                 edge_strengths.push(weight.strength);
-                let text = templates::render(
-                    weight.relation,
-                    &node_summary,
-                    &source_node.summary,
-                );
+                let text = templates::render(weight.relation, &node_summary, &source_node.summary);
 
                 // Collect evidence.
                 for ev in &weight.evidence {
@@ -101,18 +100,17 @@ pub fn build_narrative(graph: &IndexedGraph, memory_id: &str) -> CausalNarrative
     }
 
     // Process outgoing edges (effects).
-    for neighbor in graph.graph.neighbors_directed(node_idx, Direction::Outgoing) {
+    for neighbor in graph
+        .graph
+        .neighbors_directed(node_idx, Direction::Outgoing)
+    {
         if let Some(edge_idx) = graph.graph.find_edge(node_idx, neighbor) {
             if let (Some(weight), Some(target_node)) = (
                 graph.graph.edge_weight(edge_idx),
                 graph.graph.node_weight(neighbor),
             ) {
                 edge_strengths.push(weight.strength);
-                let text = templates::render(
-                    weight.relation,
-                    &target_node.summary,
-                    &node_summary,
-                );
+                let text = templates::render(weight.relation, &target_node.summary, &node_summary);
 
                 for ev in &weight.evidence {
                     evidence_refs.push(ev.description.clone());

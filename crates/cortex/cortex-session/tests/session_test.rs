@@ -14,11 +14,7 @@ fn deduplication_filters_already_sent_memories() {
     // Mark mem1 as sent with 100 tokens
     manager.mark_memory_sent(&sid, "mem1", 100);
 
-    let candidates = vec![
-        "mem1".to_string(),
-        "mem2".to_string(),
-        "mem3".to_string(),
-    ];
+    let candidates = vec!["mem1".to_string(), "mem2".to_string(), "mem3".to_string()];
     let mut estimates = HashMap::new();
     estimates.insert("mem1".to_string(), 100);
     estimates.insert("mem2".to_string(), 200);
@@ -120,7 +116,11 @@ fn concurrent_session_access_no_corruption() {
     for i in 0..4 {
         let sid = format!("sess{}", i);
         let ctx = manager.get_session(&sid).unwrap();
-        assert_eq!(ctx.queries_made, 100, "Session {} should have 100 queries", i);
+        assert_eq!(
+            ctx.queries_made, 100,
+            "Session {} should have 100 queries",
+            i
+        );
         assert_eq!(
             ctx.loaded_memories.len(),
             100,
@@ -128,8 +128,7 @@ fn concurrent_session_access_no_corruption() {
             i
         );
         assert_eq!(
-            ctx.tokens_sent,
-            1000,
+            ctx.tokens_sent, 1000,
             "Session {} should have 1000 tokens sent",
             i
         );

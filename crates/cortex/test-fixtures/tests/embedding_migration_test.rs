@@ -6,8 +6,8 @@
 use chrono::Utc;
 use cortex_compression::CompressionEngine;
 use cortex_core::config::RetrievalConfig;
-use cortex_core::memory::*;
 use cortex_core::memory::types::CoreContent;
+use cortex_core::memory::*;
 use cortex_core::models::RetrievalContext;
 use cortex_core::traits::{IMemoryStorage, IRetriever};
 use cortex_retrieval::engine::RetrievalEngine;
@@ -39,7 +39,7 @@ fn make_memory(id: &str, summary: &str, tags: Vec<&str>) -> BaseMemory {
         archived: false,
         superseded_by: None,
         supersedes: None,
-        content_hash: BaseMemory::compute_content_hash(&content),
+        content_hash: BaseMemory::compute_content_hash(&content).unwrap(),
     }
 }
 
@@ -49,26 +49,106 @@ fn t14_int_03_retrieval_works_during_model_transition() {
 
     // Create 20 memories with known content.
     let memories = vec![
-        make_memory("mig-01", "Always use bcrypt for password hashing with cost factor 12", vec!["security", "bcrypt"]),
-        make_memory("mig-02", "PostgreSQL connection pool should use max_connections=25", vec!["database", "pool"]),
-        make_memory("mig-03", "JWT tokens expire after 1 hour, refresh tokens last 30 days", vec!["auth", "jwt"]),
-        make_memory("mig-04", "Use serde with rename_all=camelCase for JSON API responses", vec!["serialization", "api"]),
-        make_memory("mig-05", "Redis cache TTL should be 5 minutes for session data", vec!["cache", "redis"]),
-        make_memory("mig-06", "All API endpoints must validate input with JSON schema", vec!["api", "validation"]),
-        make_memory("mig-07", "Use thiserror for library crates, anyhow for binaries", vec!["errors", "rust"]),
-        make_memory("mig-08", "Database migrations must be forward-only and transactional", vec!["database", "migrations"]),
-        make_memory("mig-09", "Log all authentication failures with IP and user agent", vec!["security", "logging"]),
-        make_memory("mig-10", "Rate limit API endpoints to 100 requests per minute", vec!["api", "rate-limit"]),
-        make_memory("mig-11", "Use WAL mode for SQLite concurrent read/write access", vec!["sqlite", "wal"]),
-        make_memory("mig-12", "Embedding cache uses blake3 content hash as key", vec!["embeddings", "cache"]),
-        make_memory("mig-13", "HDBSCAN clustering requires min_cluster_size=2", vec!["consolidation", "clustering"]),
-        make_memory("mig-14", "Causal graph uses petgraph StableGraph for index stability", vec!["causal", "graph"]),
-        make_memory("mig-15", "Privacy engine sanitizes PII before storage", vec!["privacy", "pii"]),
-        make_memory("mig-16", "Decay formula uses 5-factor multiplicative model", vec!["decay", "formula"]),
-        make_memory("mig-17", "Compression levels: L0=IDs, L1=one-liners, L2=examples, L3=full", vec!["compression"]),
-        make_memory("mig-18", "Retrieval uses RRF fusion with k=60", vec!["retrieval", "rrf"]),
-        make_memory("mig-19", "Validation checks 4 dimensions: citation, temporal, contradiction, pattern", vec!["validation"]),
-        make_memory("mig-20", "Consolidation runs every 6 hours or on token pressure", vec!["consolidation", "scheduling"]),
+        make_memory(
+            "mig-01",
+            "Always use bcrypt for password hashing with cost factor 12",
+            vec!["security", "bcrypt"],
+        ),
+        make_memory(
+            "mig-02",
+            "PostgreSQL connection pool should use max_connections=25",
+            vec!["database", "pool"],
+        ),
+        make_memory(
+            "mig-03",
+            "JWT tokens expire after 1 hour, refresh tokens last 30 days",
+            vec!["auth", "jwt"],
+        ),
+        make_memory(
+            "mig-04",
+            "Use serde with rename_all=camelCase for JSON API responses",
+            vec!["serialization", "api"],
+        ),
+        make_memory(
+            "mig-05",
+            "Redis cache TTL should be 5 minutes for session data",
+            vec!["cache", "redis"],
+        ),
+        make_memory(
+            "mig-06",
+            "All API endpoints must validate input with JSON schema",
+            vec!["api", "validation"],
+        ),
+        make_memory(
+            "mig-07",
+            "Use thiserror for library crates, anyhow for binaries",
+            vec!["errors", "rust"],
+        ),
+        make_memory(
+            "mig-08",
+            "Database migrations must be forward-only and transactional",
+            vec!["database", "migrations"],
+        ),
+        make_memory(
+            "mig-09",
+            "Log all authentication failures with IP and user agent",
+            vec!["security", "logging"],
+        ),
+        make_memory(
+            "mig-10",
+            "Rate limit API endpoints to 100 requests per minute",
+            vec!["api", "rate-limit"],
+        ),
+        make_memory(
+            "mig-11",
+            "Use WAL mode for SQLite concurrent read/write access",
+            vec!["sqlite", "wal"],
+        ),
+        make_memory(
+            "mig-12",
+            "Embedding cache uses blake3 content hash as key",
+            vec!["embeddings", "cache"],
+        ),
+        make_memory(
+            "mig-13",
+            "HDBSCAN clustering requires min_cluster_size=2",
+            vec!["consolidation", "clustering"],
+        ),
+        make_memory(
+            "mig-14",
+            "Causal graph uses petgraph StableGraph for index stability",
+            vec!["causal", "graph"],
+        ),
+        make_memory(
+            "mig-15",
+            "Privacy engine sanitizes PII before storage",
+            vec!["privacy", "pii"],
+        ),
+        make_memory(
+            "mig-16",
+            "Decay formula uses 5-factor multiplicative model",
+            vec!["decay", "formula"],
+        ),
+        make_memory(
+            "mig-17",
+            "Compression levels: L0=IDs, L1=one-liners, L2=examples, L3=full",
+            vec!["compression"],
+        ),
+        make_memory(
+            "mig-18",
+            "Retrieval uses RRF fusion with k=60",
+            vec!["retrieval", "rrf"],
+        ),
+        make_memory(
+            "mig-19",
+            "Validation checks 4 dimensions: citation, temporal, contradiction, pattern",
+            vec!["validation"],
+        ),
+        make_memory(
+            "mig-20",
+            "Consolidation runs every 6 hours or on token pressure",
+            vec!["consolidation", "scheduling"],
+        ),
     ];
 
     for m in &memories {

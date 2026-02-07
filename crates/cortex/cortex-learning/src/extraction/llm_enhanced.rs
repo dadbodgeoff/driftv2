@@ -39,11 +39,7 @@ mod tests {
     #[test]
     fn falls_back_to_rule_based() {
         let extractor = NoOpExtractor;
-        let result = extract_with_fallback(
-            "Don't use global state",
-            "architecture",
-            &extractor,
-        );
+        let result = extract_with_fallback("Don't use global state", "architecture", &extractor);
         assert!(result.is_some());
         assert!(result.unwrap().starts_with("Avoid:"));
     }

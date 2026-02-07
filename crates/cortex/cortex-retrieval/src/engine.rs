@@ -61,7 +61,8 @@ impl<'a> RetrievalEngine<'a> {
 
         // Step 3: Hybrid search (FTS5 + vector + entity → RRF).
         let searcher = HybridSearcher::new(self.storage, self.config.rrf_k);
-        let candidates = searcher.search(&search_query, query_embedding, self.config.rerank_top_k * 2)?;
+        let candidates =
+            searcher.search(&search_query, query_embedding, self.config.rerank_top_k * 2)?;
 
         if candidates.is_empty() {
             debug!("no candidates found");
@@ -76,6 +77,7 @@ impl<'a> RetrievalEngine<'a> {
         // Step 4: Rank (8-factor scorer → rerank → dedup).
         let ranked = self.ranking.rank(
             &candidates,
+            &search_query,
             intent,
             &context.active_files,
             &context.sent_ids,

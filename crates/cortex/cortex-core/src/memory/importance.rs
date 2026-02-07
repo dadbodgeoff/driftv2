@@ -1,7 +1,9 @@
 use serde::{Deserialize, Serialize};
+use ts_rs::TS;
 
 /// Memory importance level. Affects decay rate, compression priority, and retrieval ranking.
-#[derive(Debug, Clone, Copy, Default, PartialEq, Eq, Hash, Serialize, Deserialize)]
+#[derive(Debug, Clone, Copy, Default, PartialEq, Eq, Hash, Serialize, Deserialize, TS)]
+#[ts(export)]
 #[serde(rename_all = "lowercase")]
 pub enum Importance {
     Low,
@@ -42,5 +44,3 @@ impl Ord for Importance {
         rank(self).cmp(&rank(other))
     }
 }
-
-

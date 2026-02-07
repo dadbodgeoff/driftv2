@@ -27,8 +27,7 @@ pub trait ICausalStorage: Send + Sync {
     fn remove_edge(&self, source_id: &str, target_id: &str) -> CortexResult<()>;
 
     // --- Strength ---
-    fn update_strength(&self, source_id: &str, target_id: &str, strength: f64)
-        -> CortexResult<()>;
+    fn update_strength(&self, source_id: &str, target_id: &str, strength: f64) -> CortexResult<()>;
 
     // --- Evidence ---
     fn add_evidence(

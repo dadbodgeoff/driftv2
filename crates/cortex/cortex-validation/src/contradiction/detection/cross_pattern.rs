@@ -8,13 +8,32 @@ use cortex_core::models::{Contradiction, ContradictionType, DetectionStrategy};
 
 /// Opposing sentiment indicators.
 const POSITIVE_INDICATORS: &[&str] = &[
-    "good", "recommended", "prefer", "use", "adopt", "enable", "best practice",
-    "should", "correct", "proper", "ideal", "effective",
+    "good",
+    "recommended",
+    "prefer",
+    "use",
+    "adopt",
+    "enable",
+    "best practice",
+    "should",
+    "correct",
+    "proper",
+    "ideal",
+    "effective",
 ];
 
 const NEGATIVE_INDICATORS: &[&str] = &[
-    "bad", "avoid", "don't", "disable", "anti-pattern", "deprecated",
-    "shouldn't", "incorrect", "improper", "harmful", "ineffective",
+    "bad",
+    "avoid",
+    "don't",
+    "disable",
+    "anti-pattern",
+    "deprecated",
+    "shouldn't",
+    "incorrect",
+    "improper",
+    "harmful",
+    "ineffective",
 ];
 
 /// Detect cross-pattern contradictions.

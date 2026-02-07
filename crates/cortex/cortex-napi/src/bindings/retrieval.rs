@@ -44,9 +44,10 @@ pub fn cortex_retrieval_search(
     };
 
     // Try to get a query embedding for hybrid search.
-    let mut embeddings = rt.embeddings.lock().map_err(|e| {
-        napi::Error::from_reason(format!("Embedding lock poisoned: {e}"))
-    })?;
+    let mut embeddings = rt
+        .embeddings
+        .lock()
+        .map_err(|e| napi::Error::from_reason(format!("Embedding lock poisoned: {e}")))?;
     let query_embedding = embeddings.embed_query_for_search(&query).ok();
 
     let engine = RetrievalEngine::new(&rt.storage, &rt.compression, rt.config.retrieval.clone());

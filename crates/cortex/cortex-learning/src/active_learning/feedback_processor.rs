@@ -64,8 +64,8 @@ pub fn process_feedback(memory: &BaseMemory, feedback: &Feedback) -> FeedbackRes
 mod tests {
     use super::*;
     use chrono::Utc;
-    use cortex_core::memory::*;
     use cortex_core::memory::types::InsightContent;
+    use cortex_core::memory::*;
 
     fn make_memory(confidence: f64) -> BaseMemory {
         let content = TypedContent::Insight(InsightContent {
@@ -92,7 +92,7 @@ mod tests {
             archived: false,
             superseded_by: None,
             supersedes: None,
-            content_hash: BaseMemory::compute_content_hash(&content),
+            content_hash: BaseMemory::compute_content_hash(&content).unwrap(),
         }
     }
 

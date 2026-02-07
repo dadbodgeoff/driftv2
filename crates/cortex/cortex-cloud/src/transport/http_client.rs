@@ -86,10 +86,7 @@ impl HttpClient {
     }
 
     /// GET a resource with retry and backoff.
-    pub fn get<Resp: DeserializeOwned>(
-        &self,
-        path: &str,
-    ) -> CortexResult<CloudResponse<Resp>> {
+    pub fn get<Resp: DeserializeOwned>(&self, path: &str) -> CortexResult<CloudResponse<Resp>> {
         let _url = format!("{}{}", self.config.base_url, path);
 
         #[cfg(feature = "cloud")]

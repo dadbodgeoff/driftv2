@@ -4,4 +4,4 @@ pub mod throttle;
 pub mod triggers;
 
 pub use throttle::{Throttle, ThrottleConfig};
-pub use triggers::{TriggerReason, TriggerSignals, evaluate_triggers};
+pub use triggers::{evaluate_triggers, TriggerReason, TriggerSignals};

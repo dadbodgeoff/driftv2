@@ -56,8 +56,8 @@ pub fn select_candidates<'a>(
 mod tests {
     use super::*;
     use chrono::Utc;
-    use cortex_core::memory::*;
     use cortex_core::memory::types::InsightContent;
+    use cortex_core::memory::*;
 
     fn make_memory(confidence: f64, importance: Importance) -> BaseMemory {
         let content = TypedContent::Insight(InsightContent {
@@ -84,7 +84,7 @@ mod tests {
             archived: false,
             superseded_by: None,
             supersedes: None,
-            content_hash: BaseMemory::compute_content_hash(&content),
+            content_hash: BaseMemory::compute_content_hash(&content).unwrap(),
         }
     }
 
@@ -92,8 +92,8 @@ mod tests {
     fn selects_low_confidence_high_importance() {
         let memories = vec![
             make_memory(0.3, Importance::High),   // should be selected first
-            make_memory(0.9, Importance::Low),     // high confidence, low importance
-            make_memory(0.2, Importance::Normal),  // low confidence
+            make_memory(0.9, Importance::Low),    // high confidence, low importance
+            make_memory(0.2, Importance::Normal), // low confidence
         ];
         let criteria = SelectionCriteria::default();
         let candidates = select_candidates(&memories, &criteria);

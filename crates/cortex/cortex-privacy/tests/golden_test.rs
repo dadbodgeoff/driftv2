@@ -43,7 +43,9 @@ fn golden_pii_samples() {
                 assert!(
                     result.text.contains(ph),
                     "Sample '{}': expected '{}' in sanitized output, got: {}",
-                    id, ph, result.text
+                    id,
+                    ph,
+                    result.text
                 );
             }
         }
@@ -103,7 +105,8 @@ fn golden_secret_samples() {
             assert!(
                 result.text.contains('[') && result.text.contains(']'),
                 "Secret '{}': detected but no placeholder in output: {}",
-                id, result.text
+                id,
+                result.text
             );
         }
         // Some fixture tokens may not match the engine's exact regex

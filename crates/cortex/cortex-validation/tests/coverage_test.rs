@@ -3,8 +3,9 @@
 //! Focuses on: contradiction detection strategies, propagation, consensus,
 //! healing modules, engine validate_with_context, dimension edge cases.
 
-use cortex_core::memory::*;
+use chrono::{Duration, Utc};
 use cortex_core::memory::links::FileLink;
+use cortex_core::memory::*;
 use cortex_core::models::{ContradictionType, HealingActionType};
 use cortex_core::traits::IValidator;
 use cortex_validation::contradiction::consensus;
@@ -13,7 +14,6 @@ use cortex_validation::contradiction::ContradictionDetector;
 use cortex_validation::dimensions::{citation, pattern_alignment, temporal};
 use cortex_validation::engine::{ValidationConfig, ValidationContext, ValidationEngine};
 use cortex_validation::healing::{archival, confidence_adjust, flagging};
-use chrono::{Duration, Utc};
 
 // ─── Helper ──────────────────────────────────────────────────────────────────
 
@@ -135,9 +135,10 @@ fn citation_rename_detected() {
         }
     };
     let result = citation::validate(&mem, &no_files, &rename_detector);
-    assert!(result.healing_actions.iter().any(|a| {
-        a.action_type == HealingActionType::CitationUpdate
-    }));
+    assert!(result
+        .healing_actions
+        .iter()
+        .any(|a| { a.action_type == HealingActionType::CitationUpdate }));
 }
 
 // ─── Pattern Alignment ───────────────────────────────────────────────────────
@@ -175,8 +176,16 @@ fn contradiction_detector_single_memory() {
 #[test]
 fn contradiction_detector_detects_opposing_statements() {
     let detector = ContradictionDetector::new();
-    let a = make_memory("cd3", "Always use prepared statements for SQL", MemoryType::Tribal);
-    let b = make_memory("cd4", "Never use prepared statements for SQL", MemoryType::Tribal);
+    let a = make_memory(
+        "cd3",
+        "Always use prepared statements for SQL",
+        MemoryType::Tribal,
+    );
+    let b = make_memory(
+        "cd4",
+        "Never use prepared statements for SQL",
+        MemoryType::Tribal,
+    );
     let memories = vec![a, b];
     let contradictions = detector.detect(&memories, None);
     assert!(!contradictions.is_empty());
@@ -211,12 +220,8 @@ fn propagation_base_delta_values() {
 
 #[test]
 fn propagation_no_edges_only_sources() {
-    let adjustments = propagation::propagate(
-        &["m1".to_string()],
-        ContradictionType::Direct,
-        &[],
-        None,
-    );
+    let adjustments =
+        propagation::propagate(&["m1".to_string()], ContradictionType::Direct, &[], None);
     assert_eq!(adjustments.len(), 1);
     assert_eq!(adjustments[0].memory_id, "m1");
     assert_eq!(adjustments[0].depth, 0);
@@ -250,8 +255,16 @@ fn propagation_with_edges_ripples() {
     // Should have adjustments for m1, m2, and m3.
     assert!(adjustments.len() >= 2);
     // m2 should have a smaller delta than m1.
-    let m1_delta = adjustments.iter().find(|a| a.memory_id == "m1").unwrap().delta;
-    let m2_delta = adjustments.iter().find(|a| a.memory_id == "m2").unwrap().delta;
+    let m1_delta = adjustments
+        .iter()
+        .find(|a| a.memory_id == "m1")
+        .unwrap()
+        .delta;
+    let m2_delta = adjustments
+        .iter()
+        .find(|a| a.memory_id == "m2")
+        .unwrap()
+        .delta;
     assert!(m2_delta.abs() < m1_delta.abs());
 }
 
@@ -452,8 +465,8 @@ fn temporal_supersession_different_types_no_match() {
 
 #[test]
 fn temporal_supersession_same_tags_triggers() {
-    use cortex_validation::contradiction::detection::temporal_supersession;
     use chrono::Duration;
+    use cortex_validation::contradiction::detection::temporal_supersession;
     let mut a = make_memory("ts3", "old auth pattern", MemoryType::Semantic);
     a.valid_time = Utc::now() - Duration::days(30);
     a.tags = vec!["auth".to_string(), "security".to_string()];
@@ -468,8 +481,8 @@ fn temporal_supersession_same_tags_triggers() {
 
 #[test]
 fn temporal_supersession_explicit_supersedes() {
-    use cortex_validation::contradiction::detection::temporal_supersession;
     use chrono::Duration;
+    use cortex_validation::contradiction::detection::temporal_supersession;
     let mut a = make_memory("ts5", "old version", MemoryType::Semantic);
     a.valid_time = Utc::now() - Duration::days(10);
     a.tags = vec!["auth".to_string()];
@@ -487,8 +500,8 @@ fn temporal_supersession_explicit_supersedes() {
 
 #[test]
 fn temporal_supersession_via_embedding_similarity() {
-    use cortex_validation::contradiction::detection::temporal_supersession;
     use chrono::Duration;
+    use cortex_validation::contradiction::detection::temporal_supersession;
     let mut a = make_memory("ts7", "old approach", MemoryType::Semantic);
     a.valid_time = Utc::now() - Duration::days(5);
 
@@ -505,10 +518,16 @@ fn temporal_supersession_via_embedding_similarity() {
 #[test]
 fn feedback_detection_negative_feedback() {
     use cortex_validation::contradiction::detection::feedback;
-    let a = make_memory("fb1", "Use singleton pattern for database connections", MemoryType::Tribal);
+    let a = make_memory(
+        "fb1",
+        "Use singleton pattern for database connections",
+        MemoryType::Tribal,
+    );
     let mut b = make_memory("fb2", "singleton pattern feedback", MemoryType::Feedback);
     b.content = TypedContent::Feedback(cortex_core::memory::types::FeedbackContent {
-        feedback: "This is wrong and outdated, singleton is an anti-pattern for database connections".to_string(),
+        feedback:
+            "This is wrong and outdated, singleton is an anti-pattern for database connections"
+                .to_string(),
         source: "user".to_string(),
         category: "correction".to_string(),
     });
@@ -556,15 +575,23 @@ fn cross_pattern_no_shared_patterns() {
 
 #[test]
 fn cross_pattern_shared_pattern_opposing_sentiment() {
-    use cortex_validation::contradiction::detection::cross_pattern;
     use cortex_core::memory::links::PatternLink;
-    let mut a = make_memory("cp3", "Singleton is a good recommended practice", MemoryType::PatternRationale);
+    use cortex_validation::contradiction::detection::cross_pattern;
+    let mut a = make_memory(
+        "cp3",
+        "Singleton is a good recommended practice",
+        MemoryType::PatternRationale,
+    );
     a.linked_patterns = vec![PatternLink {
         pattern_id: "pat-singleton".to_string(),
         pattern_name: "Singleton".to_string(),
     }];
 
-    let mut b = make_memory("cp4", "Singleton is a bad anti-pattern to avoid", MemoryType::PatternRationale);
+    let mut b = make_memory(
+        "cp4",
+        "Singleton is a bad anti-pattern to avoid",
+        MemoryType::PatternRationale,
+    );
     b.linked_patterns = vec![PatternLink {
         pattern_id: "pat-singleton".to_string(),
         pattern_name: "Singleton".to_string(),
@@ -643,8 +670,16 @@ fn embedding_refresh_no_change() {
 #[test]
 fn detector_detect_and_propagate() {
     let detector = ContradictionDetector::new();
-    let a = make_memory("dp1", "Always use prepared statements for SQL", MemoryType::Tribal);
-    let b = make_memory("dp2", "Never use prepared statements for SQL", MemoryType::Tribal);
+    let a = make_memory(
+        "dp1",
+        "Always use prepared statements for SQL",
+        MemoryType::Tribal,
+    );
+    let b = make_memory(
+        "dp2",
+        "Never use prepared statements for SQL",
+        MemoryType::Tribal,
+    );
     let memories = vec![a, b];
     let edges = vec![];
     let (contradictions, adjustments) = detector.detect_and_propagate(&memories, &edges, None);

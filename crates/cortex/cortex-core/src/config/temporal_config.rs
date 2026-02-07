@@ -42,7 +42,7 @@ impl Default for TemporalConfig {
             snapshot_event_threshold: 50,
             snapshot_periodic_interval_hours: 168, // weekly
             snapshot_retention_full_days: 180,     // 6 months
-            snapshot_retention_monthly_days: 730,   // 2 years
+            snapshot_retention_monthly_days: 730,  // 2 years
             event_compaction_age_days: 180,
             drift_hourly_enabled: true,
             drift_daily_enabled: true,

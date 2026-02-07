@@ -5,7 +5,7 @@ use cortex_causal::graph::stable_graph::{CausalEdgeWeight, EdgeEvidence, Indexed
 use cortex_causal::narrative::NarrativeGenerator;
 use cortex_causal::relations::CausalRelation;
 use cortex_causal::traversal::{TraversalConfig, TraversalEngine};
-use cortex_causal::{CausalEngine};
+use cortex_causal::CausalEngine;
 use cortex_core::memory::{BaseMemory, Confidence, Importance, MemoryType, TypedContent};
 
 /// Helper to create a test memory with minimal fields.
@@ -35,7 +35,7 @@ fn make_memory(id: &str, tags: Vec<&str>) -> BaseMemory {
         archived: false,
         superseded_by: None,
         supersedes: None,
-        content_hash: BaseMemory::compute_content_hash(&content),
+        content_hash: BaseMemory::compute_content_hash(&content).unwrap(),
     }
 }
 
@@ -187,8 +187,7 @@ fn t7_caus_04_bidirectional_is_union() {
     let bidir_ids: std::collections::HashSet<_> =
         bidir.nodes.iter().map(|n| &n.memory_id).collect();
 
-    let union: std::collections::HashSet<_> =
-        origin_ids.union(&effect_ids).copied().collect();
+    let union: std::collections::HashSet<_> = origin_ids.union(&effect_ids).copied().collect();
 
     assert_eq!(
         bidir_ids, union,
@@ -225,10 +224,7 @@ fn t7_caus_05_narrative_generates_text() {
         !narrative.sections.is_empty(),
         "Should have at least one section"
     );
-    assert!(
-        !narrative.key_points.is_empty(),
-        "Should have key points"
-    );
+    assert!(!narrative.key_points.is_empty(), "Should have key points");
     assert!(narrative.confidence > 0.0, "Confidence should be > 0");
 
     // Check sections have content.

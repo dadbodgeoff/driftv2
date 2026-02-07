@@ -48,7 +48,6 @@ pub fn cortex_configure(config_toml: Option<String>) -> napi::Result<serde_json:
             "Hot configuration reload not supported. Call shutdown() then initialize() with new config.",
         ));
     }
-    serde_json::to_value(&rt.config).map_err(|e| {
-        napi::Error::from_reason(format!("Failed to serialize config: {e}"))
-    })
+    serde_json::to_value(&rt.config)
+        .map_err(|e| napi::Error::from_reason(format!("Failed to serialize config: {e}")))
 }

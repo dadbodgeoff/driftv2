@@ -6,10 +6,14 @@ use crate::relations::CausalRelation;
 /// Templates use `{source}` and `{target}` as placeholders.
 pub fn template_for(relation: CausalRelation) -> &'static str {
     match relation {
-        CausalRelation::Caused => "{source} was caused by {target} because of direct causal evidence.",
+        CausalRelation::Caused => {
+            "{source} was caused by {target} because of direct causal evidence."
+        }
         CausalRelation::Enabled => "{target} enabled {source} by providing necessary conditions.",
         CausalRelation::Prevented => "{target} prevented {source} from occurring.",
-        CausalRelation::Contradicts => "Warning: {source} contradicts {target}. These memories are in conflict.",
+        CausalRelation::Contradicts => {
+            "Warning: {source} contradicts {target}. These memories are in conflict."
+        }
         CausalRelation::Supersedes => "{source} supersedes {target} as a newer version.",
         CausalRelation::Supports => "{target} supports {source} with corroborating evidence.",
         CausalRelation::DerivedFrom => "{source} was derived from {target} through transformation.",

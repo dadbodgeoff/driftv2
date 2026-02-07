@@ -41,9 +41,7 @@ pub fn default_weight(intent: Intent, memory_type: MemoryType) -> f64 {
         (Intent::SecurityAudit, MemoryType::ConstraintOverride | MemoryType::Tribal) => 2.0,
 
         // UnderstandCode boosts patterns and decisions
-        (Intent::UnderstandCode, MemoryType::PatternRationale | MemoryType::DecisionContext) => {
-            2.0
-        }
+        (Intent::UnderstandCode, MemoryType::PatternRationale | MemoryType::DecisionContext) => 2.0,
         (Intent::UnderstandCode, MemoryType::Tribal) => 1.5,
 
         // ReviewCode boosts code smells and patterns

@@ -77,10 +77,7 @@ pub fn run_migrations(conn: &Connection) -> CortexResult<u32> {
         return Ok(0);
     }
 
-    info!(
-        "running migrations: v{} → v{}",
-        current, LATEST_VERSION
-    );
+    info!("running migrations: v{} → v{}", current, LATEST_VERSION);
 
     for &(version, name, migrate_fn) in &MIGRATIONS {
         if version <= current {
@@ -100,9 +97,7 @@ pub fn run_migrations(conn: &Connection) -> CortexResult<u32> {
                     "INSERT INTO schema_version (version) VALUES (?1)",
                     [version],
                 )
-                .map_err(|e| {
-                    to_storage_err(format!("record version v{version:03}: {e}"))
-                })?;
+                .map_err(|e| to_storage_err(format!("record version v{version:03}: {e}")))?;
 
                 conn.execute_batch("COMMIT")
                     .map_err(|e| to_storage_err(format!("commit v{version:03}: {e}")))?;

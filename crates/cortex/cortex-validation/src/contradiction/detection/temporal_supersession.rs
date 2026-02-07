@@ -39,10 +39,12 @@ pub fn detect(
 
     // Check if they reference the same files.
     let files_match = !older.linked_files.is_empty()
-        && older
-            .linked_files
-            .iter()
-            .any(|f| newer.linked_files.iter().any(|nf| nf.file_path == f.file_path));
+        && older.linked_files.iter().any(|f| {
+            newer
+                .linked_files
+                .iter()
+                .any(|nf| nf.file_path == f.file_path)
+        });
 
     if tags_match || embeddings_match || files_match {
         // Check if the newer one explicitly supersedes.

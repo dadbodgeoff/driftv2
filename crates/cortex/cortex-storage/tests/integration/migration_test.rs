@@ -7,17 +7,19 @@ fn test_all_migrations_run_on_fresh_db() {
     let engine = StorageEngine::open_in_memory().unwrap();
 
     // Verify schema version is 12 by checking we can query the version table.
-    engine.pool().writer.with_conn_sync(|conn| {
-        let version: u32 = conn
-            .query_row(
-                "SELECT MAX(version) FROM schema_version",
-                [],
-                |row| row.get(0),
-            )
-            .unwrap();
-        assert_eq!(version, 14, "schema should be at version 14");
-        Ok(())
-    }).unwrap();
+    engine
+        .pool()
+        .writer
+        .with_conn_sync(|conn| {
+            let version: u32 = conn
+                .query_row("SELECT MAX(version) FROM schema_version", [], |row| {
+                    row.get(0)
+                })
+                .unwrap();
+            assert_eq!(version, 14, "schema should be at version 14");
+            Ok(())
+        })
+        .unwrap();
 }
 
 #[test]
@@ -72,19 +74,23 @@ fn test_all_tables_exist() {
         "materialized_views",
     ];
 
-    engine.pool().writer.with_conn_sync(|conn| {
-        for table in &expected_tables {
-            let exists: bool = conn
-                .prepare(&format!(
-                    "SELECT 1 FROM sqlite_master WHERE type='table' AND name='{table}'"
-                ))
-                .unwrap()
-                .exists([])
-                .unwrap();
-            assert!(exists, "table '{table}' should exist");
-        }
-        Ok(())
-    }).unwrap();
+    engine
+        .pool()
+        .writer
+        .with_conn_sync(|conn| {
+            for table in &expected_tables {
+                let exists: bool = conn
+                    .prepare(&format!(
+                        "SELECT 1 FROM sqlite_master WHERE type='table' AND name='{table}'"
+                    ))
+                    .unwrap()
+                    .exists([])
+                    .unwrap();
+                assert!(exists, "table '{table}' should exist");
+            }
+            Ok(())
+        })
+        .unwrap();
 }
 
 #[test]
@@ -93,11 +99,15 @@ fn test_wal_mode_active() {
     let db_path = dir.path().join("wal_test.db");
     let engine = StorageEngine::open(&db_path).unwrap();
 
-    engine.pool().writer.with_conn_sync(|conn| {
-        let mode: String = conn
-            .pragma_query_value(None, "journal_mode", |row| row.get(0))
-            .unwrap();
-        assert_eq!(mode.to_lowercase(), "wal", "WAL mode should be active");
-        Ok(())
-    }).unwrap();
+    engine
+        .pool()
+        .writer
+        .with_conn_sync(|conn| {
+            let mode: String = conn
+                .pragma_query_value(None, "journal_mode", |row| row.get(0))
+                .unwrap();
+            assert_eq!(mode.to_lowercase(), "wal", "WAL mode should be active");
+            Ok(())
+        })
+        .unwrap();
 }

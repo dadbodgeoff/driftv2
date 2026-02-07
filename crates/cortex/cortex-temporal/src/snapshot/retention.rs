@@ -24,7 +24,8 @@ pub async fn apply_retention_policy(
     config: &TemporalConfig,
 ) -> CortexResult<RetentionResult> {
     let now = Utc::now();
-    let full_cutoff = (now - Duration::days(config.snapshot_retention_full_days as i64)).to_rfc3339();
+    let full_cutoff =
+        (now - Duration::days(config.snapshot_retention_full_days as i64)).to_rfc3339();
     let monthly_cutoff =
         (now - Duration::days(config.snapshot_retention_monthly_days as i64)).to_rfc3339();
 
@@ -34,10 +35,12 @@ pub async fn apply_retention_policy(
     writer
         .with_conn(move |conn| {
             // Delete very old snapshots entirely
-            let deleted_old = snapshot_ops::delete_old_snapshots(conn, &monthly_cutoff_clone, false)?;
+            let deleted_old =
+                snapshot_ops::delete_old_snapshots(conn, &monthly_cutoff_clone, false)?;
 
             // For the middle range, keep only monthly
-            let deleted_monthly = snapshot_ops::delete_old_snapshots(conn, &full_cutoff_clone, true)?;
+            let deleted_monthly =
+                snapshot_ops::delete_old_snapshots(conn, &full_cutoff_clone, true)?;
 
             Ok(RetentionResult {
                 snapshots_deleted: deleted_old + deleted_monthly,

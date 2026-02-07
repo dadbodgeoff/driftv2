@@ -1,8 +1,8 @@
 use chrono::Utc;
 use criterion::{criterion_group, criterion_main, Criterion};
 
-use cortex_core::memory::*;
 use cortex_core::memory::types::*;
+use cortex_core::memory::*;
 use cortex_core::traits::IMemoryStorage;
 use cortex_storage::StorageEngine;
 
@@ -107,5 +107,11 @@ fn bench_bulk_insert(c: &mut Criterion) {
     });
 }
 
-criterion_group!(benches, bench_insert, bench_get, bench_fts5_search, bench_bulk_insert);
+criterion_group!(
+    benches,
+    bench_insert,
+    bench_get,
+    bench_fts5_search,
+    bench_bulk_insert
+);
 criterion_main!(benches);

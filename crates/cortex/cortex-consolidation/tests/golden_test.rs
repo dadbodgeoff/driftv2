@@ -10,14 +10,14 @@
 //! requirements.
 
 use chrono::{DateTime, Duration, Utc};
-use cortex_core::errors::CortexResult;
-use cortex_core::memory::*;
-use cortex_core::memory::types::EpisodicContent;
-use cortex_core::traits::{IConsolidator, IEmbeddingProvider};
 use cortex_consolidation::engine::ConsolidationEngine;
 use cortex_consolidation::pipeline;
+use cortex_core::errors::CortexResult;
+use cortex_core::memory::types::EpisodicContent;
+use cortex_core::memory::*;
+use cortex_core::traits::{IConsolidator, IEmbeddingProvider};
 use serde_json::Value;
-use test_fixtures::{load_fixture_value, list_fixtures};
+use test_fixtures::{list_fixtures, load_fixture_value};
 
 // ---------------------------------------------------------------------------
 // Deterministic embedder for golden tests
@@ -35,11 +35,20 @@ impl IEmbeddingProvider for GoldenEmbedder {
         Ok(deterministic_embedding(text, 64))
     }
     fn embed_batch(&self, texts: &[String]) -> CortexResult<Vec<Vec<f32>>> {
-        Ok(texts.iter().map(|t| deterministic_embedding(t, 64)).collect())
+        Ok(texts
+            .iter()
+            .map(|t| deterministic_embedding(t, 64))
+            .collect())
     }
-    fn dimensions(&self) -> usize { 64 }
-    fn name(&self) -> &str { "golden-test" }
-    fn is_available(&self) -> bool { true }
+    fn dimensions(&self) -> usize {
+        64
+    }
+    fn name(&self) -> &str {
+        "golden-test"
+    }
+    fn is_available(&self) -> bool {
+        true
+    }
 }
 
 /// Produces embeddings with a strong shared component plus a small text-specific
@@ -47,9 +56,10 @@ impl IEmbeddingProvider for GoldenEmbedder {
 /// still allowing the recall gate to distinguish them.
 fn deterministic_embedding(text: &str, dims: usize) -> Vec<f32> {
     let mut vec = vec![0.5f32; dims];
-    let hash = text.as_bytes().iter().fold(0u64, |acc, &b| {
-        acc.wrapping_mul(31).wrapping_add(b as u64)
-    });
+    let hash = text
+        .as_bytes()
+        .iter()
+        .fold(0u64, |acc, &b| acc.wrapping_mul(31).wrapping_add(b as u64));
     for i in 0..dims {
         let noise = ((hash.wrapping_add(i as u64) % 1000) as f32) / 100_000.0;
         vec[i] += noise;
@@ -94,7 +104,11 @@ fn parse_memories_from_fixture(fixture: &Value) -> Vec<BaseMemory> {
 
             let tags: Vec<String> = m["tags"]
                 .as_array()
-                .map(|arr| arr.iter().filter_map(|v| v.as_str().map(String::from)).collect())
+                .map(|arr| {
+                    arr.iter()
+                        .filter_map(|v| v.as_str().map(String::from))
+                        .collect()
+                })
                 .unwrap_or_default();
 
             let content = TypedContent::Episodic(EpisodicContent {
@@ -128,7 +142,7 @@ fn parse_memories_from_fixture(fixture: &Value) -> Vec<BaseMemory> {
                 archived: false,
                 superseded_by: None,
                 supersedes: None,
-                content_hash: BaseMemory::compute_content_hash(&content),
+                content_hash: BaseMemory::compute_content_hash(&content).unwrap(),
             }
         })
         .collect()
@@ -154,7 +168,7 @@ fn run_pipeline_on_cluster(memories: &[BaseMemory]) -> (Vec<String>, Vec<String>
 
     // Phase 4: Abstraction.
     let abstraction = pipeline::phase4_abstraction::abstract_cluster(&refs, &embeddings);
-    let new_memory = pipeline::phase4_abstraction::build_semantic_memory(&abstraction);
+    let new_memory = pipeline::phase4_abstraction::build_semantic_memory(&abstraction).unwrap();
 
     // Phase 5: Integration (no existing semantics).
     let new_emb = deterministic_embedding(&new_memory.summary, 64);
@@ -338,7 +352,7 @@ fn golden_summary_generation() {
         .collect();
 
     let result = pipeline::phase4_abstraction::abstract_cluster(&refs, &embeddings);
-    let semantic = pipeline::phase4_abstraction::build_semantic_memory(&result);
+    let semantic = pipeline::phase4_abstraction::build_semantic_memory(&result).unwrap();
     let expected = &fixture["expected_output"]["semantic_memory"];
 
     let min_len = expected["knowledge_min_length"].as_u64().unwrap_or(0) as usize;
@@ -359,7 +373,11 @@ fn golden_summary_generation() {
     let has_any = keywords
         .iter()
         .any(|kw| content_str.to_lowercase().contains(&kw.to_lowercase()));
-    assert!(has_any, "Expected at least one of {:?} in summary", keywords);
+    assert!(
+        has_any,
+        "Expected at least one of {:?} in summary",
+        keywords
+    );
 }
 
 #[test]
@@ -374,7 +392,7 @@ fn golden_metadata_union() {
         .collect();
 
     let result = pipeline::phase4_abstraction::abstract_cluster(&refs, &embeddings);
-    let semantic = pipeline::phase4_abstraction::build_semantic_memory(&result);
+    let semantic = pipeline::phase4_abstraction::build_semantic_memory(&result).unwrap();
 
     let input_tags: std::collections::HashSet<&str> = memories
         .iter()
@@ -451,7 +469,13 @@ fn golden_all_10_consolidation_files_load() {
     for file in &files {
         let path = file.strip_prefix(test_fixtures::fixture_path("")).unwrap();
         let fixture = load_fixture_value(path.to_str().unwrap());
-        assert!(fixture["description"].is_string(), "Each fixture must have a description");
-        assert!(fixture["input"]["memories"].is_array(), "Each fixture must have input.memories");
+        assert!(
+            fixture["description"].is_string(),
+            "Each fixture must have a description"
+        );
+        assert!(
+            fixture["input"]["memories"].is_array(),
+            "Each fixture must have input.memories"
+        );
     }
 }

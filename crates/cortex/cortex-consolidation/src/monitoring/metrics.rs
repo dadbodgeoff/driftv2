@@ -44,8 +44,7 @@ pub fn assess_quality(metrics: &ConsolidationMetrics) -> QualityAssessment {
         ));
     }
 
-    let compression_ok =
-        metrics.compression_ratio >= MIN_COMPRESSION_RATIO;
+    let compression_ok = metrics.compression_ratio >= MIN_COMPRESSION_RATIO;
     if !compression_ok {
         issues.push(format!(
             "compression ratio {:.1} below minimum {:.1}",

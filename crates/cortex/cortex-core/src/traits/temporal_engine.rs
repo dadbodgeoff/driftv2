@@ -7,8 +7,8 @@ use serde::{Deserialize, Serialize};
 use crate::errors::CortexResult;
 use crate::memory::BaseMemory;
 use crate::models::{
-    AsOfQuery, DecisionReplay, DecisionReplayQuery, MemoryEvent, TemporalCausalQuery,
-    TemporalDiff, TemporalDiffQuery, TemporalRangeQuery,
+    AsOfQuery, DecisionReplay, DecisionReplayQuery, MemoryEvent, TemporalCausalQuery, TemporalDiff,
+    TemporalDiffQuery, TemporalRangeQuery,
 };
 
 /// A node discovered during temporal causal traversal.
@@ -55,10 +55,7 @@ pub trait ITemporalEngine: Send + Sync {
         memory_id: &str,
         as_of: DateTime<Utc>,
     ) -> CortexResult<Option<BaseMemory>>;
-    async fn reconstruct_all_at(
-        &self,
-        as_of: DateTime<Utc>,
-    ) -> CortexResult<Vec<BaseMemory>>;
+    async fn reconstruct_all_at(&self, as_of: DateTime<Utc>) -> CortexResult<Vec<BaseMemory>>;
 
     // Temporal queries (TR3 - Phase B)
     async fn query_as_of(&self, query: &AsOfQuery) -> CortexResult<Vec<BaseMemory>>;
@@ -66,10 +63,7 @@ pub trait ITemporalEngine: Send + Sync {
     async fn query_diff(&self, query: &TemporalDiffQuery) -> CortexResult<TemporalDiff>;
 
     // Decision replay + temporal causal (TR3 - Phase C)
-    async fn replay_decision(
-        &self,
-        query: &DecisionReplayQuery,
-    ) -> CortexResult<DecisionReplay>;
+    async fn replay_decision(&self, query: &DecisionReplayQuery) -> CortexResult<DecisionReplay>;
     async fn query_temporal_causal(
         &self,
         query: &TemporalCausalQuery,

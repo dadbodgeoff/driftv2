@@ -32,7 +32,7 @@ fn make_prop_memory() -> BaseMemory {
         archived: false,
         superseded_by: None,
         supersedes: None,
-        content_hash: BaseMemory::compute_content_hash(&content),
+        content_hash: BaseMemory::compute_content_hash(&content).unwrap(),
     }
 }
 

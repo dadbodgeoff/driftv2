@@ -1,8 +1,8 @@
 //! Integration test: version tracking, rollback, retention.
 
 use chrono::Utc;
-use cortex_core::memory::*;
 use cortex_core::memory::types::*;
+use cortex_core::memory::*;
 use cortex_core::traits::IMemoryStorage;
 use cortex_storage::StorageEngine;
 
@@ -46,12 +46,16 @@ fn test_version_tracking_on_update() {
     engine.update(&memory).unwrap();
 
     // Check version history.
-    engine.pool().writer.with_conn_sync(|conn| {
-        let history = cortex_storage::versioning::query::get_history(conn, "ver-1")?;
-        assert!(!history.is_empty(), "should have at least 1 version");
-        assert_eq!(history[0].summary, "original summary");
-        Ok(())
-    }).unwrap();
+    engine
+        .pool()
+        .writer
+        .with_conn_sync(|conn| {
+            let history = cortex_storage::versioning::query::get_history(conn, "ver-1")?;
+            assert!(!history.is_empty(), "should have at least 1 version");
+            assert_eq!(history[0].summary, "original summary");
+            Ok(())
+        })
+        .unwrap();
 }
 
 #[test]
@@ -68,9 +72,13 @@ fn test_version_rollback() {
     engine.update(&memory).unwrap();
 
     // Rollback to version 1 (the original snapshot).
-    engine.pool().writer.with_conn_sync(|conn| {
-        cortex_storage::versioning::rollback::rollback_to_version(conn, "ver-rollback", 1)
-    }).unwrap();
+    engine
+        .pool()
+        .writer
+        .with_conn_sync(|conn| {
+            cortex_storage::versioning::rollback::rollback_to_version(conn, "ver-rollback", 1)
+        })
+        .unwrap();
 
     // Verify content was rolled back.
     let retrieved = engine.get("ver-rollback").unwrap().unwrap();
@@ -89,9 +97,16 @@ fn test_version_retention() {
         engine.update(&memory).unwrap();
     }
 
-    engine.pool().writer.with_conn_sync(|conn| {
-        let count = cortex_storage::queries::version_ops::version_count(conn, "ver-retention")?;
-        assert!(count <= 10, "should retain at most 10 versions, got {count}");
-        Ok(())
-    }).unwrap();
+    engine
+        .pool()
+        .writer
+        .with_conn_sync(|conn| {
+            let count = cortex_storage::queries::version_ops::version_count(conn, "ver-retention")?;
+            assert!(
+                count <= 10,
+                "should retain at most 10 versions, got {count}"
+            );
+            Ok(())
+        })
+        .unwrap();
 }

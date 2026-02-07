@@ -27,7 +27,11 @@ pub fn summarize(text: &str, num_sentences: usize) -> String {
     indexed.sort_by(|a, b| b.1.partial_cmp(&a.1).unwrap_or(std::cmp::Ordering::Equal));
 
     // Take top N, then re-sort by original position for coherent output.
-    let mut top: Vec<usize> = indexed.iter().take(num_sentences).map(|(i, _)| *i).collect();
+    let mut top: Vec<usize> = indexed
+        .iter()
+        .take(num_sentences)
+        .map(|(i, _)| *i)
+        .collect();
     top.sort();
 
     top.iter()
@@ -72,10 +76,7 @@ fn rank_sentences(sentences: &[String]) -> Vec<f64> {
                 if i == j {
                     continue;
                 }
-                let out_sum: f64 = (0..n)
-                    .filter(|&k| k != j)
-                    .map(|k| sim_matrix[j][k])
-                    .sum();
+                let out_sum: f64 = (0..n).filter(|&k| k != j).map(|k| sim_matrix[j][k]).sum();
                 if out_sum > f64::EPSILON {
                     sum += sim_matrix[j][i] * scores[j] / out_sum;
                 }

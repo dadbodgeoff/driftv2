@@ -27,7 +27,9 @@ impl L3PrecomputedCache {
     /// In production, this would memory-map a binary file containing
     /// `(content_hash, embedding)` pairs serialized contiguously.
     pub fn load(entries: HashMap<String, Vec<f32>>) -> Self {
-        Self { embeddings: entries }
+        Self {
+            embeddings: entries,
+        }
     }
 
     /// Look up a precomputed embedding by content hash.

@@ -4,8 +4,8 @@ use criterion::{criterion_group, criterion_main, Criterion};
 
 use chrono::{Duration, Utc};
 use cortex_core::errors::CortexResult;
-use cortex_core::memory::*;
 use cortex_core::memory::types::EpisodicContent;
+use cortex_core::memory::*;
 use cortex_core::traits::IEmbeddingProvider;
 
 use cortex_consolidation::pipeline::phase2_clustering;
@@ -22,9 +22,15 @@ impl IEmbeddingProvider for BenchEmbedder {
     fn embed_batch(&self, texts: &[String]) -> CortexResult<Vec<Vec<f32>>> {
         texts.iter().map(|t| self.embed(t)).collect()
     }
-    fn dimensions(&self) -> usize { 64 }
-    fn name(&self) -> &str { "bench" }
-    fn is_available(&self) -> bool { true }
+    fn dimensions(&self) -> usize {
+        64
+    }
+    fn name(&self) -> &str {
+        "bench"
+    }
+    fn is_available(&self) -> bool {
+        true
+    }
 }
 
 fn make_episodic(summary: &str) -> BaseMemory {
@@ -54,7 +60,7 @@ fn make_episodic(summary: &str) -> BaseMemory {
         archived: false,
         superseded_by: None,
         supersedes: None,
-        content_hash: BaseMemory::compute_content_hash(&content),
+        content_hash: BaseMemory::compute_content_hash(&content).unwrap(),
     }
 }
 

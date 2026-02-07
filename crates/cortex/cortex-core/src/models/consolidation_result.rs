@@ -1,9 +1,11 @@
 use serde::{Deserialize, Serialize};
+use ts_rs::TS;
 
 use super::consolidation_metrics::ConsolidationMetrics;
 
 /// Result of a consolidation operation.
-#[derive(Debug, Clone, Serialize, Deserialize)]
+#[derive(Debug, Clone, Serialize, Deserialize, TS)]
+#[ts(export)]
 pub struct ConsolidationResult {
     /// IDs of newly created consolidated memories.
     pub created: Vec<String>,

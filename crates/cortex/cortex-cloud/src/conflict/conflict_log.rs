@@ -76,6 +76,9 @@ impl ConflictLog {
 
     /// Count of unresolved conflicts.
     pub fn unresolved_count(&self) -> usize {
-        self.records.iter().filter(|r| r.resolved_at.is_none()).count()
+        self.records
+            .iter()
+            .filter(|r| r.resolved_at.is_none())
+            .count()
     }
 }

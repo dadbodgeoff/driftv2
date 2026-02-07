@@ -24,7 +24,12 @@ pub fn add_edge(conn: &Connection, edge: &CausalEdge) -> CortexResult<()> {
         "strength": edge.strength,
     });
     let _ = crate::temporal_events::emit_event(
-        conn, &edge.source_id, "relationship_added", &delta, "system", "causal_ops",
+        conn,
+        &edge.source_id,
+        "relationship_added",
+        &delta,
+        "system",
+        "causal_ops",
     );
 
     // Insert evidence.
@@ -79,7 +84,12 @@ pub fn remove_edge(conn: &Connection, source_id: &str, target_id: &str) -> Corte
         "target_id": target_id,
     });
     let _ = crate::temporal_events::emit_event(
-        conn, source_id, "relationship_removed", &delta, "system", "causal_ops",
+        conn,
+        source_id,
+        "relationship_removed",
+        &delta,
+        "system",
+        "causal_ops",
     );
 
     // Evidence is cascade-deleted.
@@ -112,7 +122,12 @@ pub fn update_strength(
         "new_strength": strength,
     });
     let _ = crate::temporal_events::emit_event(
-        conn, source_id, "strength_updated", &delta, "system", "causal_ops",
+        conn,
+        source_id,
+        "strength_updated",
+        &delta,
+        "system",
+        "causal_ops",
     );
 
     Ok(())

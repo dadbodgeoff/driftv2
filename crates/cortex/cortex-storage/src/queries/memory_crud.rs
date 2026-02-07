@@ -109,9 +109,7 @@ pub fn get_memory(conn: &Connection, id: &str) -> CortexResult<Option<BaseMemory
         .map_err(|e| to_storage_err(e.to_string()))?;
 
     let result = stmt
-        .query_row(params![id], |row| {
-            Ok(row_to_base_memory(row))
-        })
+        .query_row(params![id], |row| Ok(row_to_base_memory(row)))
         .optional()
         .map_err(|e| to_storage_err(e.to_string()))?;
 
@@ -190,15 +188,33 @@ pub fn update_memory(conn: &Connection, memory: &BaseMemory) -> CortexResult<()>
                 "new_content_hash": memory.content_hash,
             });
             let _ = crate::temporal_events::emit_event(
-                conn, &memory.id, "content_updated", &delta, "system", "memory_crud",
+                conn,
+                &memory.id,
+                "content_updated",
+                &delta,
+                "system",
+                "memory_crud",
             );
         }
         if old_mem.tags != memory.tags {
-            let added: Vec<_> = memory.tags.iter().filter(|t| !old_mem.tags.contains(t)).collect();
-            let removed: Vec<_> = old_mem.tags.iter().filter(|t| !memory.tags.contains(t)).collect();
+            let added: Vec<_> = memory
+                .tags
+                .iter()
+                .filter(|t| !old_mem.tags.contains(t))
+                .collect();
+            let removed: Vec<_> = old_mem
+                .tags
+                .iter()
+                .filter(|t| !memory.tags.contains(t))
+                .collect();
             let delta = serde_json::json!({ "added": added, "removed": removed });
             let _ = crate::temporal_events::emit_event(
-                conn, &memory.id, "tags_modified", &delta, "system", "memory_crud",
+                conn,
+                &memory.id,
+                "tags_modified",
+                &delta,
+                "system",
+                "memory_crud",
             );
         }
         if (old_mem.confidence.value() - memory.confidence.value()).abs() > f64::EPSILON {
@@ -208,7 +224,12 @@ pub fn update_memory(conn: &Connection, memory: &BaseMemory) -> CortexResult<()>
                 "reason": "update",
             });
             let _ = crate::temporal_events::emit_event(
-                conn, &memory.id, "confidence_changed", &delta, "system", "memory_crud",
+                conn,
+                &memory.id,
+                "confidence_changed",
+                &delta,
+                "system",
+                "memory_crud",
             );
         }
         if old_mem.importance != memory.importance {
@@ -218,19 +239,34 @@ pub fn update_memory(conn: &Connection, memory: &BaseMemory) -> CortexResult<()>
                 "reason": "update",
             });
             let _ = crate::temporal_events::emit_event(
-                conn, &memory.id, "importance_changed", &delta, "system", "memory_crud",
+                conn,
+                &memory.id,
+                "importance_changed",
+                &delta,
+                "system",
+                "memory_crud",
             );
         }
         if old_mem.archived != memory.archived {
             if memory.archived {
                 let delta = serde_json::json!({ "reason": "update" });
                 let _ = crate::temporal_events::emit_event(
-                    conn, &memory.id, "archived", &delta, "system", "memory_crud",
+                    conn,
+                    &memory.id,
+                    "archived",
+                    &delta,
+                    "system",
+                    "memory_crud",
                 );
             } else {
                 let delta = serde_json::json!({});
                 let _ = crate::temporal_events::emit_event(
-                    conn, &memory.id, "restored", &delta, "system", "memory_crud",
+                    conn,
+                    &memory.id,
+                    "restored",
+                    &delta,
+                    "system",
+                    "memory_crud",
                 );
             }
         }
@@ -243,9 +279,8 @@ pub fn update_memory(conn: &Connection, memory: &BaseMemory) -> CortexResult<()>
 pub fn delete_memory(conn: &Connection, id: &str) -> CortexResult<()> {
     // Emit Archived event BEFORE the row is deleted (hard DELETE).
     let delta = serde_json::json!({ "reason": "hard_delete" });
-    let _ = crate::temporal_events::emit_event(
-        conn, id, "archived", &delta, "system", "memory_crud",
-    );
+    let _ =
+        crate::temporal_events::emit_event(conn, id, "archived", &delta, "system", "memory_crud");
 
     delete_links(conn, id)?;
     conn.execute("DELETE FROM memories WHERE id = ?1", params![id])
@@ -377,8 +412,8 @@ pub(crate) fn row_to_base_memory(row: &rusqlite::Row<'_>) -> CortexResult<BaseMe
         .map_err(|e| to_storage_err(format!("parse memory_type '{memory_type_str}': {e}")))?;
     let content: TypedContent = serde_json::from_str(&content_json)
         .map_err(|e| to_storage_err(format!("parse content: {e}")))?;
-    let tags: Vec<String> = serde_json::from_str(&tags_json)
-        .map_err(|e| to_storage_err(format!("parse tags: {e}")))?;
+    let tags: Vec<String> =
+        serde_json::from_str(&tags_json).map_err(|e| to_storage_err(format!("parse tags: {e}")))?;
     let importance: Importance = serde_json::from_str(&format!("\"{importance_str}\""))
         .map_err(|e| to_storage_err(format!("parse importance '{importance_str}': {e}")))?;
 
@@ -403,13 +438,18 @@ pub(crate) fn row_to_base_memory(row: &rusqlite::Row<'_>) -> CortexResult<BaseMe
         confidence: Confidence::new(row.get(7).map_err(|e| to_storage_err(e.to_string()))?),
         importance,
         last_accessed: parse_dt(&last_accessed_str)?,
-        access_count: row.get::<_, i64>(10).map_err(|e| to_storage_err(e.to_string()))? as u64,
+        access_count: row
+            .get::<_, i64>(10)
+            .map_err(|e| to_storage_err(e.to_string()))? as u64,
         linked_patterns: Vec::new(),
         linked_constraints: Vec::new(),
         linked_files: Vec::new(),
         linked_functions: Vec::new(),
         tags,
-        archived: row.get::<_, i32>(12).map_err(|e| to_storage_err(e.to_string()))? != 0,
+        archived: row
+            .get::<_, i32>(12)
+            .map_err(|e| to_storage_err(e.to_string()))?
+            != 0,
         superseded_by: row.get(13).map_err(|e| to_storage_err(e.to_string()))?,
         supersedes: row.get(14).map_err(|e| to_storage_err(e.to_string()))?,
         content_hash: row.get(15).map_err(|e| to_storage_err(e.to_string()))?,

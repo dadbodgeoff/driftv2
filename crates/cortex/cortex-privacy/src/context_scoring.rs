@@ -100,17 +100,19 @@ pub fn looks_like_placeholder(matched_text: &str) -> bool {
     // For email-like patterns, check for well-known placeholder domains
     if lower.contains('@') {
         let email_placeholders = [
-            "example.com", "example.org", "test.com", "dummy.com",
-            "fake.com", "sample.com", "placeholder.com",
+            "example.com",
+            "example.org",
+            "test.com",
+            "dummy.com",
+            "fake.com",
+            "sample.com",
+            "placeholder.com",
         ];
         return email_placeholders.iter().any(|p| lower.contains(p));
     }
 
     // For other patterns, check if the entire match is a known placeholder
-    let full_match_placeholders = [
-        "your_", "my_", "replace_me", "change_me",
-        "todo", "fixme",
-    ];
+    let full_match_placeholders = ["your_", "my_", "replace_me", "change_me", "todo", "fixme"];
     full_match_placeholders.iter().any(|p| lower.starts_with(p))
 }
 
@@ -120,8 +122,17 @@ pub fn has_sensitive_variable_context(text: &str, match_start: usize) -> bool {
     let prefix_start = match_start.saturating_sub(60);
     let prefix = &text[prefix_start..match_start].to_lowercase();
     let sensitive_names = [
-        "password", "passwd", "pwd", "secret", "token", "api_key",
-        "apikey", "auth", "credential", "private_key", "access_key",
+        "password",
+        "passwd",
+        "pwd",
+        "secret",
+        "token",
+        "api_key",
+        "apikey",
+        "auth",
+        "credential",
+        "private_key",
+        "access_key",
     ];
     sensitive_names.iter().any(|name| prefix.contains(name))
 }

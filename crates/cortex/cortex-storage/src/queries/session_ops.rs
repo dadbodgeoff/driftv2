@@ -7,11 +7,7 @@ use cortex_core::errors::CortexResult;
 use crate::to_storage_err;
 
 /// Create a new session.
-pub fn create_session(
-    conn: &Connection,
-    session_id: &str,
-    tokens_budget: i64,
-) -> CortexResult<()> {
+pub fn create_session(conn: &Connection, session_id: &str, tokens_budget: i64) -> CortexResult<()> {
     conn.execute(
         "INSERT INTO session_contexts (id, tokens_budget) VALUES (?1, ?2)",
         params![session_id, tokens_budget],

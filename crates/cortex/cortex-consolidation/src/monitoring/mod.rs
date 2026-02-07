@@ -6,4 +6,4 @@ pub mod metrics;
 
 pub use auto_tuning::{TunableThresholds, TuningAdjustment};
 pub use dashboard::ConsolidationDashboard;
-pub use metrics::{QualityAssessment, assess_quality};
+pub use metrics::{assess_quality, QualityAssessment};

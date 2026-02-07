@@ -7,11 +7,7 @@ use crate::graph::stable_graph::IndexedGraph;
 use super::{trace_effects, trace_origins, TraversalConfig, TraversalResult};
 
 /// Trace both directions and return the union.
-pub fn trace(
-    graph: &IndexedGraph,
-    memory_id: &str,
-    config: &TraversalConfig,
-) -> TraversalResult {
+pub fn trace(graph: &IndexedGraph, memory_id: &str, config: &TraversalConfig) -> TraversalResult {
     let origins = trace_origins::trace(graph, memory_id, config);
     let effects = trace_effects::trace(graph, memory_id, config);
 

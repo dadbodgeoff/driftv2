@@ -25,9 +25,8 @@ pub fn cortex_prediction_predict(
         .prediction
         .predict(&signals)
         .map_err(error_types::to_napi_error)?;
-    serde_json::to_value(&result).map_err(|e| {
-        napi::Error::from_reason(format!("Failed to serialize PredictionResult: {e}"))
-    })
+    serde_json::to_value(&result)
+        .map_err(|e| napi::Error::from_reason(format!("Failed to serialize PredictionResult: {e}")))
 }
 
 /// Preload predicted memories into cache.

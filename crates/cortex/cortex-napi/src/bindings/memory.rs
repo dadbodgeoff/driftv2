@@ -12,7 +12,9 @@ use crate::runtime;
 pub fn cortex_memory_create(memory_json: serde_json::Value) -> napi::Result<()> {
     let rt = runtime::get()?;
     let memory = memory_types::memory_from_json(memory_json)?;
-    rt.storage.create(&memory).map_err(error_types::to_napi_error)
+    rt.storage
+        .create(&memory)
+        .map_err(error_types::to_napi_error)
 }
 
 /// Get a memory by ID.
@@ -34,7 +36,9 @@ pub fn cortex_memory_get(id: String) -> napi::Result<serde_json::Value> {
 pub fn cortex_memory_update(memory_json: serde_json::Value) -> napi::Result<()> {
     let rt = runtime::get()?;
     let memory = memory_types::memory_from_json(memory_json)?;
-    rt.storage.update(&memory).map_err(error_types::to_napi_error)
+    rt.storage
+        .update(&memory)
+        .map_err(error_types::to_napi_error)
 }
 
 /// Delete a memory by ID.
@@ -92,12 +96,12 @@ pub fn cortex_memory_archive(id: String) -> napi::Result<()> {
         .get(&id)
         .map_err(error_types::to_napi_error)?
         .ok_or_else(|| {
-            error_types::to_napi_error(cortex_core::CortexError::MemoryNotFound {
-                id: id.clone(),
-            })
+            error_types::to_napi_error(cortex_core::CortexError::MemoryNotFound { id: id.clone() })
         })?;
     memory.archived = true;
-    rt.storage.update(&memory).map_err(error_types::to_napi_error)
+    rt.storage
+        .update(&memory)
+        .map_err(error_types::to_napi_error)
 }
 
 /// Restore an archived memory (set archived = false).
@@ -109,10 +113,10 @@ pub fn cortex_memory_restore(id: String) -> napi::Result<()> {
         .get(&id)
         .map_err(error_types::to_napi_error)?
         .ok_or_else(|| {
-            error_types::to_napi_error(cortex_core::CortexError::MemoryNotFound {
-                id: id.clone(),
-            })
+            error_types::to_napi_error(cortex_core::CortexError::MemoryNotFound { id: id.clone() })
         })?;
     memory.archived = false;
-    rt.storage.update(&memory).map_err(error_types::to_napi_error)
+    rt.storage
+        .update(&memory)
+        .map_err(error_types::to_napi_error)
 }

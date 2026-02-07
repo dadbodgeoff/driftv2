@@ -67,5 +67,8 @@ fn config_serde_roundtrip() {
     let toml_str = toml::to_string(&config).unwrap();
     let roundtripped = CortexConfig::from_toml(&toml_str).unwrap();
     assert_eq!(roundtripped.storage.db_path, config.storage.db_path);
-    assert_eq!(roundtripped.embedding.dimensions, config.embedding.dimensions);
+    assert_eq!(
+        roundtripped.embedding.dimensions,
+        config.embedding.dimensions
+    );
 }

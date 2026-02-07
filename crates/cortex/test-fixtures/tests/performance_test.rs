@@ -14,10 +14,12 @@ use cortex_causal::CausalEngine;
 use cortex_compression::CompressionEngine;
 use cortex_core::config::RetrievalConfig;
 use cortex_core::errors::CortexResult;
-use cortex_core::memory::*;
 use cortex_core::memory::types::{CoreContent, EpisodicContent};
+use cortex_core::memory::*;
 use cortex_core::models::RetrievalContext;
-use cortex_core::traits::{IConsolidator, IDecayEngine, IEmbeddingProvider, IMemoryStorage, IRetriever};
+use cortex_core::traits::{
+    IConsolidator, IDecayEngine, IEmbeddingProvider, IMemoryStorage, IRetriever,
+};
 use cortex_decay::DecayEngine;
 use cortex_retrieval::engine::RetrievalEngine;
 use cortex_storage::StorageEngine;
@@ -33,14 +35,22 @@ impl IEmbeddingProvider for BenchEmbedder {
     fn embed(&self, text: &str) -> CortexResult<Vec<f32>> {
         let hash = blake3::hash(text.as_bytes());
         let bytes = hash.as_bytes();
-        Ok((0..64).map(|i| (bytes[i % 32] as f32 / 255.0) * 2.0 - 1.0).collect())
+        Ok((0..64)
+            .map(|i| (bytes[i % 32] as f32 / 255.0) * 2.0 - 1.0)
+            .collect())
     }
     fn embed_batch(&self, texts: &[String]) -> CortexResult<Vec<Vec<f32>>> {
         texts.iter().map(|t| self.embed(t)).collect()
     }
-    fn dimensions(&self) -> usize { 64 }
-    fn name(&self) -> &str { "bench-embedder" }
-    fn is_available(&self) -> bool { true }
+    fn dimensions(&self) -> usize {
+        64
+    }
+    fn name(&self) -> &str {
+        "bench-embedder"
+    }
+    fn is_available(&self) -> bool {
+        true
+    }
 }
 
 // ---------------------------------------------------------------------------
@@ -73,7 +83,7 @@ fn make_memory(id: &str, summary: &str, tags: Vec<&str>) -> BaseMemory {
         archived: false,
         superseded_by: None,
         supersedes: None,
-        content_hash: BaseMemory::compute_content_hash(&content),
+        content_hash: BaseMemory::compute_content_hash(&content).unwrap(),
     }
 }
 
@@ -103,7 +113,7 @@ fn make_episodic(id: &str, cluster: &str, index: usize) -> BaseMemory {
         archived: false,
         superseded_by: None,
         supersedes: None,
-        content_hash: BaseMemory::compute_content_hash(&content),
+        content_hash: BaseMemory::compute_content_hash(&content).unwrap(),
     }
 }
 
@@ -128,8 +138,10 @@ fn p95_micros(iterations: usize, mut f: impl FnMut()) -> u64 {
 #[test]
 fn perf_retrieval_100_under_5ms() {
     let storage = StorageEngine::open_in_memory().unwrap();
-    let topics = ["database", "caching", "auth", "errors", "deploy",
-                  "testing", "logging", "metrics", "config", "api"];
+    let topics = [
+        "database", "caching", "auth", "errors", "deploy", "testing", "logging", "metrics",
+        "config", "api",
+    ];
 
     for i in 0..100 {
         let topic = topics[i % topics.len()];
@@ -179,11 +191,7 @@ fn perf_decay_1k_under_1ms() {
     });
 
     let p95_ms = p95 as f64 / 1000.0;
-    assert!(
-        p95_ms < 1.0,
-        "Decay 1K p95 = {:.2}ms, target < 1ms",
-        p95_ms
-    );
+    assert!(p95_ms < 1.0, "Decay 1K p95 = {:.2}ms, target < 1ms", p95_ms);
 }
 
 /// Consolidation of a 5-memory cluster: p95 < 10ms.
@@ -213,7 +221,13 @@ fn perf_causal_traversal_1k_edges_under_5ms() {
 
     // Build a graph with ~1000 edges: 200 nodes, ~5 edges per node.
     let memories: Vec<BaseMemory> = (0..200)
-        .map(|i| make_memory(&format!("cg-{:03}", i), &format!("Causal node {}", i), vec![]))
+        .map(|i| {
+            make_memory(
+                &format!("cg-{:03}", i),
+                &format!("Causal node {}", i),
+                vec![],
+            )
+        })
         .collect();
 
     let mut edge_count = 0;
@@ -221,7 +235,9 @@ fn perf_causal_traversal_1k_edges_under_5ms() {
         // Connect to next 5 nodes (wrapping).
         for offset in 1..=5 {
             let target = (i + offset) % 200;
-            if target == i { continue; }
+            if target == i {
+                continue;
+            }
             // Only add forward edges to maintain DAG.
             if target > i {
                 let _ = engine.add_edge(
@@ -237,7 +253,11 @@ fn perf_causal_traversal_1k_edges_under_5ms() {
         }
     }
 
-    assert!(edge_count >= 500, "Should have at least 500 edges, got {}", edge_count);
+    assert!(
+        edge_count >= 500,
+        "Should have at least 500 edges, got {}",
+        edge_count
+    );
 
     let p95 = p95_micros(50, || {
         let _ = engine.trace_effects("cg-000").unwrap();

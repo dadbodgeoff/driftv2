@@ -3,10 +3,10 @@
 //! Focuses on: prediction cache, signal gathering, strategy dedup,
 //! engine predict_with_signals, file change invalidation.
 
-use cortex_prediction::strategies::{deduplicate, PredictionCandidate};
 use cortex_prediction::signals::{
     AggregatedSignals, BehavioralSignals, FileSignals, GitSignals, TemporalSignals,
 };
+use cortex_prediction::strategies::{deduplicate, PredictionCandidate};
 
 // ─── Strategy Deduplication ──────────────────────────────────────────────────
 
@@ -166,12 +166,16 @@ fn cache_miss_then_hit() {
 #[test]
 fn cache_invalidate_file() {
     let cache = cortex_prediction::PredictionCache::new();
-    cache.insert("src/main.rs".to_string(), vec![PredictionCandidate {
-        memory_id: "m1".to_string(),
-        confidence: 0.8,
-        source_strategy: "test".to_string(),
-        signals: vec![],
-    }], 0.0);
+    cache.insert(
+        "src/main.rs".to_string(),
+        vec![PredictionCandidate {
+            memory_id: "m1".to_string(),
+            confidence: 0.8,
+            source_strategy: "test".to_string(),
+            signals: vec![],
+        }],
+        0.0,
+    );
 
     // Verify it's retrievable before invalidation.
     assert!(cache.get("src/main.rs").is_some());
@@ -208,10 +212,10 @@ fn cache_hit_rate_after_operations() {
 
 // ─── Strategy: File-Based (with storage) ─────────────────────────────────────
 
+use chrono::Utc;
 use cortex_core::memory::*;
 use cortex_core::traits::IMemoryStorage;
 use cortex_storage::StorageEngine;
-use chrono::Utc;
 
 fn make_memory(id: &str, summary: &str, mem_type: MemoryType) -> BaseMemory {
     BaseMemory {
@@ -287,13 +291,14 @@ fn behavioral_strategy_no_signals() {
 fn behavioral_strategy_with_queries() {
     use cortex_prediction::strategies::BehavioralStrategy;
     let eng = storage();
-    eng.create(&make_memory("bh1", "authentication middleware pattern", MemoryType::Tribal)).unwrap();
+    eng.create(&make_memory(
+        "bh1",
+        "authentication middleware pattern",
+        MemoryType::Tribal,
+    ))
+    .unwrap();
 
-    let signals = BehavioralSignals::gather(
-        vec!["authentication".to_string()],
-        vec![],
-        vec![],
-    );
+    let signals = BehavioralSignals::gather(vec!["authentication".to_string()], vec![], vec![]);
     let result = BehavioralStrategy::predict(&signals, &eng).unwrap();
     // Should find the memory via FTS5 search.
     assert!(!result.is_empty());
@@ -303,13 +308,10 @@ fn behavioral_strategy_with_queries() {
 fn behavioral_strategy_with_frequent_ids() {
     use cortex_prediction::strategies::BehavioralStrategy;
     let eng = storage();
-    eng.create(&make_memory("bh2", "frequent memory", MemoryType::Semantic)).unwrap();
+    eng.create(&make_memory("bh2", "frequent memory", MemoryType::Semantic))
+        .unwrap();
 
-    let signals = BehavioralSignals::gather(
-        vec![],
-        vec![],
-        vec!["bh2".to_string()],
-    );
+    let signals = BehavioralSignals::gather(vec![], vec![], vec!["bh2".to_string()]);
     let result = BehavioralStrategy::predict(&signals, &eng).unwrap();
     assert!(!result.is_empty());
 }
@@ -328,7 +330,11 @@ fn temporal_strategy_predict() {
 
 #[test]
 fn file_signals_gather_extracts_directory() {
-    let signals = FileSignals::gather(Some("src/auth/mod.rs"), vec!["src/lib.rs".to_string()], vec![]);
+    let signals = FileSignals::gather(
+        Some("src/auth/mod.rs"),
+        vec!["src/lib.rs".to_string()],
+        vec![],
+    );
     assert_eq!(signals.directory, Some("src/auth".to_string()));
     assert_eq!(signals.active_file, Some("src/auth/mod.rs".to_string()));
 }

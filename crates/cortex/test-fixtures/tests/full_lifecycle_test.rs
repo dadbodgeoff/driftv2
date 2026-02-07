@@ -8,8 +8,8 @@ use cortex_compression::CompressionEngine;
 use cortex_consolidation::engine::ConsolidationEngine;
 use cortex_core::config::RetrievalConfig;
 use cortex_core::errors::CortexResult;
-use cortex_core::memory::*;
 use cortex_core::memory::types::EpisodicContent;
+use cortex_core::memory::*;
 use cortex_core::models::RetrievalContext;
 use cortex_core::traits::{IConsolidator, IEmbeddingProvider, IMemoryStorage, IRetriever};
 use cortex_decay::{DecayContext, DecayEngine};
@@ -27,14 +27,22 @@ impl IEmbeddingProvider for LifecycleEmbedder {
     fn embed(&self, text: &str) -> CortexResult<Vec<f32>> {
         let hash = blake3::hash(text.as_bytes());
         let bytes = hash.as_bytes();
-        Ok((0..64).map(|i| (bytes[i % 32] as f32 / 255.0) * 2.0 - 1.0).collect())
+        Ok((0..64)
+            .map(|i| (bytes[i % 32] as f32 / 255.0) * 2.0 - 1.0)
+            .collect())
     }
     fn embed_batch(&self, texts: &[String]) -> CortexResult<Vec<Vec<f32>>> {
         texts.iter().map(|t| self.embed(t)).collect()
     }
-    fn dimensions(&self) -> usize { 64 }
-    fn name(&self) -> &str { "lifecycle-test" }
-    fn is_available(&self) -> bool { true }
+    fn dimensions(&self) -> usize {
+        64
+    }
+    fn name(&self) -> &str {
+        "lifecycle-test"
+    }
+    fn is_available(&self) -> bool {
+        true
+    }
 }
 
 // ---------------------------------------------------------------------------
@@ -72,17 +80,32 @@ fn make_episodic(cluster: &str, index: usize, tags: Vec<String>) -> BaseMemory {
         archived: false,
         superseded_by: None,
         supersedes: None,
-        content_hash: BaseMemory::compute_content_hash(&content),
+        content_hash: BaseMemory::compute_content_hash(&content).unwrap(),
     }
 }
 
 fn create_50_episodic_memories() -> Vec<BaseMemory> {
     let clusters = [
-        ("database_config", vec!["database".to_string(), "config".to_string()]),
-        ("error_handling", vec!["errors".to_string(), "rust".to_string()]),
-        ("authentication", vec!["auth".to_string(), "security".to_string()]),
-        ("caching_strategy", vec!["cache".to_string(), "performance".to_string()]),
-        ("deployment_pipeline", vec!["ci".to_string(), "deployment".to_string()]),
+        (
+            "database_config",
+            vec!["database".to_string(), "config".to_string()],
+        ),
+        (
+            "error_handling",
+            vec!["errors".to_string(), "rust".to_string()],
+        ),
+        (
+            "authentication",
+            vec!["auth".to_string(), "security".to_string()],
+        ),
+        (
+            "caching_strategy",
+            vec!["cache".to_string(), "performance".to_string()],
+        ),
+        (
+            "deployment_pipeline",
+            vec!["ci".to_string(), "deployment".to_string()],
+        ),
     ];
 
     let mut memories = Vec::with_capacity(50);
@@ -93,7 +116,6 @@ fn create_50_episodic_memories() -> Vec<BaseMemory> {
     }
     memories
 }
-
 
 // ===========================================================================
 // T14-INT-01: Full lifecycle test
@@ -107,7 +129,9 @@ fn t14_int_01_full_lifecycle() {
     let memories = create_50_episodic_memories();
     assert_eq!(memories.len(), 50, "Should create exactly 50 memories");
     assert!(
-        memories.iter().all(|m| m.memory_type == MemoryType::Episodic),
+        memories
+            .iter()
+            .all(|m| m.memory_type == MemoryType::Episodic),
         "All should be episodic"
     );
     assert!(
@@ -124,7 +148,11 @@ fn t14_int_01_full_lifecycle() {
     // Verify all stored.
     for m in &memories {
         let retrieved = storage.get(&m.id).unwrap();
-        assert!(retrieved.is_some(), "Memory '{}' should be retrievable", m.id);
+        assert!(
+            retrieved.is_some(),
+            "Memory '{}' should be retrievable",
+            m.id
+        );
     }
 
     // ── Step 2: Run consolidation ──
@@ -151,7 +179,11 @@ fn t14_int_01_full_lifecycle() {
     );
 
     // Metrics should be valid.
-    assert!(result.metrics.precision >= 0.3, "Precision too low: {}", result.metrics.precision);
+    assert!(
+        result.metrics.precision >= 0.3,
+        "Precision too low: {}",
+        result.metrics.precision
+    );
 
     // Store the new semantic memories (we only have IDs from consolidation).
     // In a real system, the pipeline would store them. For this test,
@@ -164,13 +196,7 @@ fn t14_int_01_full_lifecycle() {
 
     // FTS5 uses AND semantics — all query terms must appear in the document.
     // Use single terms that match the memory content (cluster names + tags).
-    let queries = [
-        "database",
-        "errors",
-        "auth",
-        "cache",
-        "deployment",
-    ];
+    let queries = ["database", "errors", "auth", "cache", "deployment"];
 
     for query in &queries {
         let context = RetrievalContext {
@@ -227,8 +253,14 @@ fn t14_int_01_full_lifecycle() {
         }
     }
 
-    assert!(all_decayed_bounded, "All decayed confidences should be in [0.0, 1.0]");
-    assert!(all_decreased, "Confidences should decrease after 30 days without access");
+    assert!(
+        all_decayed_bounded,
+        "All decayed confidences should be in [0.0, 1.0]"
+    );
+    assert!(
+        all_decreased,
+        "Confidences should decrease after 30 days without access"
+    );
 
     // ── Step 5: Validate — run 4-dimension validation ──
     let validation_engine = ValidationEngine::new(ValidationConfig::default());
@@ -246,10 +278,14 @@ fn t14_int_01_full_lifecycle() {
         }
 
         let scores = &val_result.dimension_scores;
-        if scores.citation < 0.0 || scores.citation > 1.0
-            || scores.temporal < 0.0 || scores.temporal > 1.0
-            || scores.contradiction < 0.0 || scores.contradiction > 1.0
-            || scores.pattern_alignment < 0.0 || scores.pattern_alignment > 1.0
+        if scores.citation < 0.0
+            || scores.citation > 1.0
+            || scores.temporal < 0.0
+            || scores.temporal > 1.0
+            || scores.contradiction < 0.0
+            || scores.contradiction > 1.0
+            || scores.pattern_alignment < 0.0
+            || scores.pattern_alignment > 1.0
         {
             all_scores_bounded = false;
         }
@@ -258,8 +294,14 @@ fn t14_int_01_full_lifecycle() {
         all_validated = all_validated && true;
     }
 
-    assert!(all_validated, "All memories should be validated without error");
-    assert!(all_scores_bounded, "All dimension scores should be in [0.0, 1.0]");
+    assert!(
+        all_validated,
+        "All memories should be validated without error"
+    );
+    assert!(
+        all_scores_bounded,
+        "All dimension scores should be in [0.0, 1.0]"
+    );
 
     // ── Success criteria ──
     let elapsed = start.elapsed();
@@ -306,7 +348,7 @@ fn t14_int_02_concurrent_access() {
                 archived: false,
                 superseded_by: None,
                 supersedes: None,
-                content_hash: BaseMemory::compute_content_hash(&content),
+                content_hash: BaseMemory::compute_content_hash(&content).unwrap(),
             }
         })
         .collect();
@@ -373,7 +415,10 @@ fn t14_int_02_concurrent_access() {
     let error_count = errors.load(std::sync::atomic::Ordering::Relaxed);
     let read_count = reads_completed.load(std::sync::atomic::Ordering::Relaxed);
 
-    assert_eq!(error_count, 0, "No errors should occur during concurrent access");
+    assert_eq!(
+        error_count, 0,
+        "No errors should occur during concurrent access"
+    );
     assert!(read_count > 0, "Some reads should complete successfully");
 
     // Verify data integrity after concurrent access.

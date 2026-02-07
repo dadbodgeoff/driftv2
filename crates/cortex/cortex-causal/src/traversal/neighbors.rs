@@ -7,11 +7,7 @@ use crate::graph::stable_graph::IndexedGraph;
 use super::{TraversalConfig, TraversalNode, TraversalResult};
 
 /// Get direct neighbors of a memory node.
-pub fn get(
-    graph: &IndexedGraph,
-    memory_id: &str,
-    config: &TraversalConfig,
-) -> TraversalResult {
+pub fn get(graph: &IndexedGraph, memory_id: &str, config: &TraversalConfig) -> TraversalResult {
     let mut result = TraversalResult {
         origin_id: memory_id.to_string(),
         nodes: Vec::new(),

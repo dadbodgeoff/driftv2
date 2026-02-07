@@ -24,17 +24,41 @@ pub fn scan_all(text: &str) -> Vec<RawMatch> {
 
     // Connection strings FIRST — they contain user:pass@host which looks like email
     for pat in connection_strings::all_patterns() {
-        collect_matches(text, pat.regex, "connection_string", pat.name, pat.placeholder, pat.base_confidence, &mut matches);
+        collect_matches(
+            text,
+            pat.regex,
+            "connection_string",
+            pat.name,
+            pat.placeholder,
+            pat.base_confidence,
+            &mut matches,
+        );
     }
 
     // Secret patterns SECOND — they're more specific than PII
     for pat in secrets::all_patterns() {
-        collect_matches(text, pat.regex, "secret", pat.name, pat.placeholder, pat.base_confidence, &mut matches);
+        collect_matches(
+            text,
+            pat.regex,
+            "secret",
+            pat.name,
+            pat.placeholder,
+            pat.base_confidence,
+            &mut matches,
+        );
     }
 
     // PII patterns LAST — broadest patterns
     for pat in pii::all_patterns() {
-        collect_matches(text, pat.regex, "pii", pat.name, pat.placeholder, pat.base_confidence, &mut matches);
+        collect_matches(
+            text,
+            pat.regex,
+            "pii",
+            pat.name,
+            pat.placeholder,
+            pat.base_confidence,
+            &mut matches,
+        );
     }
 
     // Sort by start position descending so we can replace from the end

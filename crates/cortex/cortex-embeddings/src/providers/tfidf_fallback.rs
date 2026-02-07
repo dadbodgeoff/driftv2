@@ -159,6 +159,9 @@ mod tests {
 
         let cos_ab: f32 = a.iter().zip(&b).map(|(x, y)| x * y).sum();
         let cos_ac: f32 = a.iter().zip(&c).map(|(x, y)| x * y).sum();
-        assert!(cos_ab > cos_ac, "similar texts should have higher cosine similarity");
+        assert!(
+            cos_ab > cos_ac,
+            "similar texts should have higher cosine similarity"
+        );
     }
 }

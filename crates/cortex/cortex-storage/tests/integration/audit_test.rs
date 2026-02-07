@@ -1,8 +1,8 @@
 //! Integration test: audit log records all mutations.
 
 use chrono::Utc;
-use cortex_core::memory::*;
 use cortex_core::memory::types::*;
+use cortex_core::memory::*;
 use cortex_core::traits::IMemoryStorage;
 use cortex_storage::StorageEngine;
 
@@ -40,12 +40,19 @@ fn test_audit_log_on_create() {
     let engine = StorageEngine::open_in_memory().unwrap();
     engine.create(&make_memory("audit-1")).unwrap();
 
-    engine.pool().writer.with_conn_sync(|conn| {
-        let entries = cortex_storage::queries::audit_ops::query_by_memory(conn, "audit-1")?;
-        assert!(!entries.is_empty(), "should have audit entry for create");
-        assert_eq!(entries[0].operation, cortex_core::models::AuditOperation::Create);
-        Ok(())
-    }).unwrap();
+    engine
+        .pool()
+        .writer
+        .with_conn_sync(|conn| {
+            let entries = cortex_storage::queries::audit_ops::query_by_memory(conn, "audit-1")?;
+            assert!(!entries.is_empty(), "should have audit entry for create");
+            assert_eq!(
+                entries[0].operation,
+                cortex_core::models::AuditOperation::Create
+            );
+            Ok(())
+        })
+        .unwrap();
 }
 
 #[test]
@@ -57,12 +64,21 @@ fn test_audit_log_on_update() {
     memory.summary = "updated".to_string();
     engine.update(&memory).unwrap();
 
-    engine.pool().writer.with_conn_sync(|conn| {
-        let entries = cortex_storage::queries::audit_ops::query_by_memory(conn, "audit-update")?;
-        // Should have create + update entries.
-        assert!(entries.len() >= 2, "should have at least 2 audit entries, got {}", entries.len());
-        Ok(())
-    }).unwrap();
+    engine
+        .pool()
+        .writer
+        .with_conn_sync(|conn| {
+            let entries =
+                cortex_storage::queries::audit_ops::query_by_memory(conn, "audit-update")?;
+            // Should have create + update entries.
+            assert!(
+                entries.len() >= 2,
+                "should have at least 2 audit entries, got {}",
+                entries.len()
+            );
+            Ok(())
+        })
+        .unwrap();
 }
 
 #[test]
@@ -72,9 +88,14 @@ fn test_audit_log_on_delete() {
     engine.delete("audit-delete").unwrap();
 
     // Audit entries survive deletion since they're in a separate table.
-    engine.pool().writer.with_conn_sync(|conn| {
-        let entries = cortex_storage::queries::audit_ops::query_by_memory(conn, "audit-delete")?;
-        assert!(entries.len() >= 2, "should have create + archive entries");
-        Ok(())
-    }).unwrap();
+    engine
+        .pool()
+        .writer
+        .with_conn_sync(|conn| {
+            let entries =
+                cortex_storage::queries::audit_ops::query_by_memory(conn, "audit-delete")?;
+            assert!(entries.len() >= 2, "should have create + archive entries");
+            Ok(())
+        })
+        .unwrap();
 }

@@ -9,11 +9,7 @@ use crate::graph::stable_graph::IndexedGraph;
 use super::{TraversalConfig, TraversalNode, TraversalResult};
 
 /// Trace forward from a memory to find its effects.
-pub fn trace(
-    graph: &IndexedGraph,
-    memory_id: &str,
-    config: &TraversalConfig,
-) -> TraversalResult {
+pub fn trace(graph: &IndexedGraph, memory_id: &str, config: &TraversalConfig) -> TraversalResult {
     let mut result = TraversalResult {
         origin_id: memory_id.to_string(),
         nodes: Vec::new(),

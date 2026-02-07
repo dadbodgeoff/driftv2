@@ -32,11 +32,7 @@ impl AuditLogger {
     }
 
     /// Log a create operation.
-    pub fn log_create(
-        conn: &Connection,
-        memory_id: &str,
-        actor: AuditActor,
-    ) -> CortexResult<()> {
+    pub fn log_create(conn: &Connection, memory_id: &str, actor: AuditActor) -> CortexResult<()> {
         Self::log(
             conn,
             memory_id,

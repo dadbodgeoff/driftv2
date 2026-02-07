@@ -1,7 +1,7 @@
 //! Integration tests for cortex-learning (T8-LRN-01 through T8-LRN-08).
 
-use cortex_core::memory::*;
 use cortex_core::memory::types::InsightContent;
+use cortex_core::memory::*;
 use cortex_core::traits::{Correction, ILearner};
 
 use cortex_learning::analysis;
@@ -178,7 +178,10 @@ fn t8_lrn_07_diff_analyzer() {
     );
     assert!(!diff.additions.is_empty(), "should detect additions");
     assert!(!diff.removals.is_empty(), "should detect removals");
-    assert!(!diff.modifications.is_empty(), "should detect modifications");
+    assert!(
+        !diff.modifications.is_empty(),
+        "should detect modifications"
+    );
     assert!(diff.is_semantic_change);
 }
 

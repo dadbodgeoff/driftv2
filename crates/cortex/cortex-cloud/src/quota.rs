@@ -44,7 +44,11 @@ pub enum QuotaCheck {
     /// Approaching limits (>80% usage). Proceed but warn.
     Warning { resource: String, percent: f64 },
     /// Exceeded limits. Block the operation.
-    Exceeded { resource: String, used: u64, limit: u64 },
+    Exceeded {
+        resource: String,
+        used: u64,
+        limit: u64,
+    },
 }
 
 /// Manages quota enforcement.

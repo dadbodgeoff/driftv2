@@ -11,8 +11,8 @@
 //! T12-NAPI-05: All 23 memory type variants convert correctly
 
 use chrono::Utc;
-use cortex_core::memory::*;
 use cortex_core::memory::types::*;
+use cortex_core::memory::*;
 use cortex_core::CortexError;
 
 // ─── Helpers ─────────────────────────────────────────────────────────────────
@@ -54,7 +54,7 @@ fn make_base_memory(id: &str, mt: MemoryType, content: TypedContent) -> BaseMemo
         archived: false,
         superseded_by: None,
         supersedes: Some("old-mem".into()),
-        content_hash: BaseMemory::compute_content_hash(&content),
+        content_hash: BaseMemory::compute_content_hash(&content).unwrap(),
     }
 }
 
@@ -98,19 +98,55 @@ fn t12_napi_01_base_memory_roundtrip_all_fields_match() {
     );
     assert_eq!(restored.importance, original.importance);
     assert_eq!(restored.access_count, original.access_count);
-    assert_eq!(restored.linked_patterns.len(), original.linked_patterns.len());
-    assert_eq!(restored.linked_patterns[0].pattern_id, original.linked_patterns[0].pattern_id);
-    assert_eq!(restored.linked_patterns[0].pattern_name, original.linked_patterns[0].pattern_name);
-    assert_eq!(restored.linked_constraints.len(), original.linked_constraints.len());
-    assert_eq!(restored.linked_constraints[0].constraint_id, original.linked_constraints[0].constraint_id);
+    assert_eq!(
+        restored.linked_patterns.len(),
+        original.linked_patterns.len()
+    );
+    assert_eq!(
+        restored.linked_patterns[0].pattern_id,
+        original.linked_patterns[0].pattern_id
+    );
+    assert_eq!(
+        restored.linked_patterns[0].pattern_name,
+        original.linked_patterns[0].pattern_name
+    );
+    assert_eq!(
+        restored.linked_constraints.len(),
+        original.linked_constraints.len()
+    );
+    assert_eq!(
+        restored.linked_constraints[0].constraint_id,
+        original.linked_constraints[0].constraint_id
+    );
     assert_eq!(restored.linked_files.len(), original.linked_files.len());
-    assert_eq!(restored.linked_files[0].file_path, original.linked_files[0].file_path);
-    assert_eq!(restored.linked_files[0].line_start, original.linked_files[0].line_start);
-    assert_eq!(restored.linked_files[0].line_end, original.linked_files[0].line_end);
-    assert_eq!(restored.linked_files[0].content_hash, original.linked_files[0].content_hash);
-    assert_eq!(restored.linked_functions.len(), original.linked_functions.len());
-    assert_eq!(restored.linked_functions[0].function_name, original.linked_functions[0].function_name);
-    assert_eq!(restored.linked_functions[0].signature, original.linked_functions[0].signature);
+    assert_eq!(
+        restored.linked_files[0].file_path,
+        original.linked_files[0].file_path
+    );
+    assert_eq!(
+        restored.linked_files[0].line_start,
+        original.linked_files[0].line_start
+    );
+    assert_eq!(
+        restored.linked_files[0].line_end,
+        original.linked_files[0].line_end
+    );
+    assert_eq!(
+        restored.linked_files[0].content_hash,
+        original.linked_files[0].content_hash
+    );
+    assert_eq!(
+        restored.linked_functions.len(),
+        original.linked_functions.len()
+    );
+    assert_eq!(
+        restored.linked_functions[0].function_name,
+        original.linked_functions[0].function_name
+    );
+    assert_eq!(
+        restored.linked_functions[0].signature,
+        original.linked_functions[0].signature
+    );
     assert_eq!(restored.tags, original.tags);
     assert_eq!(restored.archived, original.archived);
     assert_eq!(restored.superseded_by, original.superseded_by);
@@ -228,7 +264,7 @@ fn t12_napi_02_compressed_memory_roundtrip() {
 
 #[test]
 fn t12_napi_02_health_report_roundtrip() {
-    use cortex_core::models::{HealthReport, HealthMetrics, HealthStatus};
+    use cortex_core::models::{HealthMetrics, HealthReport, HealthStatus};
     let report = HealthReport {
         overall_status: HealthStatus::Healthy,
         subsystems: vec![],
@@ -249,7 +285,7 @@ fn t12_napi_02_health_report_roundtrip() {
 
 #[test]
 fn t12_napi_02_consolidation_result_roundtrip() {
-    use cortex_core::models::{ConsolidationResult, ConsolidationMetrics};
+    use cortex_core::models::{ConsolidationMetrics, ConsolidationResult};
     let result = ConsolidationResult {
         created: vec!["new-1".into()],
         archived: vec!["old-1".into(), "old-2".into()],
@@ -309,33 +345,85 @@ fn t12_napi_03_all_15_error_variants_produce_distinct_messages() {
     use cortex_core::errors::*;
 
     let errors: Vec<(&str, CortexError)> = vec![
-        ("memory not found", CortexError::MemoryNotFound { id: "abc-123".into() }),
-        ("invalid memory type", CortexError::InvalidType { type_name: "bogus".into() }),
-        ("embedding", CortexError::EmbeddingError(EmbeddingError::ModelLoadFailed {
-            path: "model.onnx".into(), reason: "not found".into(),
-        })),
-        ("storage", CortexError::StorageError(StorageError::MigrationFailed {
-            version: 5, reason: "schema conflict".into(),
-        })),
-        ("causal cycle", CortexError::CausalCycle { path: "A → B → A".into() }),
-        ("token budget", CortexError::TokenBudgetExceeded { needed: 5000, available: 2000 }),
-        ("migration", CortexError::MigrationError("v005 failed".into())),
-        ("sanitization", CortexError::SanitizationError("regex compile failed".into())),
-        ("consolidation", CortexError::ConsolidationError(ConsolidationError::ClusteringFailed {
-            reason: "too few candidates".into(),
-        })),
-        ("validation", CortexError::ValidationError("citation drift".into())),
-        ("serialization", CortexError::SerializationError(
-            serde_json::from_str::<i32>("bad").unwrap_err(),
-        )),
-        ("concurrency", CortexError::ConcurrencyError("lock poisoned".into())),
-        ("cloud sync", CortexError::CloudSyncError(CloudError::NetworkError {
-            reason: "timeout".into(),
-        })),
+        (
+            "memory not found",
+            CortexError::MemoryNotFound {
+                id: "abc-123".into(),
+            },
+        ),
+        (
+            "invalid memory type",
+            CortexError::InvalidType {
+                type_name: "bogus".into(),
+            },
+        ),
+        (
+            "embedding",
+            CortexError::EmbeddingError(EmbeddingError::ModelLoadFailed {
+                path: "model.onnx".into(),
+                reason: "not found".into(),
+            }),
+        ),
+        (
+            "storage",
+            CortexError::StorageError(StorageError::MigrationFailed {
+                version: 5,
+                reason: "schema conflict".into(),
+            }),
+        ),
+        (
+            "causal cycle",
+            CortexError::CausalCycle {
+                path: "A → B → A".into(),
+            },
+        ),
+        (
+            "token budget",
+            CortexError::TokenBudgetExceeded {
+                needed: 5000,
+                available: 2000,
+            },
+        ),
+        (
+            "migration",
+            CortexError::MigrationError("v005 failed".into()),
+        ),
+        (
+            "sanitization",
+            CortexError::SanitizationError("regex compile failed".into()),
+        ),
+        (
+            "consolidation",
+            CortexError::ConsolidationError(ConsolidationError::ClusteringFailed {
+                reason: "too few candidates".into(),
+            }),
+        ),
+        (
+            "validation",
+            CortexError::ValidationError("citation drift".into()),
+        ),
+        (
+            "serialization",
+            CortexError::SerializationError(serde_json::from_str::<i32>("bad").unwrap_err()),
+        ),
+        (
+            "concurrency",
+            CortexError::ConcurrencyError("lock poisoned".into()),
+        ),
+        (
+            "cloud sync",
+            CortexError::CloudSyncError(CloudError::NetworkError {
+                reason: "timeout".into(),
+            }),
+        ),
         ("config", CortexError::ConfigError("invalid TOML".into())),
-        ("degraded mode", CortexError::DegradedMode {
-            component: "embeddings".into(), fallback: "tfidf".into(),
-        }),
+        (
+            "degraded mode",
+            CortexError::DegradedMode {
+                component: "embeddings".into(),
+                fallback: "tfidf".into(),
+            },
+        ),
     ];
 
     assert_eq!(errors.len(), 15, "must cover all 15 CortexError variants");
@@ -374,7 +462,11 @@ fn t12_napi_03_error_codes_map_to_napi_format() {
         "DEGRADED_MODE",
         "RUNTIME_NOT_INITIALIZED",
     ];
-    assert_eq!(expected_codes.len(), 16, "16 error codes including RUNTIME_NOT_INITIALIZED");
+    assert_eq!(
+        expected_codes.len(),
+        16,
+        "16 error codes including RUNTIME_NOT_INITIALIZED"
+    );
 
     // Verify each code is a valid SCREAMING_SNAKE_CASE identifier.
     for code in &expected_codes {
@@ -387,14 +479,19 @@ fn t12_napi_03_error_codes_map_to_napi_format() {
 
 #[test]
 fn t12_napi_03_memory_not_found_carries_id() {
-    let err = CortexError::MemoryNotFound { id: "test-id-42".into() };
+    let err = CortexError::MemoryNotFound {
+        id: "test-id-42".into(),
+    };
     let msg = error_to_string(&err);
     assert!(msg.contains("test-id-42"), "got: {msg}");
 }
 
 #[test]
 fn t12_napi_03_token_budget_carries_values() {
-    let err = CortexError::TokenBudgetExceeded { needed: 8000, available: 4096 };
+    let err = CortexError::TokenBudgetExceeded {
+        needed: 8000,
+        available: 4096,
+    };
     let msg = error_to_string(&err);
     assert!(msg.contains("8000"), "got: {msg}");
     assert!(msg.contains("4096"), "got: {msg}");
@@ -454,12 +551,17 @@ fn t12_napi_04_memory_json_has_all_fields_for_embedding() {
     assert!(obj.contains_key("summary"), "missing summary field");
     assert!(obj.contains_key("tags"), "missing tags field");
     assert!(obj.contains_key("memory_type"), "missing memory_type field");
-    assert!(obj.contains_key("linked_files"), "missing linked_files field");
-    assert!(obj.contains_key("linked_patterns"), "missing linked_patterns field");
+    assert!(
+        obj.contains_key("linked_files"),
+        "missing linked_files field"
+    );
+    assert!(
+        obj.contains_key("linked_patterns"),
+        "missing linked_patterns field"
+    );
     assert!(obj.contains_key("importance"), "missing importance field");
     assert!(obj.contains_key("confidence"), "missing confidence field");
 }
-
 
 // ─── T12-NAPI-05: All 23 memory type variants convert correctly ──────────────
 
@@ -506,8 +608,16 @@ fn t12_napi_05_variant_procedural() {
     let c = TypedContent::Procedural(ProceduralContent {
         title: "Deploy to prod".into(),
         steps: vec![
-            ProceduralStep { order: 1, instruction: "Run tests".into(), completed: false },
-            ProceduralStep { order: 2, instruction: "Tag release".into(), completed: false },
+            ProceduralStep {
+                order: 1,
+                instruction: "Run tests".into(),
+                completed: false,
+            },
+            ProceduralStep {
+                order: 2,
+                instruction: "Tag release".into(),
+                completed: false,
+            },
         ],
         prerequisites: vec!["CI green".into()],
     });
@@ -608,10 +718,8 @@ fn t12_napi_05_variant_constraint_override() {
     });
     let r = roundtrip_variant(MemoryType::ConstraintOverride, c.clone());
     // DateTime comparison at second precision (serde may lose sub-ms)
-    if let (
-        TypedContent::ConstraintOverride(orig),
-        TypedContent::ConstraintOverride(rest),
-    ) = (&c, &r.content)
+    if let (TypedContent::ConstraintOverride(orig), TypedContent::ConstraintOverride(rest)) =
+        (&c, &r.content)
     {
         assert_eq!(orig.constraint_name, rest.constraint_name);
         assert_eq!(orig.override_reason, rest.override_reason);
@@ -699,7 +807,11 @@ fn t12_napi_05_variant_goal() {
         title: "Ship v2.0".into(),
         description: "Complete cortex memory system".into(),
         progress: 0.85,
-        milestones: vec!["Core done".into(), "Storage done".into(), "NAPI done".into()],
+        milestones: vec![
+            "Core done".into(),
+            "Storage done".into(),
+            "NAPI done".into(),
+        ],
     });
     let r = roundtrip_variant(MemoryType::Goal, c.clone());
     assert_eq!(r.content, c);
@@ -721,8 +833,16 @@ fn t12_napi_05_variant_workflow() {
     let c = TypedContent::Workflow(WorkflowContent {
         name: "CI Pipeline".into(),
         steps: vec![
-            WorkflowStep { order: 1, action: "cargo check".into(), condition: None },
-            WorkflowStep { order: 2, action: "cargo test".into(), condition: Some("check passes".into()) },
+            WorkflowStep {
+                order: 1,
+                action: "cargo check".into(),
+                condition: None,
+            },
+            WorkflowStep {
+                order: 2,
+                action: "cargo test".into(),
+                condition: Some("check passes".into()),
+            },
         ],
         trigger: Some("push to main".into()),
     });
@@ -795,91 +915,215 @@ fn t12_napi_05_variant_environment() {
 fn t12_napi_05_all_23_variants_covered() {
     // Build one TypedContent for each of the 23 MemoryType variants.
     let variants: Vec<(MemoryType, TypedContent)> = vec![
-        (MemoryType::Core, TypedContent::Core(CoreContent {
-            project_name: "p".into(), description: "d".into(), metadata: serde_json::json!(null),
-        })),
-        (MemoryType::Tribal, TypedContent::Tribal(TribalContent {
-            knowledge: "k".into(), severity: "low".into(), warnings: vec![], consequences: vec![],
-        })),
-        (MemoryType::Procedural, TypedContent::Procedural(ProceduralContent {
-            title: "t".into(), steps: vec![], prerequisites: vec![],
-        })),
-        (MemoryType::Semantic, TypedContent::Semantic(SemanticContent {
-            knowledge: "k".into(), source_episodes: vec![], consolidation_confidence: 0.5,
-        })),
-        (MemoryType::Episodic, TypedContent::Episodic(EpisodicContent {
-            interaction: "i".into(), context: "c".into(), outcome: None,
-        })),
-        (MemoryType::Decision, TypedContent::Decision(DecisionContent {
-            decision: "d".into(), rationale: "r".into(), alternatives: vec![],
-        })),
-        (MemoryType::Insight, TypedContent::Insight(InsightContent {
-            observation: "o".into(), evidence: vec![],
-        })),
-        (MemoryType::Reference, TypedContent::Reference(ReferenceContent {
-            title: "t".into(), url: None, citation: "c".into(),
-        })),
-        (MemoryType::Preference, TypedContent::Preference(PreferenceContent {
-            preference: "p".into(), scope: "s".into(), value: serde_json::json!(true),
-        })),
-        (MemoryType::PatternRationale, TypedContent::PatternRationale(PatternRationaleContent {
-            pattern_name: "p".into(), rationale: "r".into(), business_context: "b".into(), examples: vec![],
-        })),
-        (MemoryType::ConstraintOverride, TypedContent::ConstraintOverride(ConstraintOverrideContent {
-            constraint_name: "c".into(), override_reason: "r".into(), approved_by: "a".into(),
-            scope: "s".into(), expiry: None,
-        })),
-        (MemoryType::DecisionContext, TypedContent::DecisionContext(DecisionContextContent {
-            decision: "d".into(), context: "c".into(), adr_link: None, trade_offs: vec![],
-        })),
-        (MemoryType::CodeSmell, TypedContent::CodeSmell(CodeSmellContent {
-            smell_name: "s".into(), description: "d".into(), bad_example: "b".into(),
-            good_example: "g".into(), severity: "low".into(),
-        })),
-        (MemoryType::AgentSpawn, TypedContent::AgentSpawn(AgentSpawnContent {
-            agent_name: "a".into(), configuration: serde_json::json!({}), purpose: "p".into(),
-        })),
-        (MemoryType::Entity, TypedContent::Entity(EntityContent {
-            entity_name: "e".into(), entity_type: "t".into(), description: "d".into(),
-            attributes: serde_json::json!({}),
-        })),
-        (MemoryType::Goal, TypedContent::Goal(GoalContent {
-            title: "t".into(), description: "d".into(), progress: 0.0, milestones: vec![],
-        })),
-        (MemoryType::Feedback, TypedContent::Feedback(FeedbackContent {
-            feedback: "f".into(), category: "c".into(), source: "s".into(),
-        })),
-        (MemoryType::Workflow, TypedContent::Workflow(WorkflowContent {
-            name: "w".into(), steps: vec![], trigger: None,
-        })),
-        (MemoryType::Conversation, TypedContent::Conversation(ConversationContent {
-            summary: "s".into(), participants: vec![], key_points: vec![],
-        })),
-        (MemoryType::Incident, TypedContent::Incident(IncidentContent {
-            title: "t".into(), root_cause: "r".into(), impact: "i".into(),
-            resolution: "res".into(), lessons_learned: vec![],
-        })),
-        (MemoryType::Meeting, TypedContent::Meeting(MeetingContent {
-            title: "t".into(), attendees: vec![], notes: "n".into(), action_items: vec![],
-        })),
-        (MemoryType::Skill, TypedContent::Skill(SkillContent {
-            skill_name: "s".into(), proficiency: "p".into(), domain: "d".into(), evidence: vec![],
-        })),
-        (MemoryType::Environment, TypedContent::Environment(EnvironmentContent {
-            name: "n".into(), config: serde_json::json!({}), platform: None,
-        })),
+        (
+            MemoryType::Core,
+            TypedContent::Core(CoreContent {
+                project_name: "p".into(),
+                description: "d".into(),
+                metadata: serde_json::json!(null),
+            }),
+        ),
+        (
+            MemoryType::Tribal,
+            TypedContent::Tribal(TribalContent {
+                knowledge: "k".into(),
+                severity: "low".into(),
+                warnings: vec![],
+                consequences: vec![],
+            }),
+        ),
+        (
+            MemoryType::Procedural,
+            TypedContent::Procedural(ProceduralContent {
+                title: "t".into(),
+                steps: vec![],
+                prerequisites: vec![],
+            }),
+        ),
+        (
+            MemoryType::Semantic,
+            TypedContent::Semantic(SemanticContent {
+                knowledge: "k".into(),
+                source_episodes: vec![],
+                consolidation_confidence: 0.5,
+            }),
+        ),
+        (
+            MemoryType::Episodic,
+            TypedContent::Episodic(EpisodicContent {
+                interaction: "i".into(),
+                context: "c".into(),
+                outcome: None,
+            }),
+        ),
+        (
+            MemoryType::Decision,
+            TypedContent::Decision(DecisionContent {
+                decision: "d".into(),
+                rationale: "r".into(),
+                alternatives: vec![],
+            }),
+        ),
+        (
+            MemoryType::Insight,
+            TypedContent::Insight(InsightContent {
+                observation: "o".into(),
+                evidence: vec![],
+            }),
+        ),
+        (
+            MemoryType::Reference,
+            TypedContent::Reference(ReferenceContent {
+                title: "t".into(),
+                url: None,
+                citation: "c".into(),
+            }),
+        ),
+        (
+            MemoryType::Preference,
+            TypedContent::Preference(PreferenceContent {
+                preference: "p".into(),
+                scope: "s".into(),
+                value: serde_json::json!(true),
+            }),
+        ),
+        (
+            MemoryType::PatternRationale,
+            TypedContent::PatternRationale(PatternRationaleContent {
+                pattern_name: "p".into(),
+                rationale: "r".into(),
+                business_context: "b".into(),
+                examples: vec![],
+            }),
+        ),
+        (
+            MemoryType::ConstraintOverride,
+            TypedContent::ConstraintOverride(ConstraintOverrideContent {
+                constraint_name: "c".into(),
+                override_reason: "r".into(),
+                approved_by: "a".into(),
+                scope: "s".into(),
+                expiry: None,
+            }),
+        ),
+        (
+            MemoryType::DecisionContext,
+            TypedContent::DecisionContext(DecisionContextContent {
+                decision: "d".into(),
+                context: "c".into(),
+                adr_link: None,
+                trade_offs: vec![],
+            }),
+        ),
+        (
+            MemoryType::CodeSmell,
+            TypedContent::CodeSmell(CodeSmellContent {
+                smell_name: "s".into(),
+                description: "d".into(),
+                bad_example: "b".into(),
+                good_example: "g".into(),
+                severity: "low".into(),
+            }),
+        ),
+        (
+            MemoryType::AgentSpawn,
+            TypedContent::AgentSpawn(AgentSpawnContent {
+                agent_name: "a".into(),
+                configuration: serde_json::json!({}),
+                purpose: "p".into(),
+            }),
+        ),
+        (
+            MemoryType::Entity,
+            TypedContent::Entity(EntityContent {
+                entity_name: "e".into(),
+                entity_type: "t".into(),
+                description: "d".into(),
+                attributes: serde_json::json!({}),
+            }),
+        ),
+        (
+            MemoryType::Goal,
+            TypedContent::Goal(GoalContent {
+                title: "t".into(),
+                description: "d".into(),
+                progress: 0.0,
+                milestones: vec![],
+            }),
+        ),
+        (
+            MemoryType::Feedback,
+            TypedContent::Feedback(FeedbackContent {
+                feedback: "f".into(),
+                category: "c".into(),
+                source: "s".into(),
+            }),
+        ),
+        (
+            MemoryType::Workflow,
+            TypedContent::Workflow(WorkflowContent {
+                name: "w".into(),
+                steps: vec![],
+                trigger: None,
+            }),
+        ),
+        (
+            MemoryType::Conversation,
+            TypedContent::Conversation(ConversationContent {
+                summary: "s".into(),
+                participants: vec![],
+                key_points: vec![],
+            }),
+        ),
+        (
+            MemoryType::Incident,
+            TypedContent::Incident(IncidentContent {
+                title: "t".into(),
+                root_cause: "r".into(),
+                impact: "i".into(),
+                resolution: "res".into(),
+                lessons_learned: vec![],
+            }),
+        ),
+        (
+            MemoryType::Meeting,
+            TypedContent::Meeting(MeetingContent {
+                title: "t".into(),
+                attendees: vec![],
+                notes: "n".into(),
+                action_items: vec![],
+            }),
+        ),
+        (
+            MemoryType::Skill,
+            TypedContent::Skill(SkillContent {
+                skill_name: "s".into(),
+                proficiency: "p".into(),
+                domain: "d".into(),
+                evidence: vec![],
+            }),
+        ),
+        (
+            MemoryType::Environment,
+            TypedContent::Environment(EnvironmentContent {
+                name: "n".into(),
+                config: serde_json::json!({}),
+                platform: None,
+            }),
+        ),
     ];
 
-    assert_eq!(variants.len(), MemoryType::COUNT, "must cover all 23 variants");
+    assert_eq!(
+        variants.len(),
+        MemoryType::COUNT,
+        "must cover all 23 variants"
+    );
 
     // Verify each variant roundtrips through the NAPI serde_json path.
     for (mt, content) in &variants {
         let mem = make_base_memory(&format!("all-{mt:?}"), *mt, content.clone());
         let restored = roundtrip_memory(&mem);
-        assert_eq!(
-            restored.content, mem.content,
-            "Roundtrip failed for {mt:?}"
-        );
+        assert_eq!(restored.content, mem.content, "Roundtrip failed for {mt:?}");
         assert_eq!(restored.memory_type, *mt);
     }
 
@@ -898,10 +1142,14 @@ fn memory_type_string_roundtrip_all_23() {
     for mt in MemoryType::ALL {
         let json_val = serde_json::to_value(mt).expect("serialize MemoryType");
         let s = json_val.as_str().expect("should be a string");
-        assert!(!s.is_empty(), "MemoryType string should not be empty for {mt:?}");
+        assert!(
+            !s.is_empty(),
+            "MemoryType string should not be empty for {mt:?}"
+        );
 
         // Roundtrip: string → MemoryType
-        let restored: MemoryType = serde_json::from_value(json_val).expect("deserialize MemoryType");
+        let restored: MemoryType =
+            serde_json::from_value(json_val).expect("deserialize MemoryType");
         assert_eq!(restored, mt, "MemoryType roundtrip failed for {mt:?}");
     }
 }
@@ -909,7 +1157,12 @@ fn memory_type_string_roundtrip_all_23() {
 #[test]
 fn importance_string_roundtrip() {
     use cortex_core::memory::Importance;
-    let variants = [Importance::Low, Importance::Normal, Importance::High, Importance::Critical];
+    let variants = [
+        Importance::Low,
+        Importance::Normal,
+        Importance::High,
+        Importance::Critical,
+    ];
     for imp in &variants {
         let json_val = serde_json::to_value(imp).unwrap();
         let s = json_val.as_str().expect("should be a string");
@@ -922,13 +1175,19 @@ fn importance_string_roundtrip() {
 #[test]
 fn invalid_memory_type_string_rejected() {
     let result = serde_json::from_str::<MemoryType>("\"nonexistent_type\"");
-    assert!(result.is_err(), "Invalid memory type should fail deserialization");
+    assert!(
+        result.is_err(),
+        "Invalid memory type should fail deserialization"
+    );
 }
 
 #[test]
 fn invalid_importance_string_rejected() {
     let result = serde_json::from_str::<Importance>("\"mega_important\"");
-    assert!(result.is_err(), "Invalid importance should fail deserialization");
+    assert!(
+        result.is_err(),
+        "Invalid importance should fail deserialization"
+    );
 }
 
 #[test]
@@ -953,29 +1212,133 @@ fn typed_content_json_roundtrip_preserves_tag() {
 fn typed_content_all_23_direct_roundtrip() {
     // Direct TypedContent roundtrip (not wrapped in BaseMemory) for all 23 variants.
     let contents: Vec<TypedContent> = vec![
-        TypedContent::Core(CoreContent { project_name: "p".into(), description: "d".into(), metadata: serde_json::json!(1) }),
-        TypedContent::Tribal(TribalContent { knowledge: "k".into(), severity: "s".into(), warnings: vec![], consequences: vec![] }),
-        TypedContent::Procedural(ProceduralContent { title: "t".into(), steps: vec![], prerequisites: vec![] }),
-        TypedContent::Semantic(SemanticContent { knowledge: "k".into(), source_episodes: vec![], consolidation_confidence: 0.1 }),
-        TypedContent::Episodic(EpisodicContent { interaction: "i".into(), context: "c".into(), outcome: None }),
-        TypedContent::Decision(DecisionContent { decision: "d".into(), rationale: "r".into(), alternatives: vec![] }),
-        TypedContent::Insight(InsightContent { observation: "o".into(), evidence: vec![] }),
-        TypedContent::Reference(ReferenceContent { title: "t".into(), url: None, citation: "c".into() }),
-        TypedContent::Preference(PreferenceContent { preference: "p".into(), scope: "s".into(), value: serde_json::json!(null) }),
-        TypedContent::PatternRationale(PatternRationaleContent { pattern_name: "p".into(), rationale: "r".into(), business_context: "b".into(), examples: vec![] }),
-        TypedContent::ConstraintOverride(ConstraintOverrideContent { constraint_name: "c".into(), override_reason: "r".into(), approved_by: "a".into(), scope: "s".into(), expiry: None }),
-        TypedContent::DecisionContext(DecisionContextContent { decision: "d".into(), context: "c".into(), adr_link: None, trade_offs: vec![] }),
-        TypedContent::CodeSmell(CodeSmellContent { smell_name: "s".into(), description: "d".into(), bad_example: "b".into(), good_example: "g".into(), severity: "l".into() }),
-        TypedContent::AgentSpawn(AgentSpawnContent { agent_name: "a".into(), configuration: serde_json::json!({}), purpose: "p".into() }),
-        TypedContent::Entity(EntityContent { entity_name: "e".into(), entity_type: "t".into(), description: "d".into(), attributes: serde_json::json!({}) }),
-        TypedContent::Goal(GoalContent { title: "t".into(), description: "d".into(), progress: 0.0, milestones: vec![] }),
-        TypedContent::Feedback(FeedbackContent { feedback: "f".into(), category: "c".into(), source: "s".into() }),
-        TypedContent::Workflow(WorkflowContent { name: "w".into(), steps: vec![], trigger: None }),
-        TypedContent::Conversation(ConversationContent { summary: "s".into(), participants: vec![], key_points: vec![] }),
-        TypedContent::Incident(IncidentContent { title: "t".into(), root_cause: "r".into(), impact: "i".into(), resolution: "res".into(), lessons_learned: vec![] }),
-        TypedContent::Meeting(MeetingContent { title: "t".into(), attendees: vec![], notes: "n".into(), action_items: vec![] }),
-        TypedContent::Skill(SkillContent { skill_name: "s".into(), proficiency: "p".into(), domain: "d".into(), evidence: vec![] }),
-        TypedContent::Environment(EnvironmentContent { name: "n".into(), config: serde_json::json!({}), platform: None }),
+        TypedContent::Core(CoreContent {
+            project_name: "p".into(),
+            description: "d".into(),
+            metadata: serde_json::json!(1),
+        }),
+        TypedContent::Tribal(TribalContent {
+            knowledge: "k".into(),
+            severity: "s".into(),
+            warnings: vec![],
+            consequences: vec![],
+        }),
+        TypedContent::Procedural(ProceduralContent {
+            title: "t".into(),
+            steps: vec![],
+            prerequisites: vec![],
+        }),
+        TypedContent::Semantic(SemanticContent {
+            knowledge: "k".into(),
+            source_episodes: vec![],
+            consolidation_confidence: 0.1,
+        }),
+        TypedContent::Episodic(EpisodicContent {
+            interaction: "i".into(),
+            context: "c".into(),
+            outcome: None,
+        }),
+        TypedContent::Decision(DecisionContent {
+            decision: "d".into(),
+            rationale: "r".into(),
+            alternatives: vec![],
+        }),
+        TypedContent::Insight(InsightContent {
+            observation: "o".into(),
+            evidence: vec![],
+        }),
+        TypedContent::Reference(ReferenceContent {
+            title: "t".into(),
+            url: None,
+            citation: "c".into(),
+        }),
+        TypedContent::Preference(PreferenceContent {
+            preference: "p".into(),
+            scope: "s".into(),
+            value: serde_json::json!(null),
+        }),
+        TypedContent::PatternRationale(PatternRationaleContent {
+            pattern_name: "p".into(),
+            rationale: "r".into(),
+            business_context: "b".into(),
+            examples: vec![],
+        }),
+        TypedContent::ConstraintOverride(ConstraintOverrideContent {
+            constraint_name: "c".into(),
+            override_reason: "r".into(),
+            approved_by: "a".into(),
+            scope: "s".into(),
+            expiry: None,
+        }),
+        TypedContent::DecisionContext(DecisionContextContent {
+            decision: "d".into(),
+            context: "c".into(),
+            adr_link: None,
+            trade_offs: vec![],
+        }),
+        TypedContent::CodeSmell(CodeSmellContent {
+            smell_name: "s".into(),
+            description: "d".into(),
+            bad_example: "b".into(),
+            good_example: "g".into(),
+            severity: "l".into(),
+        }),
+        TypedContent::AgentSpawn(AgentSpawnContent {
+            agent_name: "a".into(),
+            configuration: serde_json::json!({}),
+            purpose: "p".into(),
+        }),
+        TypedContent::Entity(EntityContent {
+            entity_name: "e".into(),
+            entity_type: "t".into(),
+            description: "d".into(),
+            attributes: serde_json::json!({}),
+        }),
+        TypedContent::Goal(GoalContent {
+            title: "t".into(),
+            description: "d".into(),
+            progress: 0.0,
+            milestones: vec![],
+        }),
+        TypedContent::Feedback(FeedbackContent {
+            feedback: "f".into(),
+            category: "c".into(),
+            source: "s".into(),
+        }),
+        TypedContent::Workflow(WorkflowContent {
+            name: "w".into(),
+            steps: vec![],
+            trigger: None,
+        }),
+        TypedContent::Conversation(ConversationContent {
+            summary: "s".into(),
+            participants: vec![],
+            key_points: vec![],
+        }),
+        TypedContent::Incident(IncidentContent {
+            title: "t".into(),
+            root_cause: "r".into(),
+            impact: "i".into(),
+            resolution: "res".into(),
+            lessons_learned: vec![],
+        }),
+        TypedContent::Meeting(MeetingContent {
+            title: "t".into(),
+            attendees: vec![],
+            notes: "n".into(),
+            action_items: vec![],
+        }),
+        TypedContent::Skill(SkillContent {
+            skill_name: "s".into(),
+            proficiency: "p".into(),
+            domain: "d".into(),
+            evidence: vec![],
+        }),
+        TypedContent::Environment(EnvironmentContent {
+            name: "n".into(),
+            config: serde_json::json!({}),
+            platform: None,
+        }),
     ];
 
     assert_eq!(contents.len(), 23);

@@ -1,8 +1,8 @@
 //! Integration test: archived cleanup + vacuum + dedup.
 
 use chrono::Utc;
-use cortex_core::memory::*;
 use cortex_core::memory::types::*;
+use cortex_core::memory::*;
 use cortex_core::traits::IMemoryStorage;
 use cortex_storage::StorageEngine;
 
@@ -48,17 +48,19 @@ fn test_vacuum() {
 fn test_storage_health() {
     let engine = StorageEngine::open_in_memory().unwrap();
     for i in 0..5 {
-        engine
-            .create(&make_memory(&format!("health-{i}")))
-            .unwrap();
+        engine.create(&make_memory(&format!("health-{i}"))).unwrap();
     }
 
-    engine.pool().writer.with_conn_sync(|conn| {
-        let report = cortex_storage::compaction::storage_health::report(conn)?;
-        assert_eq!(report.active_memories, 5);
-        assert_eq!(report.archived_memories, 0);
-        Ok(())
-    }).unwrap();
+    engine
+        .pool()
+        .writer
+        .with_conn_sync(|conn| {
+            let report = cortex_storage::compaction::storage_health::report(conn)?;
+            assert_eq!(report.active_memories, 5);
+            assert_eq!(report.archived_memories, 0);
+            Ok(())
+        })
+        .unwrap();
 }
 
 #[test]
@@ -67,30 +69,46 @@ fn test_embedding_dedup() {
     engine.create(&make_memory("dedup-1")).unwrap();
     engine.create(&make_memory("dedup-2")).unwrap();
 
-    engine.pool().writer.with_conn_sync(|conn| {
-        // Store embeddings with the same content hash.
-        let embedding = vec![0.1f32, 0.2, 0.3];
-        cortex_storage::queries::vector_search::store_embedding(
-            conn, "dedup-1", "same_hash", &embedding, "test-model",
-        )?;
-        cortex_storage::queries::vector_search::store_embedding(
-            conn, "dedup-2", "same_hash", &embedding, "test-model",
-        )?;
+    engine
+        .pool()
+        .writer
+        .with_conn_sync(|conn| {
+            // Store embeddings with the same content hash.
+            let embedding = vec![0.1f32, 0.2, 0.3];
+            cortex_storage::queries::vector_search::store_embedding(
+                conn,
+                "dedup-1",
+                "same_hash",
+                &embedding,
+                "test-model",
+            )?;
+            cortex_storage::queries::vector_search::store_embedding(
+                conn,
+                "dedup-2",
+                "same_hash",
+                &embedding,
+                "test-model",
+            )?;
 
-        // Should only have 1 embedding row (deduped by content_hash).
-        let count: i64 = conn
-            .query_row("SELECT COUNT(*) FROM memory_embeddings", [], |row| row.get(0))
-            .unwrap();
-        assert_eq!(count, 1, "should share embedding row");
+            // Should only have 1 embedding row (deduped by content_hash).
+            let count: i64 = conn
+                .query_row("SELECT COUNT(*) FROM memory_embeddings", [], |row| {
+                    row.get(0)
+                })
+                .unwrap();
+            assert_eq!(count, 1, "should share embedding row");
 
-        // But 2 links.
-        let link_count: i64 = conn
-            .query_row("SELECT COUNT(*) FROM memory_embedding_link", [], |row| row.get(0))
-            .unwrap();
-        assert_eq!(link_count, 2, "should have 2 links");
+            // But 2 links.
+            let link_count: i64 = conn
+                .query_row("SELECT COUNT(*) FROM memory_embedding_link", [], |row| {
+                    row.get(0)
+                })
+                .unwrap();
+            assert_eq!(link_count, 2, "should have 2 links");
 
-        Ok(())
-    }).unwrap();
+            Ok(())
+        })
+        .unwrap();
 }
 
 #[test]
@@ -98,19 +116,28 @@ fn test_orphaned_embedding_cleanup() {
     let engine = StorageEngine::open_in_memory().unwrap();
     engine.create(&make_memory("orphan-1")).unwrap();
 
-    engine.pool().writer.with_conn_sync(|conn| {
-        let embedding = vec![0.1f32, 0.2, 0.3];
-        cortex_storage::queries::vector_search::store_embedding(
-            conn, "orphan-1", "orphan_hash", &embedding, "test-model",
-        )?;
+    engine
+        .pool()
+        .writer
+        .with_conn_sync(|conn| {
+            let embedding = vec![0.1f32, 0.2, 0.3];
+            cortex_storage::queries::vector_search::store_embedding(
+                conn,
+                "orphan-1",
+                "orphan_hash",
+                &embedding,
+                "test-model",
+            )?;
 
-        // Delete the memory (link will be cascade-deleted).
-        cortex_storage::queries::memory_crud::delete_memory(conn, "orphan-1")?;
+            // Delete the memory (link will be cascade-deleted).
+            cortex_storage::queries::memory_crud::delete_memory(conn, "orphan-1")?;
 
-        // Cleanup orphaned embeddings.
-        let cleaned = cortex_storage::compaction::embedding_dedup::cleanup_orphaned_embeddings(conn)?;
-        assert_eq!(cleaned, 1);
+            // Cleanup orphaned embeddings.
+            let cleaned =
+                cortex_storage::compaction::embedding_dedup::cleanup_orphaned_embeddings(conn)?;
+            assert_eq!(cleaned, 1);
 
-        Ok(())
-    }).unwrap();
+            Ok(())
+        })
+        .unwrap();
 }

@@ -35,10 +35,7 @@ pub struct ResolutionOutcome {
 }
 
 /// Resolve a conflict using the given strategy.
-pub fn resolve(
-    conflict: &DetectedConflict,
-    strategy: ResolutionStrategy,
-) -> ResolutionOutcome {
+pub fn resolve(conflict: &DetectedConflict, strategy: ResolutionStrategy) -> ResolutionOutcome {
     match strategy {
         ResolutionStrategy::LastWriteWins => {
             let winner = if conflict.local_modified >= conflict.remote_modified {

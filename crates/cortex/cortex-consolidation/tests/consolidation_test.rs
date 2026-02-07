@@ -2,8 +2,8 @@
 
 use chrono::{Duration, Utc};
 use cortex_core::errors::CortexResult;
-use cortex_core::memory::*;
 use cortex_core::memory::types::{EpisodicContent, SemanticContent};
+use cortex_core::memory::*;
 use cortex_core::models::ConsolidationMetrics;
 use cortex_core::traits::{IConsolidator, IEmbeddingProvider};
 
@@ -21,9 +21,15 @@ impl IEmbeddingProvider for DeterministicEmbedder {
     fn embed_batch(&self, texts: &[String]) -> CortexResult<Vec<Vec<f32>>> {
         Ok(texts.iter().map(|t| text_to_embedding(t, 64)).collect())
     }
-    fn dimensions(&self) -> usize { 64 }
-    fn name(&self) -> &str { "deterministic-test" }
-    fn is_available(&self) -> bool { true }
+    fn dimensions(&self) -> usize {
+        64
+    }
+    fn name(&self) -> &str {
+        "deterministic-test"
+    }
+    fn is_available(&self) -> bool {
+        true
+    }
 }
 
 /// Generate a deterministic embedding from text (hash-based).
@@ -65,7 +71,7 @@ fn make_old_episodic(summary: &str, tags: Vec<String>, access_count: u64) -> Bas
         archived: false,
         superseded_by: None,
         supersedes: None,
-        content_hash: BaseMemory::compute_content_hash(&content),
+        content_hash: BaseMemory::compute_content_hash(&content).unwrap(),
     }
 }
 
@@ -73,9 +79,21 @@ fn make_old_episodic(summary: &str, tags: Vec<String>, access_count: u64) -> Bas
 #[test]
 fn t8_con_01_clusters_related_episodes() {
     let memories = vec![
-        make_old_episodic("Rust borrow checker prevents data races in concurrent code", vec!["rust".into()], 3),
-        make_old_episodic("Rust ownership model ensures memory safety without garbage collection", vec!["rust".into()], 3),
-        make_old_episodic("Rust lifetimes track references to prevent dangling pointers", vec!["rust".into()], 3),
+        make_old_episodic(
+            "Rust borrow checker prevents data races in concurrent code",
+            vec!["rust".into()],
+            3,
+        ),
+        make_old_episodic(
+            "Rust ownership model ensures memory safety without garbage collection",
+            vec!["rust".into()],
+            3,
+        ),
+        make_old_episodic(
+            "Rust lifetimes track references to prevent dangling pointers",
+            vec!["rust".into()],
+            3,
+        ),
     ];
 
     let selected = pipeline::phase1_selection::select_candidates(&memories);
@@ -117,7 +135,8 @@ fn t8_con_03_recall_gate_rejects_bad_embeddings() {
     let bad_embeddings = vec![vec![0.0; 64], vec![0.0; 64]];
     let all_embeddings = vec![vec![1.0; 64], vec![2.0; 64], vec![3.0; 64]];
 
-    let result = phase3_recall_gate::check_recall(&cluster, &bad_embeddings, &all_embeddings).unwrap();
+    let result =
+        phase3_recall_gate::check_recall(&cluster, &bad_embeddings, &all_embeddings).unwrap();
     // With zero embeddings vs non-zero all_embeddings, recall should be low.
     assert!(result.score < 1.0);
 }
@@ -132,7 +151,10 @@ fn t8_con_04_anchor_selects_highest_scoring() {
     let cluster: Vec<&BaseMemory> = vec![&m_low, &m_high];
 
     let anchor = phase4_abstraction::select_anchor(&cluster).unwrap();
-    assert_eq!(anchor.id, m_high.id, "anchor should be the highest-scoring memory");
+    assert_eq!(
+        anchor.id, m_high.id,
+        "anchor should be the highest-scoring memory"
+    );
 }
 
 // T8-CON-05: Novel sentences merged, duplicates dropped.
@@ -145,10 +167,7 @@ fn t8_con_05_novel_merge() {
     let cluster: Vec<&BaseMemory> = vec![&m1, &m2];
 
     // Very different embeddings → both should be considered novel.
-    let embeddings = vec![
-        vec![1.0; 64],
-        vec![-1.0; 64],
-    ];
+    let embeddings = vec![vec![1.0; 64], vec![-1.0; 64]];
 
     let result = phase4_abstraction::abstract_cluster(&cluster, &embeddings);
     assert!(!result.knowledge.is_empty());
@@ -198,7 +217,7 @@ fn t8_con_07_integration_dedup() {
         archived: false,
         superseded_by: None,
         supersedes: None,
-        content_hash: BaseMemory::compute_content_hash(&content),
+        content_hash: BaseMemory::compute_content_hash(&content).unwrap(),
     };
 
     let emb = vec![1.0; 64];
@@ -217,7 +236,13 @@ fn t8_con_07_integration_dedup() {
 fn t8_con_08_deterministic() {
     let engine = ConsolidationEngine::new(Box::new(DeterministicEmbedder));
     let memories: Vec<BaseMemory> = (0..3)
-        .map(|i| make_old_episodic(&format!("Rust safety topic number {}", i), vec!["rust".into()], 3))
+        .map(|i| {
+            make_old_episodic(
+                &format!("Rust safety topic number {}", i),
+                vec!["rust".into()],
+                3,
+            )
+        })
         .collect();
 
     let result1 = engine.consolidate(&memories).unwrap();
@@ -259,11 +284,14 @@ fn t8_con_09_idempotent() {
         archived: false,
         superseded_by: None,
         supersedes: None,
-        content_hash: BaseMemory::compute_content_hash(&content),
+        content_hash: BaseMemory::compute_content_hash(&content).unwrap(),
     };
 
     let result = engine.consolidate(&[semantic]).unwrap();
-    assert!(result.created.is_empty(), "semantic memories should not be re-consolidated");
+    assert!(
+        result.created.is_empty(),
+        "semantic memories should not be re-consolidated"
+    );
     assert!(result.archived.is_empty());
 }
 
@@ -282,8 +310,14 @@ fn t8_con_10_monotonic_confidence() {
     let small_refs: Vec<&BaseMemory> = small_cluster.iter().collect();
     let large_refs: Vec<&BaseMemory> = large_cluster.iter().collect();
 
-    let small_embs: Vec<Vec<f32>> = small_cluster.iter().map(|m| text_to_embedding(&m.summary, 64)).collect();
-    let large_embs: Vec<Vec<f32>> = large_cluster.iter().map(|m| text_to_embedding(&m.summary, 64)).collect();
+    let small_embs: Vec<Vec<f32>> = small_cluster
+        .iter()
+        .map(|m| text_to_embedding(&m.summary, 64))
+        .collect();
+    let large_embs: Vec<Vec<f32>> = large_cluster
+        .iter()
+        .map(|m| text_to_embedding(&m.summary, 64))
+        .collect();
 
     let small_result = phase4_abstraction::abstract_cluster(&small_refs, &small_embs);
     let large_result = phase4_abstraction::abstract_cluster(&large_refs, &large_embs);
@@ -307,7 +341,7 @@ fn t8_con_11_no_orphaned_links() {
     let embs = vec![vec![0.5; 64], vec![0.6; 64]];
 
     let result = phase4_abstraction::abstract_cluster(&cluster, &embs);
-    let semantic = phase4_abstraction::build_semantic_memory(&result);
+    let semantic = phase4_abstraction::build_semantic_memory(&result).unwrap();
 
     // All tags in output should come from input.
     let input_tags: std::collections::HashSet<&str> = cluster
@@ -332,10 +366,13 @@ fn t8_con_12_output_smaller_than_input() {
         ))
         .collect();
     let refs: Vec<&BaseMemory> = memories.iter().collect();
-    let embs: Vec<Vec<f32>> = memories.iter().map(|m| text_to_embedding(&m.summary, 64)).collect();
+    let embs: Vec<Vec<f32>> = memories
+        .iter()
+        .map(|m| text_to_embedding(&m.summary, 64))
+        .collect();
 
     let result = phase4_abstraction::abstract_cluster(&refs, &embs);
-    let semantic = phase4_abstraction::build_semantic_memory(&result);
+    let semantic = phase4_abstraction::build_semantic_memory(&result).unwrap();
 
     let input_tokens: usize = memories.iter().map(|m| m.summary.len()).sum();
     let output_tokens = semantic.summary.len();

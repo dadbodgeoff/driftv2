@@ -15,9 +15,7 @@ use chrono::{DateTime, Utc};
 
 use cortex_core::errors::CortexResult;
 use cortex_core::memory::{BaseMemory, MemoryType, TypedContent};
-use cortex_core::models::{
-    CompressedMemory, DecisionReplay, DecisionReplayQuery, HindsightItem,
-};
+use cortex_core::models::{CompressedMemory, DecisionReplay, DecisionReplayQuery, HindsightItem};
 use cortex_storage::pool::ReadPool;
 
 use super::temporal_causal;
@@ -59,10 +57,11 @@ pub fn execute_replay(
     // Step 4: Reconstruct decision state at creation time.
     // If reconstruction returns a shell with wrong type (e.g., Created event
     // didn't contain full BaseMemory), fall back to current memory.
-    let decision = match reconstruct::reconstruct_at(readers, &query.decision_memory_id, decision_time)? {
-        Some(reconstructed) if is_decision_type(&reconstructed) => reconstructed,
-        _ => current_memory.clone(),
-    };
+    let decision =
+        match reconstruct::reconstruct_at(readers, &query.decision_memory_id, decision_time)? {
+            Some(reconstructed) if is_decision_type(&reconstructed) => reconstructed,
+            _ => current_memory.clone(),
+        };
 
     // Step 5: Reconstruct all available context at decision time
     let available_context = reconstruct::reconstruct_all_at(readers, decision_time)?;
@@ -91,17 +90,13 @@ pub fn execute_replay(
 /// Load a memory by ID from the database.
 fn load_memory(readers: &Arc<ReadPool>, memory_id: &str) -> CortexResult<BaseMemory> {
     let mid = memory_id.to_string();
-    let result = readers.with_conn(move |conn| {
-        cortex_storage::queries::memory_crud::get_memory(conn, &mid)
-    })?;
+    let result = readers
+        .with_conn(move |conn| cortex_storage::queries::memory_crud::get_memory(conn, &mid))?;
 
     result.ok_or_else(|| {
-        cortex_core::CortexError::TemporalError(
-            cortex_core::errors::TemporalError::QueryFailed(format!(
-                "memory '{}' not found",
-                memory_id
-            )),
-        )
+        cortex_core::CortexError::TemporalError(cortex_core::errors::TemporalError::QueryFailed(
+            format!("memory '{}' not found", memory_id),
+        ))
     })
 }
 
@@ -285,11 +280,18 @@ fn classify_relationship(memory: &BaseMemory, decision: &BaseMemory) -> String {
 /// Check if a memory has signals that it contradicts a decision.
 fn has_contradiction_signals(memory: &BaseMemory, decision: &BaseMemory) -> bool {
     // Check tags for contradiction indicators
-    let contradiction_tags = ["deprecated", "obsolete", "incorrect", "revised", "retracted"];
-    let has_contradiction_tag = memory
-        .tags
-        .iter()
-        .any(|t| contradiction_tags.iter().any(|ct| t.to_lowercase().contains(ct)));
+    let contradiction_tags = [
+        "deprecated",
+        "obsolete",
+        "incorrect",
+        "revised",
+        "retracted",
+    ];
+    let has_contradiction_tag = memory.tags.iter().any(|t| {
+        contradiction_tags
+            .iter()
+            .any(|ct| t.to_lowercase().contains(ct))
+    });
 
     if has_contradiction_tag {
         return true;
@@ -297,7 +299,10 @@ fn has_contradiction_signals(memory: &BaseMemory, decision: &BaseMemory) -> bool
 
     // Check if the memory's content type suggests contradiction
     // (e.g., a new decision that covers the same topic)
-    if matches!(memory.memory_type, MemoryType::Decision | MemoryType::DecisionContext) {
+    if matches!(
+        memory.memory_type,
+        MemoryType::Decision | MemoryType::DecisionContext
+    ) {
         // Another decision on a similar topic likely contradicts or supersedes
         let decision_topic = extract_decision_topic(decision).to_lowercase();
         let memory_topic = extract_decision_topic(memory).to_lowercase();

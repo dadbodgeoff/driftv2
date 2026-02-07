@@ -78,13 +78,7 @@ fn has_topic_overlap(a: &BaseMemory, b: &BaseMemory) -> bool {
     // Summary word overlap (at least 2 significant words in common).
     let a_lower = a.summary.to_lowercase();
     let b_lower = b.summary.to_lowercase();
-    let a_words: Vec<&str> = a_lower
-        .split_whitespace()
-        .filter(|w| w.len() > 3)
-        .collect();
-    let overlap = a_words
-        .iter()
-        .filter(|w| b_lower.contains(**w))
-        .count();
+    let a_words: Vec<&str> = a_lower.split_whitespace().filter(|w| w.len() > 3).collect();
+    let overlap = a_words.iter().filter(|w| b_lower.contains(**w)).count();
     overlap >= 2
 }

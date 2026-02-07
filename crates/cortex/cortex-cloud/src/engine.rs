@@ -133,7 +133,10 @@ impl CloudEngine {
         all_changes.extend_from_slice(local_changes);
 
         // Perform the sync.
-        match self.sync.sync(&self.client, &all_changes, &mut self.conflicts) {
+        match self
+            .sync
+            .sync(&self.client, &all_changes, &mut self.conflicts)
+        {
             Ok(report) => {
                 self.status = CloudStatus::Connected;
                 Ok(SyncResult {

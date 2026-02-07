@@ -36,10 +36,7 @@ pub struct ClusterResult {
 /// Cluster candidate memories using HDBSCAN on composite feature vectors.
 ///
 /// `embeddings` must be parallel to `candidates` — one embedding per memory.
-pub fn cluster_candidates(
-    candidates: &[&BaseMemory],
-    embeddings: &[Vec<f32>],
-) -> ClusterResult {
+pub fn cluster_candidates(candidates: &[&BaseMemory], embeddings: &[Vec<f32>]) -> ClusterResult {
     if candidates.len() < MIN_CLUSTER_SIZE {
         return ClusterResult {
             clusters: vec![],
@@ -86,10 +83,7 @@ pub fn cluster_candidates(
 }
 
 /// Build composite feature vectors from 5 signals.
-fn build_composite_features(
-    candidates: &[&BaseMemory],
-    embeddings: &[Vec<f32>],
-) -> Vec<Vec<f32>> {
+fn build_composite_features(candidates: &[&BaseMemory], embeddings: &[Vec<f32>]) -> Vec<Vec<f32>> {
     let embed_dim = embeddings.first().map(|e| e.len()).unwrap_or(0);
 
     candidates
@@ -128,8 +122,8 @@ fn build_composite_features(
 mod tests {
     use super::*;
     use chrono::Utc;
-    use cortex_core::memory::*;
     use cortex_core::memory::types::EpisodicContent;
+    use cortex_core::memory::*;
 
     fn make_memory(tags: Vec<String>) -> BaseMemory {
         let content = TypedContent::Episodic(EpisodicContent {
@@ -157,7 +151,7 @@ mod tests {
             archived: false,
             superseded_by: None,
             supersedes: None,
-            content_hash: BaseMemory::compute_content_hash(&content),
+            content_hash: BaseMemory::compute_content_hash(&content).unwrap(),
         }
     }
 

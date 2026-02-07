@@ -11,10 +11,7 @@ use crate::transport::HttpClient;
 /// Pull remote changes from the cloud.
 ///
 /// Returns the pulled payloads and the new sync token.
-pub fn pull_changes(
-    client: &HttpClient,
-    sync_token: Option<&str>,
-) -> CortexResult<PullResult> {
+pub fn pull_changes(client: &HttpClient, sync_token: Option<&str>) -> CortexResult<PullResult> {
     let path = match sync_token {
         Some(token) => format!("/api/v1/sync/pull?since={token}"),
         None => "/api/v1/sync/pull".to_string(),

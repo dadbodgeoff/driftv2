@@ -22,10 +22,7 @@ const FREQUENCY_BOOST: f64 = 0.05;
 ///
 /// After consolidation, the source episodes are archived (marked as superseded).
 /// Frequently accessed episodes get a confidence boost before archival.
-pub fn plan_pruning(
-    source_episodes: &[&BaseMemory],
-    _consolidated_id: &str,
-) -> PruningResult {
+pub fn plan_pruning(source_episodes: &[&BaseMemory], _consolidated_id: &str) -> PruningResult {
     let mut archived_ids = Vec::new();
     let mut boosted_ids = Vec::new();
     let mut tokens_freed = 0usize;
@@ -51,10 +48,7 @@ pub fn plan_pruning(
 
 /// Apply pruning: mark memories as archived and set superseded_by.
 /// Returns the mutated memories (caller is responsible for persisting).
-pub fn apply_pruning(
-    source_episodes: &mut [BaseMemory],
-    consolidated_id: &str,
-) -> PruningResult {
+pub fn apply_pruning(source_episodes: &mut [BaseMemory], consolidated_id: &str) -> PruningResult {
     let mut archived_ids = Vec::new();
     let mut boosted_ids = Vec::new();
     let mut tokens_freed = 0usize;
@@ -85,8 +79,8 @@ pub fn apply_pruning(
 mod tests {
     use super::*;
     use chrono::Utc;
-    use cortex_core::memory::*;
     use cortex_core::memory::types::EpisodicContent;
+    use cortex_core::memory::*;
 
     fn make_episodic(access_count: u64) -> BaseMemory {
         let content = TypedContent::Episodic(EpisodicContent {
@@ -114,7 +108,7 @@ mod tests {
             archived: false,
             superseded_by: None,
             supersedes: None,
-            content_hash: BaseMemory::compute_content_hash(&content),
+            content_hash: BaseMemory::compute_content_hash(&content).unwrap(),
         }
     }
 
@@ -139,7 +133,9 @@ mod tests {
         let mut memories = vec![make_episodic(1), make_episodic(6)];
         let result = apply_pruning(&mut memories, "new-id");
         assert!(memories.iter().all(|m| m.archived));
-        assert!(memories.iter().all(|m| m.superseded_by.as_deref() == Some("new-id")));
+        assert!(memories
+            .iter()
+            .all(|m| m.superseded_by.as_deref() == Some("new-id")));
         assert_eq!(result.archived_ids.len(), 2);
         assert_eq!(result.boosted_ids.len(), 1); // only the one with access_count=6
     }

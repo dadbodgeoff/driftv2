@@ -13,9 +13,10 @@ use crate::runtime;
 #[napi]
 pub fn cortex_health_get_health() -> napi::Result<serde_json::Value> {
     let rt = runtime::get()?;
-    let mut obs = rt.observability.lock().map_err(|e| {
-        napi::Error::from_reason(format!("Observability lock poisoned: {e}"))
-    })?;
+    let mut obs = rt
+        .observability
+        .lock()
+        .map_err(|e| napi::Error::from_reason(format!("Observability lock poisoned: {e}")))?;
 
     // Build a snapshot from current engine state.
     let type_counts = rt
@@ -52,9 +53,10 @@ pub fn cortex_health_get_health() -> napi::Result<serde_json::Value> {
 #[napi]
 pub fn cortex_health_get_metrics() -> napi::Result<serde_json::Value> {
     let rt = runtime::get()?;
-    let _obs = rt.observability.lock().map_err(|e| {
-        napi::Error::from_reason(format!("Observability lock poisoned: {e}"))
-    })?;
+    let _obs = rt
+        .observability
+        .lock()
+        .map_err(|e| napi::Error::from_reason(format!("Observability lock poisoned: {e}")))?;
     // MetricsCollector doesn't derive Serialize, so we build JSON manually.
     Ok(json!({
         "session_count": rt.session.session_count(),
@@ -69,9 +71,10 @@ pub fn cortex_health_get_metrics() -> napi::Result<serde_json::Value> {
 #[napi]
 pub fn cortex_health_get_degradations() -> napi::Result<serde_json::Value> {
     let rt = runtime::get()?;
-    let mut embeddings = rt.embeddings.lock().map_err(|e| {
-        napi::Error::from_reason(format!("Embedding lock poisoned: {e}"))
-    })?;
+    let mut embeddings = rt
+        .embeddings
+        .lock()
+        .map_err(|e| napi::Error::from_reason(format!("Embedding lock poisoned: {e}")))?;
     let events = embeddings.drain_degradation_events();
     health_types::degradation_events_to_json(&events)
 }

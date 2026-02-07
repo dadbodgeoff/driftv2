@@ -46,7 +46,7 @@ fn make_memory_with_content(id: &str, importance: Importance, summary: &str) -> 
         archived: false,
         superseded_by: None,
         supersedes: None,
-        content_hash: BaseMemory::compute_content_hash(&content),
+        content_hash: BaseMemory::compute_content_hash(&content).unwrap(),
     }
 }
 
@@ -59,7 +59,11 @@ fn stress_level_ordering_500_memories() {
     for i in 0..500 {
         let mem = make_memory_with_content(
             &format!("lo-{i}"),
-            if i % 4 == 0 { Importance::Critical } else { Importance::Normal },
+            if i % 4 == 0 {
+                Importance::Critical
+            } else {
+                Importance::Normal
+            },
             &format!("Topic {i} about software engineering principle number {i}"),
         );
 
@@ -71,17 +75,20 @@ fn stress_level_ordering_500_memories() {
         assert!(
             l0.token_count <= l1.token_count,
             "Memory {i}: L0 ({}) > L1 ({})",
-            l0.token_count, l1.token_count
+            l0.token_count,
+            l1.token_count
         );
         assert!(
             l1.token_count <= l2.token_count,
             "Memory {i}: L1 ({}) > L2 ({})",
-            l1.token_count, l2.token_count
+            l1.token_count,
+            l2.token_count
         );
         assert!(
             l2.token_count <= l3.token_count,
             "Memory {i}: L2 ({}) > L3 ({})",
-            l2.token_count, l3.token_count
+            l2.token_count,
+            l3.token_count
         );
     }
 }
@@ -109,11 +116,15 @@ fn stress_compress_to_fit_respects_budget_or_returns_l0() {
                 assert!(
                     compressed.token_count <= budget,
                     "Budget {budget}: compressed to {} tokens at level {} (exceeded)",
-                    compressed.token_count, compressed.level
+                    compressed.token_count,
+                    compressed.level
                 );
             } else {
                 // Very small budgets: L0 is returned regardless.
-                assert_eq!(compressed.level, 0, "Should fall back to L0 for tiny budget");
+                assert_eq!(
+                    compressed.level, 0,
+                    "Should fall back to L0 for tiny budget"
+                );
             }
         }
     }
@@ -149,19 +160,27 @@ fn stress_batch_packing_100_memories() {
     assert!(
         total_tokens <= budget,
         "Batch total {} exceeds budget {}",
-        total_tokens, budget
+        total_tokens,
+        budget
     );
     assert!(elapsed.as_secs() < 5, "Batch packing took {:?}", elapsed);
 
     // Critical memories should be prioritized.
     if !packed.is_empty() {
-        let critical_count = packed.iter().filter(|c| c.importance == Importance::Critical).count();
-        let low_count = packed.iter().filter(|c| c.importance == Importance::Low).count();
+        let critical_count = packed
+            .iter()
+            .filter(|c| c.importance == Importance::Critical)
+            .count();
+        let low_count = packed
+            .iter()
+            .filter(|c| c.importance == Importance::Low)
+            .count();
         // With priority weighting, critical should appear more than low.
         assert!(
             critical_count >= low_count || packed.len() >= 100,
             "Critical ({}) should be >= Low ({}) in priority packing",
-            critical_count, low_count
+            critical_count,
+            low_count
         );
     }
 }
@@ -170,11 +189,13 @@ fn stress_batch_packing_100_memories() {
 fn stress_batch_packing_tight_budget() {
     let engine = CompressionEngine::new();
     let memories: Vec<BaseMemory> = (0..50)
-        .map(|i| make_memory_with_content(
-            &format!("tight-{i}"),
-            Importance::Normal,
-            &format!("Memory {i}"),
-        ))
+        .map(|i| {
+            make_memory_with_content(
+                &format!("tight-{i}"),
+                Importance::Normal,
+                &format!("Memory {i}"),
+            )
+        })
         .collect();
 
     // Very tight budget — should still not exceed.
@@ -215,11 +236,7 @@ fn stress_all_levels_produce_nonempty_text() {
             "Level {} produced empty text",
             level
         );
-        assert!(
-            compressed.token_count > 0,
-            "Level {} has 0 tokens",
-            level
-        );
+        assert!(compressed.token_count > 0, "Level {} has 0 tokens", level);
     }
 }
 
@@ -229,11 +246,13 @@ fn stress_all_levels_produce_nonempty_text() {
 fn stress_compression_throughput_1000() {
     let engine = CompressionEngine::new();
     let memories: Vec<BaseMemory> = (0..1000)
-        .map(|i| make_memory_with_content(
-            &format!("perf-{i}"),
-            Importance::Normal,
-            &format!("Performance test memory number {i} with sufficient content"),
-        ))
+        .map(|i| {
+            make_memory_with_content(
+                &format!("perf-{i}"),
+                Importance::Normal,
+                &format!("Performance test memory number {i} with sufficient content"),
+            )
+        })
         .collect();
 
     let start = Instant::now();

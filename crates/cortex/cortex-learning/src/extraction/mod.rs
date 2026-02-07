@@ -3,5 +3,5 @@
 pub mod llm_enhanced;
 pub mod rule_based;
 
-pub use llm_enhanced::{LlmExtractor, NoOpExtractor, extract_with_fallback};
+pub use llm_enhanced::{extract_with_fallback, LlmExtractor, NoOpExtractor};
 pub use rule_based::extract_principle;

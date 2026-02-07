@@ -43,7 +43,11 @@ fn parse_and_seed_memories(storage: &StorageEngine, fixture: &Value) -> Vec<Stri
 
         let tags: Vec<String> = m["tags"]
             .as_array()
-            .map(|arr| arr.iter().filter_map(|v| v.as_str().map(String::from)).collect())
+            .map(|arr| {
+                arr.iter()
+                    .filter_map(|v| v.as_str().map(String::from))
+                    .collect()
+            })
             .unwrap_or_default();
 
         let content = TypedContent::Core(cortex_core::memory::types::CoreContent {
@@ -72,7 +76,7 @@ fn parse_and_seed_memories(storage: &StorageEngine, fixture: &Value) -> Vec<Stri
             archived: false,
             superseded_by: None,
             supersedes: None,
-            content_hash: BaseMemory::compute_content_hash(&content),
+            content_hash: BaseMemory::compute_content_hash(&content).unwrap(),
         };
 
         storage.create(&memory).expect("failed to seed memory");
@@ -144,12 +148,20 @@ fn build_context(fixture: &Value) -> RetrievalContext {
         intent: parse_intent(query["intent"].as_str()),
         active_files: query["active_files"]
             .as_array()
-            .map(|arr| arr.iter().filter_map(|v| v.as_str().map(String::from)).collect())
+            .map(|arr| {
+                arr.iter()
+                    .filter_map(|v| v.as_str().map(String::from))
+                    .collect()
+            })
             .unwrap_or_default(),
         budget: query["budget"].as_u64().unwrap_or(2000) as usize,
         sent_ids: query["sent_ids"]
             .as_array()
-            .map(|arr| arr.iter().filter_map(|v| v.as_str().map(String::from)).collect())
+            .map(|arr| {
+                arr.iter()
+                    .filter_map(|v| v.as_str().map(String::from))
+                    .collect()
+            })
             .unwrap_or_default(),
     }
 }
@@ -158,7 +170,13 @@ fn build_context(fixture: &Value) -> RetrievalContext {
 fn sanitize_fts5_query(query: &str) -> String {
     query
         .chars()
-        .map(|c| if c.is_alphanumeric() || c == ' ' || c == '_' { c } else { ' ' })
+        .map(|c| {
+            if c.is_alphanumeric() || c == ' ' || c == '_' {
+                c
+            } else {
+                ' '
+            }
+        })
         .collect::<String>()
         .split_whitespace()
         .collect::<Vec<_>>()
@@ -242,7 +260,10 @@ fn golden_semantic_match() {
     // The query "How does user login work What signing algorithm do we use"
     // may or may not match via FTS5 depending on keyword overlap.
     let results = engine.retrieve(&context, context.budget);
-    assert!(results.is_ok(), "Retrieval should not error even without embeddings");
+    assert!(
+        results.is_ok(),
+        "Retrieval should not error even without embeddings"
+    );
 }
 
 /// Hybrid RRF: tests the fusion of FTS5 results.

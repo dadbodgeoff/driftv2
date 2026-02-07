@@ -117,12 +117,8 @@ impl ReclassificationEngine {
                 let last_reclass = history_provider(&memory.id);
                 let is_user_critical = user_critical_check(&memory.id);
 
-                let eval = Self::evaluate(
-                    memory,
-                    &signals,
-                    is_user_critical,
-                    last_reclass.as_ref(),
-                );
+                let eval =
+                    Self::evaluate(memory, &signals, is_user_critical, last_reclass.as_ref());
                 evaluations.push(eval);
             }
         }

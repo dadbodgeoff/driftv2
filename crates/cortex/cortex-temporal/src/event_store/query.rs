@@ -19,7 +19,10 @@ pub fn get_events(
     let before_str = before.map(|t| t.to_rfc3339());
     readers.with_conn(|conn| {
         let raw = event_ops::get_events_for_memory(conn, &mid, before_str.as_deref())?;
-        Ok(raw.into_iter().filter_map(|r| raw_to_event(r).ok()).collect())
+        Ok(raw
+            .into_iter()
+            .filter_map(|r| raw_to_event(r).ok())
+            .collect())
     })
 }
 
@@ -33,7 +36,10 @@ pub fn get_events_in_range(
     let to_str = to.to_rfc3339();
     readers.with_conn(|conn| {
         let raw = event_ops::get_events_in_range(conn, &from_str, &to_str)?;
-        Ok(raw.into_iter().filter_map(|r| raw_to_event(r).ok()).collect())
+        Ok(raw
+            .into_iter()
+            .filter_map(|r| raw_to_event(r).ok())
+            .collect())
     })
 }
 
@@ -50,7 +56,10 @@ pub fn get_events_by_type(
     let before_str = before.map(|t| t.to_rfc3339());
     readers.with_conn(|conn| {
         let raw = event_ops::get_events_by_type(conn, &et, before_str.as_deref())?;
-        Ok(raw.into_iter().filter_map(|r| raw_to_event(r).ok()).collect())
+        Ok(raw
+            .into_iter()
+            .filter_map(|r| raw_to_event(r).ok())
+            .collect())
     })
 }
 
@@ -72,14 +81,17 @@ pub fn get_events_after_id(
     readers.with_conn(|conn| {
         let raw =
             event_ops::get_events_after_id(conn, &mid, after_event_id, before_str.as_deref())?;
-        Ok(raw.into_iter().filter_map(|r| raw_to_event(r).ok()).collect())
+        Ok(raw
+            .into_iter()
+            .filter_map(|r| raw_to_event(r).ok())
+            .collect())
     })
 }
 
 /// Convert a RawEvent to a MemoryEvent.
 pub(crate) fn raw_to_event(raw: RawEvent) -> CortexResult<MemoryEvent> {
-    let event_type: MemoryEventType =
-        serde_json::from_str(&format!("\"{}\"", raw.event_type)).map_err(|e| {
+    let event_type: MemoryEventType = serde_json::from_str(&format!("\"{}\"", raw.event_type))
+        .map_err(|e| {
             cortex_core::CortexError::TemporalError(
                 cortex_core::errors::TemporalError::EventAppendFailed(format!(
                     "parse event_type '{}': {}",

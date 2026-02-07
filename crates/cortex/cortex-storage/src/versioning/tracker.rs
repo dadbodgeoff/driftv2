@@ -18,8 +18,7 @@ impl VersionTracker {
         changed_by: &str,
         reason: &str,
     ) -> CortexResult<i64> {
-        let content_json = serde_json::to_string(&memory.content)
-            .unwrap_or_default();
+        let content_json = serde_json::to_string(&memory.content).unwrap_or_default();
 
         let version = version_ops::insert_version(
             conn,

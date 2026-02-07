@@ -9,10 +9,7 @@ pub fn chain_confidence(edge_strengths: &[f64], depth: usize) -> f64 {
         return 0.0;
     }
 
-    let min_strength = edge_strengths
-        .iter()
-        .copied()
-        .fold(f64::INFINITY, f64::min);
+    let min_strength = edge_strengths.iter().copied().fold(f64::INFINITY, f64::min);
 
     let avg_strength = edge_strengths.iter().sum::<f64>() / edge_strengths.len() as f64;
 

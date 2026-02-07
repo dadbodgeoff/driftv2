@@ -62,7 +62,8 @@ pub fn update_persisted_strength(
 
 /// Convert a storage CausalEdge into our in-memory CausalEdgeWeight.
 pub fn from_storage_edge(edge: &CausalEdge) -> CausalEdgeWeight {
-    let relation = CausalRelation::from_str_name(&edge.relation).unwrap_or(CausalRelation::Supports);
+    let relation =
+        CausalRelation::from_str_name(&edge.relation).unwrap_or(CausalRelation::Supports);
     CausalEdgeWeight {
         relation,
         strength: edge.strength,

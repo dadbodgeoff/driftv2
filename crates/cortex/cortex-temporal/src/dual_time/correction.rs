@@ -33,12 +33,11 @@ pub async fn apply_temporal_correction(
     let corrected_memory = writer
         .with_conn(move |conn| {
             // Get the current memory
-            let old_memory = memory_crud::get_memory(conn, &mid)?
-                .ok_or_else(|| {
-                    CortexError::StorageError(cortex_core::errors::StorageError::SqliteError {
-                        message: format!("Memory not found: {}", mid),
-                    })
-                })?;
+            let old_memory = memory_crud::get_memory(conn, &mid)?.ok_or_else(|| {
+                CortexError::StorageError(cortex_core::errors::StorageError::SqliteError {
+                    message: format!("Memory not found: {}", mid),
+                })
+            })?;
 
             let now = Utc::now();
             let corrected_id = format!("{}-corrected-{}", mid, now.timestamp_millis());

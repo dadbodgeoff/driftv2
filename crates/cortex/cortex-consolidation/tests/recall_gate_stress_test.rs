@@ -2,9 +2,9 @@
 //! Verify the gate correctly rejects poorly-encoded clusters.
 
 use chrono::{Duration, Utc};
-use cortex_core::memory::*;
-use cortex_core::memory::types::EpisodicContent;
 use cortex_consolidation::pipeline::phase3_recall_gate;
+use cortex_core::memory::types::EpisodicContent;
+use cortex_core::memory::*;
 
 fn make_episodic(summary: &str) -> BaseMemory {
     let content = TypedContent::Episodic(EpisodicContent {
@@ -33,7 +33,7 @@ fn make_episodic(summary: &str) -> BaseMemory {
         archived: false,
         superseded_by: None,
         supersedes: None,
-        content_hash: BaseMemory::compute_content_hash(&content),
+        content_hash: BaseMemory::compute_content_hash(&content).unwrap(),
     }
 }
 
@@ -171,9 +171,7 @@ fn recall_gate_rejects_contradictory_embeddings() {
     let mut all_embs = cluster_embs.clone();
     for i in 0..50 {
         let distractor: Vec<f32> = (0..dims)
-            .map(|j| {
-                uniform_val + ((i * 7 + j * 13) % 100) as f32 / 100000.0
-            })
+            .map(|j| uniform_val + ((i * 7 + j * 13) % 100) as f32 / 100000.0)
             .collect();
         all_embs.push(distractor);
     }
@@ -189,10 +187,7 @@ fn recall_gate_rejects_contradictory_embeddings() {
     );
     // Soft assertion: if it passes, the score should at least be low-ish.
     if result.passed {
-        assert!(
-            result.score <= 1.0,
-            "Score should be bounded"
-        );
+        assert!(result.score <= 1.0, "Score should be bounded");
     }
 }
 
@@ -219,9 +214,7 @@ fn recall_gate_batch_scattered_clusters_mostly_rejected() {
         let cluster_embs = vec![e1.clone(), e2.clone(), e3.clone()];
 
         // Centroid and distractors near it.
-        let centroid: Vec<f32> = (0..dims)
-            .map(|i| (e1[i] + e2[i] + e3[i]) / 3.0)
-            .collect();
+        let centroid: Vec<f32> = (0..dims).map(|i| (e1[i] + e2[i] + e3[i]) / 3.0).collect();
 
         let mut all_embs = cluster_embs.clone();
         for i in 0..50 {
@@ -236,8 +229,7 @@ fn recall_gate_batch_scattered_clusters_mostly_rejected() {
             all_embs.push(distractor);
         }
 
-        let result =
-            phase3_recall_gate::check_recall(&cluster, &cluster_embs, &all_embs).unwrap();
+        let result = phase3_recall_gate::check_recall(&cluster, &cluster_embs, &all_embs).unwrap();
         if !result.passed {
             rejected += 1;
         }
@@ -281,8 +273,7 @@ fn recall_gate_accepts_good_cluster() {
     assert!(
         result.passed,
         "Good cluster should pass recall gate, got score={}, passed={}",
-        result.score,
-        result.passed
+        result.score, result.passed
     );
 }
 

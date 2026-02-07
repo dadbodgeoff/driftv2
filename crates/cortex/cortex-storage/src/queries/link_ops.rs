@@ -21,7 +21,12 @@ pub fn add_pattern_link(
 
     let delta = serde_json::json!({ "link_type": "pattern", "target": link.pattern_id });
     let _ = crate::temporal_events::emit_event(
-        conn, memory_id, "link_added", &delta, "system", "link_ops",
+        conn,
+        memory_id,
+        "link_added",
+        &delta,
+        "system",
+        "link_ops",
     );
     Ok(())
 }
@@ -40,7 +45,12 @@ pub fn add_constraint_link(
 
     let delta = serde_json::json!({ "link_type": "constraint", "target": link.constraint_id });
     let _ = crate::temporal_events::emit_event(
-        conn, memory_id, "link_added", &delta, "system", "link_ops",
+        conn,
+        memory_id,
+        "link_added",
+        &delta,
+        "system",
+        "link_ops",
     );
     Ok(())
 }
@@ -61,7 +71,12 @@ pub fn add_file_link(conn: &Connection, memory_id: &str, link: &FileLink) -> Cor
 
     let delta = serde_json::json!({ "link_type": "file", "target": link.file_path });
     let _ = crate::temporal_events::emit_event(
-        conn, memory_id, "link_added", &delta, "system", "link_ops",
+        conn,
+        memory_id,
+        "link_added",
+        &delta,
+        "system",
+        "link_ops",
     );
     Ok(())
 }
@@ -85,7 +100,12 @@ pub fn add_function_link(
 
     let delta = serde_json::json!({ "link_type": "function", "target": link.function_name });
     let _ = crate::temporal_events::emit_event(
-        conn, memory_id, "link_added", &delta, "system", "link_ops",
+        conn,
+        memory_id,
+        "link_added",
+        &delta,
+        "system",
+        "link_ops",
     );
     Ok(())
 }

@@ -90,10 +90,9 @@ fn reconstruct_modified_memories(
                  WHERE memory_id = ?1 AND recorded_at > ?2 AND event_type != 'created')",
             )
             .and_then(|mut stmt| {
-                stmt.query_row(
-                    rusqlite::params![memory.id, system_time_str],
-                    |row| row.get(0),
-                )
+                stmt.query_row(rusqlite::params![memory.id, system_time_str], |row| {
+                    row.get(0)
+                })
             })
             .unwrap_or(false);
 
@@ -140,7 +139,9 @@ fn reconstruct_memory_at(
 
     // Create empty shell and replay
     let shell = empty_memory_shell(memory_id);
-    Ok(Some(crate::event_store::replay::replay_events(&events, shell)))
+    Ok(Some(crate::event_store::replay::replay_events(
+        &events, shell,
+    )))
 }
 
 /// Create an empty BaseMemory shell for replay.
@@ -197,7 +198,10 @@ fn apply_filter(
 
             // Filter by linked files (check file paths)
             if let Some(files) = &filter.linked_files {
-                if !files.iter().any(|f| m.linked_files.iter().any(|link| &link.file_path == f)) {
+                if !files
+                    .iter()
+                    .any(|f| m.linked_files.iter().any(|link| &link.file_path == f))
+                {
                     return false;
                 }
             }

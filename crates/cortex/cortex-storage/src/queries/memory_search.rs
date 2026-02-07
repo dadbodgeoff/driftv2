@@ -10,11 +10,7 @@ use crate::to_storage_err;
 
 /// Search memories using FTS5 full-text search.
 /// Returns memories ranked by BM25 relevance.
-pub fn search_fts5(
-    conn: &Connection,
-    query: &str,
-    limit: usize,
-) -> CortexResult<Vec<BaseMemory>> {
+pub fn search_fts5(conn: &Connection, query: &str, limit: usize) -> CortexResult<Vec<BaseMemory>> {
     let mut stmt = conn
         .prepare(
             "SELECT m.id, m.memory_type, m.content, m.summary, m.transaction_time,

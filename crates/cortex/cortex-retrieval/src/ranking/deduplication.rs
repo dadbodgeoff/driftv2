@@ -7,10 +7,7 @@ use crate::ranking::scorer::ScoredCandidate;
 /// Deduplicate candidates:
 /// 1. Remove memories already sent in this session (`sent_ids`).
 /// 2. Remove duplicate memory IDs (keep highest-scored).
-pub fn deduplicate(
-    candidates: Vec<ScoredCandidate>,
-    sent_ids: &[String],
-) -> Vec<ScoredCandidate> {
+pub fn deduplicate(candidates: Vec<ScoredCandidate>, sent_ids: &[String]) -> Vec<ScoredCandidate> {
     let sent: HashSet<&str> = sent_ids.iter().map(|s| s.as_str()).collect();
     let mut seen: HashSet<String> = HashSet::new();
 

@@ -6,8 +6,8 @@
 use chrono::Utc;
 use cortex_compression::CompressionEngine;
 use cortex_core::errors::CortexResult;
-use cortex_core::memory::*;
 use cortex_core::memory::types::SemanticContent;
+use cortex_core::memory::*;
 use cortex_core::traits::{ICompressor, IDecayEngine, IMemoryStorage, ISanitizer};
 use cortex_decay::{DecayContext, DecayEngine};
 use cortex_privacy::PrivacyEngine;
@@ -43,7 +43,7 @@ fn make_test_memory(id: &str, summary: &str) -> BaseMemory {
         archived: false,
         superseded_by: None,
         supersedes: None,
-        content_hash: BaseMemory::compute_content_hash(&content),
+        content_hash: BaseMemory::compute_content_hash(&content).unwrap(),
     }
 }
 
@@ -61,17 +61,27 @@ fn degradation_consolidation_empty_input() {
     impl IEmbeddingProvider for FailingEmbedder {
         fn embed(&self, _: &str) -> CortexResult<Vec<f32>> {
             Err(cortex_core::errors::CortexError::EmbeddingError(
-                cortex_core::errors::EmbeddingError::InferenceFailed { reason: "test failure".into() },
+                cortex_core::errors::EmbeddingError::InferenceFailed {
+                    reason: "test failure".into(),
+                },
             ))
         }
         fn embed_batch(&self, _: &[String]) -> CortexResult<Vec<Vec<f32>>> {
             Err(cortex_core::errors::CortexError::EmbeddingError(
-                cortex_core::errors::EmbeddingError::InferenceFailed { reason: "test failure".into() },
+                cortex_core::errors::EmbeddingError::InferenceFailed {
+                    reason: "test failure".into(),
+                },
             ))
         }
-        fn dimensions(&self) -> usize { 64 }
-        fn name(&self) -> &str { "failing" }
-        fn is_available(&self) -> bool { false }
+        fn dimensions(&self) -> usize {
+            64
+        }
+        fn name(&self) -> &str {
+            "failing"
+        }
+        fn is_available(&self) -> bool {
+            false
+        }
     }
 
     let engine = ConsolidationEngine::new(Box::new(FailingEmbedder));
@@ -184,7 +194,11 @@ fn degradation_compression_minimal_content() {
     // All compression levels should work.
     for level in 0..=3 {
         let result = engine.compress(&memory, level).unwrap();
-        assert!(result.token_count > 0, "Level {} should produce non-zero tokens", level);
+        assert!(
+            result.token_count > 0,
+            "Level {} should produce non-zero tokens",
+            level
+        );
     }
 
     // compress_to_fit with tiny budget.
@@ -211,13 +225,19 @@ fn degradation_matrix_all_modes_no_panic() {
         let memory = make_test_memory("dm-2", "bcrypt password hashing");
         storage.create(&memory).unwrap();
         let results = storage.search_fts5("bcrypt", 10).unwrap();
-        assert!(!results.is_empty(), "FTS5 should work independently of vector search");
+        assert!(
+            !results.is_empty(),
+            "FTS5 should work independently of vector search"
+        );
     }
 
     // Mode 3: Consolidation skip → memories remain as-is.
     {
         let memory = make_test_memory("dm-3", "Unconsolidated");
-        assert!(!memory.archived, "Memory should remain unarchived if consolidation skipped");
+        assert!(
+            !memory.archived,
+            "Memory should remain unarchived if consolidation skipped"
+        );
     }
 
     // Mode 4: Causal inference empty → return empty graph.
@@ -257,7 +277,10 @@ fn degradation_matrix_all_modes_no_panic() {
     {
         let engine = PrivacyEngine::new();
         let result = engine.sanitize("This is clean text with no PII").unwrap();
-        assert!(result.redactions.is_empty(), "Clean text should have no redactions");
+        assert!(
+            result.redactions.is_empty(),
+            "Clean text should have no redactions"
+        );
     }
 
     // Mode 9: Cloud sync unavailable → local operations still work.
@@ -274,6 +297,9 @@ fn degradation_matrix_all_modes_no_panic() {
     // (Session manager handles empty state gracefully.)
     {
         let memory = make_test_memory("dm-10", "Test");
-        assert!(memory.id == "dm-10", "Basic operations work regardless of session state");
+        assert!(
+            memory.id == "dm-10",
+            "Basic operations work regardless of session state"
+        );
     }
 }

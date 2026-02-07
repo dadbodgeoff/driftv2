@@ -29,8 +29,8 @@ pub mod matryoshka;
 pub mod migration;
 pub mod providers;
 
-pub use engine::EmbeddingEngine;
-pub use providers::{ApiModel, ApiProvider, OllamaProvider, OnnxProvider, TfIdfFallback};
 pub use cache::{CacheCoordinator, CacheHitTier};
 pub use degradation::DegradationChain;
+pub use engine::EmbeddingEngine;
 pub use migration::{DetectionResult, MigrationProgress, MigrationStatus, ProgressSnapshot};
+pub use providers::{ApiModel, ApiProvider, OllamaProvider, OnnxProvider, TfIdfFallback};

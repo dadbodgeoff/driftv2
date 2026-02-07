@@ -25,11 +25,7 @@ pub struct ArchivalDecision {
 }
 
 /// Evaluate archival eligibility for a memory.
-pub fn evaluate(
-    memory: &BaseMemory,
-    decayed_confidence: f64,
-    threshold: f64,
-) -> ArchivalDecision {
+pub fn evaluate(memory: &BaseMemory, decayed_confidence: f64, threshold: f64) -> ArchivalDecision {
     if memory.archived {
         return ArchivalDecision {
             memory_id: memory.id.clone(),

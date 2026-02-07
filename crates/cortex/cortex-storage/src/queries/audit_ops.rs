@@ -36,7 +36,12 @@ pub fn insert_audit_entry(conn: &Connection, entry: &AuditEntry) -> CortexResult
     });
     let actor_id = actor_str.trim_matches('"').to_string();
     let _ = crate::temporal_events::emit_event(
-        conn, &entry.memory_id, operation_str.trim_matches('"'), &delta, "audit", &actor_id,
+        conn,
+        &entry.memory_id,
+        operation_str.trim_matches('"'),
+        &delta,
+        "audit",
+        &actor_id,
     );
 
     Ok(())
@@ -74,8 +79,7 @@ pub fn query_by_time_range(
 
 /// Query audit entries by actor.
 pub fn query_by_actor(conn: &Connection, actor: &AuditActor) -> CortexResult<Vec<AuditEntry>> {
-    let actor_str =
-        serde_json::to_string(actor).map_err(|e| to_storage_err(e.to_string()))?;
+    let actor_str = serde_json::to_string(actor).map_err(|e| to_storage_err(e.to_string()))?;
 
     let mut stmt = conn
         .prepare(

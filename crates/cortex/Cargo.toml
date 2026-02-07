@@ -117,6 +117,9 @@ test-fixtures = { path = "test-fixtures" }
 # Compression
 zstd = "0.13"
 
+# Type export (Rust → TypeScript)
+ts-rs = { version = "12", features = ["serde-compat", "chrono-impl", "serde-json-impl"] }
+
 [profile.release]
 lto = true
 codegen-units = 1

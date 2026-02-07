@@ -47,10 +47,7 @@ impl LearningEngine {
     /// Full learning pipeline.
     fn learn(&self, correction: &Correction) -> CortexResult<LearningResult> {
         // Step 1: Categorize the correction.
-        let category = analysis::categorize(
-            &correction.correction_text,
-            &correction.context,
-        );
+        let category = analysis::categorize(&correction.correction_text, &correction.context);
         info!(category = ?category, "correction categorized");
 
         // Step 2: Map category to memory type.
@@ -64,13 +61,12 @@ impl LearningEngine {
         );
 
         // Step 4: Check dedup.
-        let summary = principle.clone().unwrap_or_else(|| correction.correction_text.clone());
+        let summary = principle
+            .clone()
+            .unwrap_or_else(|| correction.correction_text.clone());
         let content_hash = blake3::hash(summary.as_bytes()).to_hex().to_string();
-        let dedup_action = deduplication::check_dedup(
-            &content_hash,
-            &summary,
-            &self.existing_memories,
-        );
+        let dedup_action =
+            deduplication::check_dedup(&content_hash, &summary, &self.existing_memories);
 
         // Step 5: Determine result.
         let memory_created = match dedup_action {

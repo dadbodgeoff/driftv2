@@ -99,6 +99,11 @@ impl ICompressor for CompressionEngine {
         memories: &[BaseMemory],
         budget: usize,
     ) -> CortexResult<Vec<CompressedMemory>> {
-        Ok(packing::pack_to_budget(memories, budget, &self.counter, None))
+        Ok(packing::pack_to_budget(
+            memories,
+            budget,
+            &self.counter,
+            None,
+        ))
     }
 }

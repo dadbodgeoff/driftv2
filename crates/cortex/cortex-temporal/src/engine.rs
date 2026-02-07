@@ -8,8 +8,8 @@ use cortex_core::config::TemporalConfig;
 use cortex_core::errors::CortexResult;
 use cortex_core::memory::BaseMemory;
 use cortex_core::models::{
-    AsOfQuery, DecisionReplay, DecisionReplayQuery, MemoryEvent, TemporalCausalQuery,
-    TemporalDiff, TemporalDiffQuery, TemporalRangeQuery,
+    AsOfQuery, DecisionReplay, DecisionReplayQuery, MemoryEvent, TemporalCausalQuery, TemporalDiff,
+    TemporalDiffQuery, TemporalRangeQuery,
 };
 use cortex_core::traits::{ITemporalEngine, TemporalTraversalNode, TemporalTraversalResult};
 use cortex_storage::pool::{ReadPool, WriteConnection};
@@ -70,10 +70,7 @@ impl ITemporalEngine for TemporalEngine {
         snapshot::reconstruct::reconstruct_at(&readers, &mid, as_of)
     }
 
-    async fn reconstruct_all_at(
-        &self,
-        as_of: DateTime<Utc>,
-    ) -> CortexResult<Vec<BaseMemory>> {
+    async fn reconstruct_all_at(&self, as_of: DateTime<Utc>) -> CortexResult<Vec<BaseMemory>> {
         let readers = self.readers.clone();
         snapshot::reconstruct::reconstruct_all_at(&readers, as_of)
     }
@@ -95,10 +92,7 @@ impl ITemporalEngine for TemporalEngine {
     }
 
     // Phase C: Decision replay + temporal causal
-    async fn replay_decision(
-        &self,
-        query: &DecisionReplayQuery,
-    ) -> CortexResult<DecisionReplay> {
+    async fn replay_decision(&self, query: &DecisionReplayQuery) -> CortexResult<DecisionReplay> {
         let readers = self.readers.clone();
         query::replay::execute_replay(&readers, query)
     }

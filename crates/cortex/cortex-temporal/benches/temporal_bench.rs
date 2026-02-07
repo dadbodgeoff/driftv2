@@ -62,7 +62,7 @@ fn make_memory() -> BaseMemory {
         archived: false,
         superseded_by: None,
         supersedes: None,
-        content_hash: BaseMemory::compute_content_hash(&content),
+        content_hash: BaseMemory::compute_content_hash(&content).unwrap(),
     }
 }
 
@@ -252,7 +252,14 @@ fn insert_memory_with_times(
          VALUES (?1, ?2, '{}', 'bench summary', ?3, ?4, \
                  CASE WHEN ?5 = '' THEN NULL ELSE ?5 END, \
                  ?6, 'normal', ?3, 0, 0, 'hash', '[]')",
-        rusqlite::params![id, memory_type, transaction_time, valid_time, valid_until_val, confidence],
+        rusqlite::params![
+            id,
+            memory_type,
+            transaction_time,
+            valid_time,
+            valid_until_val,
+            confidence
+        ],
     )
     .unwrap();
 }
@@ -263,10 +270,20 @@ fn bench_as_of_single_memory(c: &mut Criterion) {
     let now = chrono::Utc::now();
     let now_str = now.to_rfc3339();
 
-    readers.with_conn(|conn| {
-        insert_memory_with_times(conn, "bench-single", "episodic", &now_str, &now_str, None, 0.8);
-        Ok::<_, cortex_core::errors::CortexError>(())
-    }).unwrap();
+    readers
+        .with_conn(|conn| {
+            insert_memory_with_times(
+                conn,
+                "bench-single",
+                "episodic",
+                &now_str,
+                &now_str,
+                None,
+                0.8,
+            );
+            Ok::<_, cortex_core::errors::CortexError>(())
+        })
+        .unwrap();
 
     let query = cortex_core::models::AsOfQuery {
         system_time: now + chrono::Duration::seconds(1),
@@ -276,9 +293,9 @@ fn bench_as_of_single_memory(c: &mut Criterion) {
 
     c.bench_function("as_of_single_memory", |b| {
         b.iter(|| {
-            readers.with_conn(|conn| {
-                cortex_temporal::query::as_of::execute_as_of(conn, &query)
-            }).unwrap();
+            readers
+                .with_conn(|conn| cortex_temporal::query::as_of::execute_as_of(conn, &query))
+                .unwrap();
         });
     });
 }
@@ -290,20 +307,22 @@ fn bench_as_of_10k_memories(c: &mut Criterion) {
     let now_str = now.to_rfc3339();
 
     // Insert 10K memories
-    readers.with_conn(|conn| {
-        for i in 0..10_000 {
-            insert_memory_with_times(
-                conn,
-                &format!("bench-10k-{}", i),
-                "episodic",
-                &now_str,
-                &now_str,
-                None,
-                0.8,
-            );
-        }
-        Ok::<_, cortex_core::errors::CortexError>(())
-    }).unwrap();
+    readers
+        .with_conn(|conn| {
+            for i in 0..10_000 {
+                insert_memory_with_times(
+                    conn,
+                    &format!("bench-10k-{}", i),
+                    "episodic",
+                    &now_str,
+                    &now_str,
+                    None,
+                    0.8,
+                );
+            }
+            Ok::<_, cortex_core::errors::CortexError>(())
+        })
+        .unwrap();
 
     let query = cortex_core::models::AsOfQuery {
         system_time: now + chrono::Duration::seconds(1),
@@ -313,9 +332,9 @@ fn bench_as_of_10k_memories(c: &mut Criterion) {
 
     c.bench_function("as_of_10k_memories", |b| {
         b.iter(|| {
-            readers.with_conn(|conn| {
-                cortex_temporal::query::as_of::execute_as_of(conn, &query)
-            }).unwrap();
+            readers
+                .with_conn(|conn| cortex_temporal::query::as_of::execute_as_of(conn, &query))
+                .unwrap();
         });
     });
 }
@@ -329,31 +348,33 @@ fn bench_temporal_diff(c: &mut Criterion) {
     let mid_str = (t1 + chrono::Duration::hours(1)).to_rfc3339();
 
     // Insert memories at different times
-    readers.with_conn(|conn| {
-        for i in 0..100 {
-            insert_memory_with_times(
-                conn,
-                &format!("bench-diff-a-{}", i),
-                "episodic",
-                &t1_str,
-                &t1_str,
-                None,
-                0.8,
-            );
-        }
-        for i in 0..50 {
-            insert_memory_with_times(
-                conn,
-                &format!("bench-diff-b-{}", i),
-                "semantic",
-                &mid_str,
-                &mid_str,
-                None,
-                0.9,
-            );
-        }
-        Ok::<_, cortex_core::errors::CortexError>(())
-    }).unwrap();
+    readers
+        .with_conn(|conn| {
+            for i in 0..100 {
+                insert_memory_with_times(
+                    conn,
+                    &format!("bench-diff-a-{}", i),
+                    "episodic",
+                    &t1_str,
+                    &t1_str,
+                    None,
+                    0.8,
+                );
+            }
+            for i in 0..50 {
+                insert_memory_with_times(
+                    conn,
+                    &format!("bench-diff-b-{}", i),
+                    "semantic",
+                    &mid_str,
+                    &mid_str,
+                    None,
+                    0.9,
+                );
+            }
+            Ok::<_, cortex_core::errors::CortexError>(())
+        })
+        .unwrap();
 
     let query = cortex_core::models::TemporalDiffQuery {
         time_a: t1,
@@ -363,9 +384,9 @@ fn bench_temporal_diff(c: &mut Criterion) {
 
     c.bench_function("temporal_diff_150_memories", |b| {
         b.iter(|| {
-            readers.with_conn(|conn| {
-                cortex_temporal::query::diff::execute_diff(conn, &query)
-            }).unwrap();
+            readers
+                .with_conn(|conn| cortex_temporal::query::diff::execute_diff(conn, &query))
+                .unwrap();
         });
     });
 }
@@ -377,26 +398,28 @@ fn bench_range_overlaps(c: &mut Criterion) {
     let past = (now - chrono::Duration::days(30)).to_rfc3339();
 
     // Insert memories with various validity ranges
-    readers.with_conn(|conn| {
-        for i in 0..1000 {
-            let valid_from = (now - chrono::Duration::days(i % 60)).to_rfc3339();
-            let valid_until = if i % 3 == 0 {
-                Some((now + chrono::Duration::days(30)).to_rfc3339())
-            } else {
-                None
-            };
-            insert_memory_with_times(
-                conn,
-                &format!("bench-range-{}", i),
-                "episodic",
-                &past,
-                &valid_from,
-                valid_until.as_deref(),
-                0.8,
-            );
-        }
-        Ok::<_, cortex_core::errors::CortexError>(())
-    }).unwrap();
+    readers
+        .with_conn(|conn| {
+            for i in 0..1000 {
+                let valid_from = (now - chrono::Duration::days(i % 60)).to_rfc3339();
+                let valid_until = if i % 3 == 0 {
+                    Some((now + chrono::Duration::days(30)).to_rfc3339())
+                } else {
+                    None
+                };
+                insert_memory_with_times(
+                    conn,
+                    &format!("bench-range-{}", i),
+                    "episodic",
+                    &past,
+                    &valid_from,
+                    valid_until.as_deref(),
+                    0.8,
+                );
+            }
+            Ok::<_, cortex_core::errors::CortexError>(())
+        })
+        .unwrap();
 
     let query = cortex_core::models::TemporalRangeQuery {
         from: now - chrono::Duration::days(15),
@@ -406,9 +429,9 @@ fn bench_range_overlaps(c: &mut Criterion) {
 
     c.bench_function("range_overlaps_1k_memories", |b| {
         b.iter(|| {
-            readers.with_conn(|conn| {
-                cortex_temporal::query::range::execute_range(conn, &query)
-            }).unwrap();
+            readers
+                .with_conn(|conn| cortex_temporal::query::range::execute_range(conn, &query))
+                .unwrap();
         });
     });
 }
@@ -458,10 +481,12 @@ fn bench_decision_replay(c: &mut Criterion) {
             archived: false,
             superseded_by: None,
             supersedes: None,
-            content_hash: BaseMemory::compute_content_hash(&decision_content),
+            content_hash: BaseMemory::compute_content_hash(&decision_content).unwrap(),
         };
         writer
-            .with_conn(move |conn| cortex_storage::queries::memory_crud::insert_memory(conn, &decision))
+            .with_conn(move |conn| {
+                cortex_storage::queries::memory_crud::insert_memory(conn, &decision)
+            })
             .await
             .unwrap();
 
@@ -476,10 +501,15 @@ fn bench_decision_replay(c: &mut Criterion) {
         for i in 0..20 {
             let mem = make_memory();
             let mid = format!("bench-ctx-{}", i);
-            let mut m = BaseMemory { id: mid.clone(), ..mem };
+            let mut m = BaseMemory {
+                id: mid.clone(),
+                ..mem
+            };
             m.transaction_time = now - chrono::Duration::hours(1);
             writer
-                .with_conn(move |conn| cortex_storage::queries::memory_crud::insert_memory(conn, &m))
+                .with_conn(move |conn| {
+                    cortex_storage::queries::memory_crud::insert_memory(conn, &m)
+                })
                 .await
                 .unwrap();
 
@@ -518,7 +548,9 @@ fn bench_temporal_causal_traversal(c: &mut Criterion) {
                 ..make_memory()
             };
             writer
-                .with_conn(move |conn| cortex_storage::queries::memory_crud::insert_memory(conn, &mem))
+                .with_conn(move |conn| {
+                    cortex_storage::queries::memory_crud::insert_memory(conn, &mem)
+                })
                 .await
                 .unwrap();
 

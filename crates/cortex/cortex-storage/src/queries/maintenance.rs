@@ -37,11 +37,7 @@ pub fn integrity_check(conn: &Connection) -> CortexResult<bool> {
 
 /// Clean up archived memories older than `days`, with confidence below
 /// `max_confidence` and zero access count. Returns count deleted.
-pub fn archived_cleanup(
-    conn: &Connection,
-    days: u64,
-    max_confidence: f64,
-) -> CortexResult<usize> {
+pub fn archived_cleanup(conn: &Connection, days: u64, max_confidence: f64) -> CortexResult<usize> {
     let deleted = conn
         .execute(
             "DELETE FROM memories

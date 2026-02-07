@@ -28,9 +28,10 @@ pub fn cortex_consolidation_consolidate(
             .map_err(error_types::to_napi_error)?,
     };
 
-    let mut consolidation = rt.consolidation.lock().map_err(|e| {
-        napi::Error::from_reason(format!("Consolidation lock poisoned: {e}"))
-    })?;
+    let mut consolidation = rt
+        .consolidation
+        .lock()
+        .map_err(|e| napi::Error::from_reason(format!("Consolidation lock poisoned: {e}")))?;
     let result = consolidation
         .consolidate_with_context(&candidates, &[])
         .map_err(error_types::to_napi_error)?;
@@ -43,9 +44,10 @@ pub fn cortex_consolidation_consolidate(
 #[napi]
 pub fn cortex_consolidation_get_metrics() -> napi::Result<serde_json::Value> {
     let rt = runtime::get()?;
-    let consolidation = rt.consolidation.lock().map_err(|e| {
-        napi::Error::from_reason(format!("Consolidation lock poisoned: {e}"))
-    })?;
+    let consolidation = rt
+        .consolidation
+        .lock()
+        .map_err(|e| napi::Error::from_reason(format!("Consolidation lock poisoned: {e}")))?;
     let dashboard = consolidation.dashboard();
     Ok(serde_json::json!({
         "total_runs": dashboard.total_runs,
@@ -59,9 +61,10 @@ pub fn cortex_consolidation_get_metrics() -> napi::Result<serde_json::Value> {
 #[napi]
 pub fn cortex_consolidation_get_status() -> napi::Result<serde_json::Value> {
     let rt = runtime::get()?;
-    let consolidation = rt.consolidation.lock().map_err(|e| {
-        napi::Error::from_reason(format!("Consolidation lock poisoned: {e}"))
-    })?;
+    let consolidation = rt
+        .consolidation
+        .lock()
+        .map_err(|e| napi::Error::from_reason(format!("Consolidation lock poisoned: {e}")))?;
     Ok(serde_json::json!({
         "is_running": consolidation.is_running(),
     }))

@@ -70,8 +70,16 @@ fn remove_orphaned_nodes(graph: &mut IndexedGraph) -> usize {
         .graph
         .node_indices()
         .filter(|&idx| {
-            graph.graph.neighbors_directed(idx, Direction::Incoming).next().is_none()
-                && graph.graph.neighbors_directed(idx, Direction::Outgoing).next().is_none()
+            graph
+                .graph
+                .neighbors_directed(idx, Direction::Incoming)
+                .next()
+                .is_none()
+                && graph
+                    .graph
+                    .neighbors_directed(idx, Direction::Outgoing)
+                    .next()
+                    .is_none()
         })
         .filter_map(|idx| graph.graph.node_weight(idx).map(|n| n.memory_id.clone()))
         .collect();

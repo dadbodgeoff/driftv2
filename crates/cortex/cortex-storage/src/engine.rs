@@ -73,9 +73,9 @@ impl IMemoryStorage for StorageEngine {
     }
 
     fn get(&self, id: &str) -> CortexResult<Option<BaseMemory>> {
-        self.pool.writer.with_conn_sync(|conn| {
-            crate::queries::memory_crud::get_memory(conn, id)
-        })
+        self.pool
+            .writer
+            .with_conn_sync(|conn| crate::queries::memory_crud::get_memory(conn, id))
     }
 
     fn update(&self, memory: &BaseMemory) -> CortexResult<()> {
@@ -105,27 +105,27 @@ impl IMemoryStorage for StorageEngine {
     }
 
     fn create_bulk(&self, memories: &[BaseMemory]) -> CortexResult<usize> {
-        self.pool.writer.with_conn_sync(|conn| {
-            crate::queries::memory_crud::bulk_insert(conn, memories)
-        })
+        self.pool
+            .writer
+            .with_conn_sync(|conn| crate::queries::memory_crud::bulk_insert(conn, memories))
     }
 
     fn get_bulk(&self, ids: &[String]) -> CortexResult<Vec<BaseMemory>> {
-        self.pool.writer.with_conn_sync(|conn| {
-            crate::queries::memory_crud::bulk_get(conn, ids)
-        })
+        self.pool
+            .writer
+            .with_conn_sync(|conn| crate::queries::memory_crud::bulk_get(conn, ids))
     }
 
     fn query_by_type(&self, memory_type: MemoryType) -> CortexResult<Vec<BaseMemory>> {
-        self.pool.writer.with_conn_sync(|conn| {
-            crate::queries::memory_query::query_by_type(conn, memory_type)
-        })
+        self.pool
+            .writer
+            .with_conn_sync(|conn| crate::queries::memory_query::query_by_type(conn, memory_type))
     }
 
     fn query_by_importance(&self, min: Importance) -> CortexResult<Vec<BaseMemory>> {
-        self.pool.writer.with_conn_sync(|conn| {
-            crate::queries::memory_query::query_by_importance(conn, min)
-        })
+        self.pool
+            .writer
+            .with_conn_sync(|conn| crate::queries::memory_query::query_by_importance(conn, min))
     }
 
     fn query_by_confidence_range(&self, min: f64, max: f64) -> CortexResult<Vec<BaseMemory>> {
@@ -145,15 +145,15 @@ impl IMemoryStorage for StorageEngine {
     }
 
     fn query_by_tags(&self, tags: &[String]) -> CortexResult<Vec<BaseMemory>> {
-        self.pool.writer.with_conn_sync(|conn| {
-            crate::queries::memory_query::query_by_tags(conn, tags)
-        })
+        self.pool
+            .writer
+            .with_conn_sync(|conn| crate::queries::memory_query::query_by_tags(conn, tags))
     }
 
     fn search_fts5(&self, query: &str, limit: usize) -> CortexResult<Vec<BaseMemory>> {
-        self.pool.writer.with_conn_sync(|conn| {
-            crate::queries::memory_search::search_fts5(conn, query, limit)
-        })
+        self.pool
+            .writer
+            .with_conn_sync(|conn| crate::queries::memory_search::search_fts5(conn, query, limit))
     }
 
     fn search_vector(
@@ -177,9 +177,9 @@ impl IMemoryStorage for StorageEngine {
     }
 
     fn add_relationship(&self, edge: &RelationshipEdge) -> CortexResult<()> {
-        self.pool.writer.with_conn_sync(|conn| {
-            crate::queries::relationship_ops::add_relationship(conn, edge)
-        })
+        self.pool
+            .writer
+            .with_conn_sync(|conn| crate::queries::relationship_ops::add_relationship(conn, edge))
     }
 
     fn remove_relationship(&self, source_id: &str, target_id: &str) -> CortexResult<()> {
@@ -201,9 +201,9 @@ impl IMemoryStorage for StorageEngine {
     }
 
     fn add_file_link(&self, memory_id: &str, link: &FileLink) -> CortexResult<()> {
-        self.pool.writer.with_conn_sync(|conn| {
-            crate::queries::link_ops::add_file_link(conn, memory_id, link)
-        })
+        self.pool
+            .writer
+            .with_conn_sync(|conn| crate::queries::link_ops::add_file_link(conn, memory_id, link))
     }
 
     fn add_function_link(&self, memory_id: &str, link: &FunctionLink) -> CortexResult<()> {
@@ -213,41 +213,41 @@ impl IMemoryStorage for StorageEngine {
     }
 
     fn count_by_type(&self) -> CortexResult<Vec<(MemoryType, usize)>> {
-        self.pool.writer.with_conn_sync(|conn| {
-            crate::queries::aggregation::count_by_type(conn)
-        })
+        self.pool
+            .writer
+            .with_conn_sync(|conn| crate::queries::aggregation::count_by_type(conn))
     }
 
     fn average_confidence(&self) -> CortexResult<f64> {
-        self.pool.writer.with_conn_sync(|conn| {
-            crate::queries::aggregation::average_confidence(conn)
-        })
+        self.pool
+            .writer
+            .with_conn_sync(|conn| crate::queries::aggregation::average_confidence(conn))
     }
 
     fn stale_count(&self, threshold_days: u64) -> CortexResult<usize> {
-        self.pool.writer.with_conn_sync(|conn| {
-            crate::queries::aggregation::stale_count(conn, threshold_days)
-        })
+        self.pool
+            .writer
+            .with_conn_sync(|conn| crate::queries::aggregation::stale_count(conn, threshold_days))
     }
 
     fn vacuum(&self) -> CortexResult<()> {
-        self.pool.writer.with_conn_sync(|conn| {
-            crate::queries::maintenance::full_vacuum(conn)
-        })
+        self.pool
+            .writer
+            .with_conn_sync(|conn| crate::queries::maintenance::full_vacuum(conn))
     }
 }
 
 impl ICausalStorage for StorageEngine {
     fn add_edge(&self, edge: &CausalEdge) -> CortexResult<()> {
-        self.pool.writer.with_conn_sync(|conn| {
-            crate::queries::causal_ops::add_edge(conn, edge)
-        })
+        self.pool
+            .writer
+            .with_conn_sync(|conn| crate::queries::causal_ops::add_edge(conn, edge))
     }
 
     fn get_edges(&self, node_id: &str) -> CortexResult<Vec<CausalEdge>> {
-        self.pool.writer.with_conn_sync(|conn| {
-            crate::queries::causal_ops::get_edges(conn, node_id)
-        })
+        self.pool
+            .writer
+            .with_conn_sync(|conn| crate::queries::causal_ops::get_edges(conn, node_id))
     }
 
     fn remove_edge(&self, source_id: &str, target_id: &str) -> CortexResult<()> {
@@ -256,12 +256,7 @@ impl ICausalStorage for StorageEngine {
         })
     }
 
-    fn update_strength(
-        &self,
-        source_id: &str,
-        target_id: &str,
-        strength: f64,
-    ) -> CortexResult<()> {
+    fn update_strength(&self, source_id: &str, target_id: &str, strength: f64) -> CortexResult<()> {
         self.pool.writer.with_conn_sync(|conn| {
             crate::queries::causal_ops::update_strength(conn, source_id, target_id, strength)
         })
@@ -285,20 +280,20 @@ impl ICausalStorage for StorageEngine {
     }
 
     fn edge_count(&self) -> CortexResult<usize> {
-        self.pool.writer.with_conn_sync(|conn| {
-            crate::queries::causal_ops::edge_count(conn)
-        })
+        self.pool
+            .writer
+            .with_conn_sync(|conn| crate::queries::causal_ops::edge_count(conn))
     }
 
     fn node_count(&self) -> CortexResult<usize> {
-        self.pool.writer.with_conn_sync(|conn| {
-            crate::queries::causal_ops::node_count(conn)
-        })
+        self.pool
+            .writer
+            .with_conn_sync(|conn| crate::queries::causal_ops::node_count(conn))
     }
 
     fn remove_orphaned_edges(&self) -> CortexResult<usize> {
-        self.pool.writer.with_conn_sync(|conn| {
-            crate::queries::causal_ops::remove_orphaned_edges(conn)
-        })
+        self.pool
+            .writer
+            .with_conn_sync(|conn| crate::queries::causal_ops::remove_orphaned_edges(conn))
     }
 }

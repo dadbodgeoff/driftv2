@@ -30,33 +30,31 @@ fn arb_importance() -> impl Strategy<Value = Importance> {
 
 #[allow(dead_code)]
 fn arb_memory(id: String) -> impl Strategy<Value = BaseMemory> {
-    (arb_importance(), 0.1f64..=1.0f64).prop_map(move |(importance, confidence)| {
-        BaseMemory {
-            id: id.clone(),
-            memory_type: MemoryType::Core,
-            content: TypedContent::Core(cortex_core::memory::types::CoreContent {
-                project_name: String::new(),
-                description: format!("Memory {}", id),
-                metadata: serde_json::Value::Null,
-            }),
-            summary: format!("Memory {}", id),
-            transaction_time: Utc::now(),
-            valid_time: Utc::now(),
-            valid_until: None,
-            confidence: Confidence::new(confidence),
-            importance,
-            last_accessed: Utc::now(),
-            access_count: 1,
-            linked_patterns: Vec::new(),
-            linked_constraints: Vec::new(),
-            linked_files: Vec::new(),
-            linked_functions: Vec::new(),
-            tags: Vec::new(),
-            archived: false,
-            superseded_by: None,
-            supersedes: None,
-            content_hash: format!("hash-{}", id),
-        }
+    (arb_importance(), 0.1f64..=1.0f64).prop_map(move |(importance, confidence)| BaseMemory {
+        id: id.clone(),
+        memory_type: MemoryType::Core,
+        content: TypedContent::Core(cortex_core::memory::types::CoreContent {
+            project_name: String::new(),
+            description: format!("Memory {}", id),
+            metadata: serde_json::Value::Null,
+        }),
+        summary: format!("Memory {}", id),
+        transaction_time: Utc::now(),
+        valid_time: Utc::now(),
+        valid_until: None,
+        confidence: Confidence::new(confidence),
+        importance,
+        last_accessed: Utc::now(),
+        access_count: 1,
+        linked_patterns: Vec::new(),
+        linked_constraints: Vec::new(),
+        linked_files: Vec::new(),
+        linked_functions: Vec::new(),
+        tags: Vec::new(),
+        archived: false,
+        superseded_by: None,
+        supersedes: None,
+        content_hash: format!("hash-{}", id),
     })
 }
 
@@ -103,15 +101,18 @@ proptest! {
         }
 
         // Generate ranked lists.
-        let mut ranked_lists = Vec::new();
+        let mut all_lists: Vec<Vec<(String, usize)>> = Vec::new();
         for _ in 0..num_lists {
             let list: Vec<(String, usize)> = (0..n)
                 .map(|i| (format!("mem-{i}"), i))
                 .collect();
-            ranked_lists.push(list);
+            all_lists.push(list);
         }
 
-        let candidates = rrf_fusion::fuse(&ranked_lists, &memories, k);
+        let fts5 = all_lists.get(0);
+        let vector = all_lists.get(1);
+        let entity = all_lists.get(2);
+        let candidates = rrf_fusion::fuse(fts5, vector, entity, &memories, k);
 
         // Verify monotonically decreasing.
         for window in candidates.windows(2) {

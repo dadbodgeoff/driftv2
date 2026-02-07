@@ -188,11 +188,7 @@ impl IMemoryStorage for MockStorage {
     fn add_pattern_link(&self, _memory_id: &str, _link: &PatternLink) -> CortexResult<()> {
         Ok(())
     }
-    fn add_constraint_link(
-        &self,
-        _memory_id: &str,
-        _link: &ConstraintLink,
-    ) -> CortexResult<()> {
+    fn add_constraint_link(&self, _memory_id: &str, _link: &ConstraintLink) -> CortexResult<()> {
         Ok(())
     }
     fn add_file_link(&self, _memory_id: &str, _link: &FileLink) -> CortexResult<()> {
@@ -322,7 +318,10 @@ fn cache_invalidates_on_file_change() {
     // Next call should miss cache
     let _r3 = engine.predict_with_signals(&signals).unwrap();
     let misses_after = engine.cache().misses();
-    assert!(misses_after >= 2, "Should have cache miss after invalidation");
+    assert!(
+        misses_after >= 2,
+        "Should have cache miss after invalidation"
+    );
 }
 
 // ── T9-PRED-04: Multi-strategy dedup ──────────────────────────────────────

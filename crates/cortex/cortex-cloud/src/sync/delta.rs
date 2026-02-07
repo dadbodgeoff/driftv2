@@ -22,10 +22,7 @@ pub struct SyncDelta {
 ///
 /// Uses content hashes for efficient comparison — no need to diff
 /// the full memory content.
-pub fn compute_delta(
-    local: &[MemoryPayload],
-    remote: &[MemoryPayload],
-) -> SyncDelta {
+pub fn compute_delta(local: &[MemoryPayload], remote: &[MemoryPayload]) -> SyncDelta {
     let local_map: HashMap<&str, &MemoryPayload> =
         local.iter().map(|m| (m.id.as_str(), m)).collect();
     let remote_map: HashMap<&str, &MemoryPayload> =
@@ -64,9 +61,7 @@ pub fn compute_delta(
 impl SyncDelta {
     /// Whether there are any changes to sync.
     pub fn has_changes(&self) -> bool {
-        !self.local_only.is_empty()
-            || !self.remote_only.is_empty()
-            || !self.diverged.is_empty()
+        !self.local_only.is_empty() || !self.remote_only.is_empty() || !self.diverged.is_empty()
     }
 
     /// Total number of changes detected.

@@ -41,12 +41,7 @@ impl SessionManager {
     }
 
     /// Mark a memory as sent in a session. Returns false if session not found.
-    pub fn mark_memory_sent(
-        &self,
-        session_id: &str,
-        memory_id: &str,
-        tokens: usize,
-    ) -> bool {
+    pub fn mark_memory_sent(&self, session_id: &str, memory_id: &str, tokens: usize) -> bool {
         if let Some(mut entry) = self.sessions.get_mut(session_id) {
             entry.mark_memory_sent(memory_id, tokens);
             true

@@ -2,13 +2,18 @@
 //! causal storage, and edge cases.
 
 use chrono::Utc;
-use cortex_core::memory::*;
 use cortex_core::memory::types::*;
+use cortex_core::memory::*;
 use cortex_core::traits::{CausalEdge, CausalEvidence, ICausalStorage, IMemoryStorage};
 use cortex_storage::StorageEngine;
 use std::time::Instant;
 
-fn make_memory(id: &str, mem_type: MemoryType, importance: Importance, tags: Vec<&str>) -> BaseMemory {
+fn make_memory(
+    id: &str,
+    mem_type: MemoryType,
+    importance: Importance,
+    tags: Vec<&str>,
+) -> BaseMemory {
     let content = TypedContent::Tribal(TribalContent {
         knowledge: format!("Knowledge for {id}"),
         severity: "medium".to_string(),
@@ -35,7 +40,7 @@ fn make_memory(id: &str, mem_type: MemoryType, importance: Importance, tags: Vec
         archived: false,
         superseded_by: None,
         supersedes: None,
-        content_hash: BaseMemory::compute_content_hash(&content),
+        content_hash: BaseMemory::compute_content_hash(&content).unwrap(),
     }
 }
 
@@ -57,7 +62,11 @@ fn stress_1000_individual_creates_and_gets() {
     }
 
     let create_elapsed = start.elapsed();
-    assert!(create_elapsed.as_secs() < 10, "1000 creates took {:?}", create_elapsed);
+    assert!(
+        create_elapsed.as_secs() < 10,
+        "1000 creates took {:?}",
+        create_elapsed
+    );
 
     // Verify random reads.
     for id in ["mem-0000", "mem-0500", "mem-0999"] {
@@ -71,12 +80,18 @@ fn stress_1000_individual_creates_and_gets() {
 fn stress_bulk_create_1000() {
     let engine = StorageEngine::open_in_memory().unwrap();
     let memories: Vec<BaseMemory> = (0..1000)
-        .map(|i| make_memory(
-            &format!("bulk-{i:04}"),
-            MemoryType::Tribal,
-            if i % 10 == 0 { Importance::Critical } else { Importance::Normal },
-            vec!["bulk", if i % 2 == 0 { "even" } else { "odd" }],
-        ))
+        .map(|i| {
+            make_memory(
+                &format!("bulk-{i:04}"),
+                MemoryType::Tribal,
+                if i % 10 == 0 {
+                    Importance::Critical
+                } else {
+                    Importance::Normal
+                },
+                vec!["bulk", if i % 2 == 0 { "even" } else { "odd" }],
+            )
+        })
         .collect();
 
     let start = Instant::now();
@@ -84,7 +99,11 @@ fn stress_bulk_create_1000() {
     let elapsed = start.elapsed();
 
     assert_eq!(count, 1000);
-    assert!(elapsed.as_secs() < 5, "Bulk create of 1000 took {:?}", elapsed);
+    assert!(
+        elapsed.as_secs() < 5,
+        "Bulk create of 1000 took {:?}",
+        elapsed
+    );
 
     // Verify bulk get.
     let ids: Vec<String> = (0..100).map(|i| format!("bulk-{i:04}")).collect();
@@ -98,18 +117,16 @@ fn stress_bulk_create_1000() {
 fn stress_query_by_type_across_many_types() {
     let engine = StorageEngine::open_in_memory().unwrap();
     let types = [
-        MemoryType::Core, MemoryType::Tribal, MemoryType::Episodic,
-        MemoryType::Semantic, MemoryType::Decision,
+        MemoryType::Core,
+        MemoryType::Tribal,
+        MemoryType::Episodic,
+        MemoryType::Semantic,
+        MemoryType::Decision,
     ];
 
     for (i, &mt) in types.iter().enumerate() {
         for j in 0..200 {
-            let mem = make_memory(
-                &format!("qt-{i}-{j}"),
-                mt,
-                Importance::Normal,
-                vec![],
-            );
+            let mem = make_memory(&format!("qt-{i}-{j}"), mt, Importance::Normal, vec![]);
             engine.create(&mem).unwrap();
         }
     }
@@ -123,16 +140,16 @@ fn stress_query_by_type_across_many_types() {
 #[test]
 fn stress_query_by_importance() {
     let engine = StorageEngine::open_in_memory().unwrap();
-    let importances = [Importance::Low, Importance::Normal, Importance::High, Importance::Critical];
+    let importances = [
+        Importance::Low,
+        Importance::Normal,
+        Importance::High,
+        Importance::Critical,
+    ];
 
     for (i, &imp) in importances.iter().enumerate() {
         for j in 0..100 {
-            let mem = make_memory(
-                &format!("qi-{i}-{j}"),
-                MemoryType::Tribal,
-                imp,
-                vec![],
-            );
+            let mem = make_memory(&format!("qi-{i}-{j}"), MemoryType::Tribal, imp, vec![]);
             engine.create(&mem).unwrap();
         }
     }
@@ -162,7 +179,12 @@ fn stress_query_by_tags() {
         } else {
             vec!["rust", "ml"]
         };
-        let mem = make_memory(&format!("tag-{i}"), MemoryType::Tribal, Importance::Normal, tags);
+        let mem = make_memory(
+            &format!("tag-{i}"),
+            MemoryType::Tribal,
+            Importance::Normal,
+            tags,
+        );
         engine.create(&mem).unwrap();
     }
 
@@ -181,7 +203,13 @@ fn stress_query_by_tags() {
 fn stress_fts5_search_1000_memories() {
     let engine = StorageEngine::open_in_memory().unwrap();
 
-    let topics = ["database optimization", "memory safety", "async runtime", "error handling", "testing patterns"];
+    let topics = [
+        "database optimization",
+        "memory safety",
+        "async runtime",
+        "error handling",
+        "testing patterns",
+    ];
     for i in 0..1000 {
         let topic = topics[i % topics.len()];
         let mut mem = make_memory(
@@ -198,7 +226,10 @@ fn stress_fts5_search_1000_memories() {
     let results = engine.search_fts5("memory safety", 50).unwrap();
     let elapsed = start.elapsed();
 
-    assert!(!results.is_empty(), "FTS5 should find results for 'memory safety'");
+    assert!(
+        !results.is_empty(),
+        "FTS5 should find results for 'memory safety'"
+    );
     assert!(elapsed.as_millis() < 1000, "FTS5 search took {:?}", elapsed);
 }
 
@@ -210,7 +241,12 @@ fn stress_500_relationships() {
 
     // Create 100 memories.
     for i in 0..100 {
-        let mem = make_memory(&format!("rel-{i:02}"), MemoryType::Tribal, Importance::Normal, vec![]);
+        let mem = make_memory(
+            &format!("rel-{i:02}"),
+            MemoryType::Tribal,
+            Importance::Normal,
+            vec![],
+        );
         engine.create(&mem).unwrap();
     }
 
@@ -244,7 +280,12 @@ fn stress_causal_500_edges() {
 
     // Create memories first.
     for i in 0..100 {
-        let mem = make_memory(&format!("causal-{i:02}"), MemoryType::Tribal, Importance::Normal, vec![]);
+        let mem = make_memory(
+            &format!("causal-{i:02}"),
+            MemoryType::Tribal,
+            Importance::Normal,
+            vec![],
+        );
         engine.create(&mem).unwrap();
     }
 
@@ -269,7 +310,11 @@ fn stress_causal_500_edges() {
         }
     }
     let elapsed = start.elapsed();
-    assert!(elapsed.as_secs() < 10, "500 causal edges took {:?}", elapsed);
+    assert!(
+        elapsed.as_secs() < 10,
+        "500 causal edges took {:?}",
+        elapsed
+    );
 
     // Verify edge retrieval.
     let edges = engine.get_edges("causal-00").unwrap();
@@ -289,7 +334,11 @@ fn stress_aggregation_queries() {
     for i in 0..500 {
         let mut mem = make_memory(
             &format!("agg-{i:03}"),
-            if i % 2 == 0 { MemoryType::Tribal } else { MemoryType::Episodic },
+            if i % 2 == 0 {
+                MemoryType::Tribal
+            } else {
+                MemoryType::Episodic
+            },
             Importance::Normal,
             vec![],
         );
@@ -302,7 +351,11 @@ fn stress_aggregation_queries() {
     assert_eq!(total, 500);
 
     let avg_conf = engine.average_confidence().unwrap();
-    assert!(avg_conf > 0.0 && avg_conf <= 1.0, "Average confidence should be in (0,1], got {}", avg_conf);
+    assert!(
+        avg_conf > 0.0 && avg_conf <= 1.0,
+        "Average confidence should be in (0,1], got {}",
+        avg_conf
+    );
 }
 
 // ── Edge cases ───────────────────────────────────────────────────────────
@@ -328,7 +381,12 @@ fn stress_delete_and_verify_gone() {
 #[test]
 fn stress_update_preserves_changes() {
     let engine = StorageEngine::open_in_memory().unwrap();
-    let mut mem = make_memory("to-update", MemoryType::Tribal, Importance::Normal, vec!["original"]);
+    let mut mem = make_memory(
+        "to-update",
+        MemoryType::Tribal,
+        Importance::Normal,
+        vec!["original"],
+    );
     engine.create(&mem).unwrap();
 
     mem.importance = Importance::Critical;

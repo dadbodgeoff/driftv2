@@ -27,8 +27,9 @@ pub fn get_memories_valid_at(
     let valid_time_str = valid_time.to_rfc3339();
     let system_time_str = system_time.to_rfc3339();
 
-    let mut stmt = conn.prepare(
-        "SELECT id, memory_type, content, summary, transaction_time, valid_time, valid_until,
+    let mut stmt = conn
+        .prepare(
+            "SELECT id, memory_type, content, summary, transaction_time, valid_time, valid_until,
                 confidence, importance, last_accessed, access_count,
                 tags, archived, superseded_by, supersedes, content_hash
          FROM memories
@@ -36,7 +37,8 @@ pub fn get_memories_valid_at(
            AND valid_time <= ?2
            AND (valid_until IS NULL OR valid_until > ?2)
            AND archived = 0",
-    ).map_err(|e| to_storage_err(e.to_string()))?;
+        )
+        .map_err(|e| to_storage_err(e.to_string()))?;
 
     let rows = stmt
         .query_map(params![system_time_str, valid_time_str], |row| {
@@ -102,12 +104,12 @@ pub fn get_memories_in_range(
         where_clause
     );
 
-    let mut stmt = conn.prepare(&query).map_err(|e| to_storage_err(e.to_string()))?;
+    let mut stmt = conn
+        .prepare(&query)
+        .map_err(|e| to_storage_err(e.to_string()))?;
 
     let rows = stmt
-        .query_map(params![from_str, to_str], |row| {
-            Ok(parse_memory_row(row))
-        })
+        .query_map(params![from_str, to_str], |row| Ok(parse_memory_row(row)))
         .map_err(|e| to_storage_err(e.to_string()))?;
 
     let mut results = Vec::new();
@@ -131,15 +133,19 @@ pub fn get_memories_modified_between(
     let time_a_str = time_a.to_rfc3339();
     let time_b_str = time_b.to_rfc3339();
 
-    let mut stmt = conn.prepare(
-        "SELECT DISTINCT memory_id
+    let mut stmt = conn
+        .prepare(
+            "SELECT DISTINCT memory_id
          FROM memory_events
          WHERE recorded_at > ?1 AND recorded_at <= ?2
          ORDER BY memory_id",
-    ).map_err(|e| to_storage_err(e.to_string()))?;
+        )
+        .map_err(|e| to_storage_err(e.to_string()))?;
 
     let rows = stmt
-        .query_map(params![time_a_str, time_b_str], |row| row.get::<_, String>(0))
+        .query_map(params![time_a_str, time_b_str], |row| {
+            row.get::<_, String>(0)
+        })
         .map_err(|e| to_storage_err(e.to_string()))?;
 
     let mut results = Vec::new();
@@ -155,23 +161,20 @@ pub fn get_memories_modified_between(
 ///
 /// Used by decision replay to find memories that didn't exist at decision time
 /// for hindsight computation.
-pub fn get_memories_created_after(
-    conn: &Connection,
-    after: &str,
-) -> CortexResult<Vec<BaseMemory>> {
-    let mut stmt = conn.prepare(
-        "SELECT id, memory_type, content, summary, transaction_time, valid_time, valid_until,
+pub fn get_memories_created_after(conn: &Connection, after: &str) -> CortexResult<Vec<BaseMemory>> {
+    let mut stmt = conn
+        .prepare(
+            "SELECT id, memory_type, content, summary, transaction_time, valid_time, valid_until,
                 confidence, importance, last_accessed, access_count,
                 tags, archived, superseded_by, supersedes, content_hash
          FROM memories
          WHERE transaction_time > ?1
            AND archived = 0",
-    ).map_err(|e| to_storage_err(e.to_string()))?;
+        )
+        .map_err(|e| to_storage_err(e.to_string()))?;
 
     let rows = stmt
-        .query_map(params![after], |row| {
-            Ok(parse_memory_row(row))
-        })
+        .query_map(params![after], |row| Ok(parse_memory_row(row)))
         .map_err(|e| to_storage_err(e.to_string()))?;
 
     let mut results = Vec::new();

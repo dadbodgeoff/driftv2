@@ -1,7 +1,9 @@
 use serde::{Deserialize, Serialize};
+use ts_rs::TS;
 
 /// Result of 4-dimension memory validation.
-#[derive(Debug, Clone, Serialize, Deserialize)]
+#[derive(Debug, Clone, Serialize, Deserialize, TS)]
+#[ts(export)]
 pub struct ValidationResult {
     pub memory_id: String,
     /// Score per dimension (0.0–1.0).
@@ -15,7 +17,8 @@ pub struct ValidationResult {
 }
 
 /// Scores for each of the 4 validation dimensions.
-#[derive(Debug, Clone, Serialize, Deserialize)]
+#[derive(Debug, Clone, Serialize, Deserialize, TS)]
+#[ts(export)]
 pub struct DimensionScores {
     /// Citation validation: file existence, content hash drift, line validity.
     pub citation: f64,
@@ -35,7 +38,8 @@ impl DimensionScores {
 }
 
 /// The type of healing action to apply.
-#[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize, TS)]
+#[ts(export)]
 #[serde(rename_all = "snake_case")]
 pub enum HealingActionType {
     /// Adjust confidence based on validation score.
@@ -51,7 +55,8 @@ pub enum HealingActionType {
 }
 
 /// An automatic healing action.
-#[derive(Debug, Clone, Serialize, Deserialize)]
+#[derive(Debug, Clone, Serialize, Deserialize, TS)]
+#[ts(export)]
 pub struct HealingAction {
     pub action_type: HealingActionType,
     pub description: String,

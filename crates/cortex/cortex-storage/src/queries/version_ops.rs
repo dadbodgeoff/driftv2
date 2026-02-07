@@ -52,17 +52,19 @@ pub fn insert_version(
         "reason": reason,
     });
     let _ = crate::temporal_events::emit_event(
-        conn, memory_id, "content_updated", &delta, "system", "version_ops",
+        conn,
+        memory_id,
+        "content_updated",
+        &delta,
+        "system",
+        "version_ops",
     );
 
     Ok(next_version)
 }
 
 /// Get version history for a memory, ordered newest first.
-pub fn get_version_history(
-    conn: &Connection,
-    memory_id: &str,
-) -> CortexResult<Vec<MemoryVersion>> {
+pub fn get_version_history(conn: &Connection, memory_id: &str) -> CortexResult<Vec<MemoryVersion>> {
     let mut stmt = conn
         .prepare(
             "SELECT memory_id, version, content, summary, confidence, changed_by, reason, created_at
@@ -96,24 +98,23 @@ pub fn get_at_version(
     memory_id: &str,
     version: i64,
 ) -> CortexResult<Option<MemoryVersion>> {
-    let result = conn
-        .query_row(
-            "SELECT memory_id, version, content, summary, confidence, changed_by, reason, created_at
+    let result = conn.query_row(
+        "SELECT memory_id, version, content, summary, confidence, changed_by, reason, created_at
              FROM memory_versions WHERE memory_id = ?1 AND version = ?2",
-            params![memory_id, version],
-            |row| {
-                Ok(MemoryVersion {
-                    memory_id: row.get(0)?,
-                    version: row.get(1)?,
-                    content: row.get(2)?,
-                    summary: row.get(3)?,
-                    confidence: row.get(4)?,
-                    changed_by: row.get(5)?,
-                    reason: row.get(6)?,
-                    created_at: row.get(7)?,
-                })
-            },
-        );
+        params![memory_id, version],
+        |row| {
+            Ok(MemoryVersion {
+                memory_id: row.get(0)?,
+                version: row.get(1)?,
+                content: row.get(2)?,
+                summary: row.get(3)?,
+                confidence: row.get(4)?,
+                changed_by: row.get(5)?,
+                reason: row.get(6)?,
+                created_at: row.get(7)?,
+            })
+        },
+    );
 
     match result {
         Ok(v) => Ok(Some(v)),

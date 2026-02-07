@@ -12,4 +12,4 @@ pub mod scheduling;
 
 pub use engine::ConsolidationEngine;
 pub use monitoring::{ConsolidationDashboard, QualityAssessment, TunableThresholds};
-pub use scheduling::{TriggerReason, TriggerSignals, evaluate_triggers};
+pub use scheduling::{evaluate_triggers, TriggerReason, TriggerSignals};

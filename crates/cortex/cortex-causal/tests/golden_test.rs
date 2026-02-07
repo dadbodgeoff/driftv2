@@ -40,7 +40,7 @@ fn make_memory(id: &str, summary: &str) -> BaseMemory {
         archived: false,
         superseded_by: None,
         supersedes: None,
-        content_hash: BaseMemory::compute_content_hash(&content),
+        content_hash: BaseMemory::compute_content_hash(&content).unwrap(),
     }
 }
 
@@ -76,11 +76,7 @@ fn parse_evidence(edge: &Value) -> Vec<EdgeEvidence> {
         .unwrap_or_default()
 }
 
-fn add_edges_from_array(
-    engine: &CausalEngine,
-    edges: &[Value],
-    memories: &[BaseMemory],
-) {
+fn add_edges_from_array(engine: &CausalEngine, edges: &[Value], memories: &[BaseMemory]) {
     for edge in edges {
         let source_id = edge["source"].as_str().unwrap();
         let target_id = edge["target"].as_str().unwrap();
@@ -213,7 +209,12 @@ fn golden_cycle_rejection() {
     let engine = CausalEngine::new();
     let memories: Vec<BaseMemory> = nodes
         .iter()
-        .map(|n| make_memory(n["memory_id"].as_str().unwrap(), n["summary"].as_str().unwrap_or("")))
+        .map(|n| {
+            make_memory(
+                n["memory_id"].as_str().unwrap(),
+                n["summary"].as_str().unwrap_or(""),
+            )
+        })
         .collect();
 
     // Add the existing (valid) edges.
@@ -268,7 +269,11 @@ fn golden_counterfactual() {
             result.nodes.iter().any(|n| n.memory_id == *id),
             "Counterfactual should identify '{}' as affected, got: {:?}",
             id,
-            result.nodes.iter().map(|n| &n.memory_id).collect::<Vec<_>>()
+            result
+                .nodes
+                .iter()
+                .map(|n| &n.memory_id)
+                .collect::<Vec<_>>()
         );
     }
 
@@ -302,7 +307,10 @@ fn golden_narrative_output() {
 
     let narrative = engine.narrative(target_node).unwrap();
 
-    assert!(!narrative.summary.is_empty(), "Narrative should have a summary");
+    assert!(
+        !narrative.summary.is_empty(),
+        "Narrative should have a summary"
+    );
     assert!(
         narrative.confidence >= 0.0 && narrative.confidence <= 1.0,
         "Narrative confidence should be bounded"

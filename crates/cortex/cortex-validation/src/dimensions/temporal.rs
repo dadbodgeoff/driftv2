@@ -28,9 +28,7 @@ pub fn validate(memory: &BaseMemory, now: DateTime<Utc>) -> TemporalValidationRe
     let mut healing_actions = Vec::new();
 
     // Check explicit expiry.
-    let expired = memory
-        .valid_until
-        .is_some_and(|until| until < now);
+    let expired = memory.valid_until.is_some_and(|until| until < now);
 
     if expired {
         healing_actions.push(HealingAction {

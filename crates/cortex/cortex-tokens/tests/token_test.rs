@@ -11,7 +11,11 @@ fn count_simple_text() {
     let counter = TokenCounter::default();
     let count = counter.count("hello world");
     assert!(count > 0, "non-empty text should have >0 tokens");
-    assert!(count < 10, "hello world should be a few tokens, got {}", count);
+    assert!(
+        count < 10,
+        "hello world should be a few tokens, got {}",
+        count
+    );
 }
 
 #[test]
@@ -58,7 +62,11 @@ fn subadditivity_property() {
     assert!(
         count_combined <= count_a + count_b + 1,
         "subadditivity violated: count({}) = {}, count({}) = {}, count(combined) = {}",
-        a, count_a, b, count_b, count_combined
+        a,
+        count_a,
+        b,
+        count_b,
+        count_combined
     );
 }
 

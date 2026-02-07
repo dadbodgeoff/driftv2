@@ -20,9 +20,8 @@ pub fn cortex_session_get(session_id: String) -> napi::Result<serde_json::Value>
         .session
         .get_session(&session_id)
         .ok_or_else(|| napi::Error::from_reason(format!("Session not found: {session_id}")))?;
-    serde_json::to_value(&ctx).map_err(|e| {
-        napi::Error::from_reason(format!("Failed to serialize SessionContext: {e}"))
-    })
+    serde_json::to_value(&ctx)
+        .map_err(|e| napi::Error::from_reason(format!("Failed to serialize SessionContext: {e}")))
 }
 
 /// Clean up stale sessions.

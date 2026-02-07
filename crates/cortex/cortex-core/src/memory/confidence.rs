@@ -1,10 +1,12 @@
 use serde::{Deserialize, Serialize};
 use std::fmt;
 use std::ops::{Add, Mul, Sub};
+use ts_rs::TS;
 
 /// Confidence score clamped to [0.0, 1.0].
 /// Represents how confident the system is in a memory's accuracy.
-#[derive(Debug, Clone, Copy, PartialEq, PartialOrd, Serialize, Deserialize)]
+#[derive(Debug, Clone, Copy, PartialEq, PartialOrd, Serialize, Deserialize, TS)]
+#[ts(export)]
 pub struct Confidence(f64);
 
 impl Confidence {

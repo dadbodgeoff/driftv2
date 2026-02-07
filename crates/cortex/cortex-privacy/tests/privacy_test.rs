@@ -6,21 +6,45 @@ use cortex_privacy::PrivacyEngine;
 #[test]
 fn all_patterns_compile_without_errors() {
     let pii = cortex_privacy::patterns::pii::all_patterns();
-    assert!(pii.len() >= 15, "Expected 15+ PII patterns, got {}", pii.len());
+    assert!(
+        pii.len() >= 15,
+        "Expected 15+ PII patterns, got {}",
+        pii.len()
+    );
     for pat in &pii {
-        assert!(pat.regex.is_some(), "PII pattern '{}' failed to compile", pat.name);
+        assert!(
+            pat.regex.is_some(),
+            "PII pattern '{}' failed to compile",
+            pat.name
+        );
     }
 
     let secrets = cortex_privacy::patterns::secrets::all_patterns();
-    assert!(secrets.len() >= 35, "Expected 35+ secret patterns, got {}", secrets.len());
+    assert!(
+        secrets.len() >= 35,
+        "Expected 35+ secret patterns, got {}",
+        secrets.len()
+    );
     for pat in &secrets {
-        assert!(pat.regex.is_some(), "Secret pattern '{}' failed to compile", pat.name);
+        assert!(
+            pat.regex.is_some(),
+            "Secret pattern '{}' failed to compile",
+            pat.name
+        );
     }
 
     let conn = cortex_privacy::patterns::connection_strings::all_patterns();
-    assert!(conn.len() >= 7, "Expected 7+ connection string patterns, got {}", conn.len());
+    assert!(
+        conn.len() >= 7,
+        "Expected 7+ connection string patterns, got {}",
+        conn.len()
+    );
     for pat in &conn {
-        assert!(pat.regex.is_some(), "Connection string pattern '{}' failed to compile", pat.name);
+        assert!(
+            pat.regex.is_some(),
+            "Connection string pattern '{}' failed to compile",
+            pat.name
+        );
     }
 
     let total = pii.len() + secrets.len() + conn.len();
@@ -32,7 +56,9 @@ fn all_patterns_compile_without_errors() {
 #[test]
 fn known_pii_email_sanitized() {
     let engine = PrivacyEngine::new();
-    let result = engine.sanitize("Contact john.doe@company.org for details").unwrap();
+    let result = engine
+        .sanitize("Contact john.doe@company.org for details")
+        .unwrap();
     assert!(
         result.text.contains("[EMAIL]"),
         "Email not sanitized: {}",
@@ -160,7 +186,10 @@ fn gitlab_pat_sanitized() {
 fn slack_bot_token_sanitized() {
     let engine = PrivacyEngine::new();
     // Construct token at runtime to avoid triggering GitHub secret scanning
-    let input = format!("SLACK_TOKEN=xoxb-{}-{}-{}", "0000000000", "0000000000", "FakeTokenFakeTokenFake");
+    let input = format!(
+        "SLACK_TOKEN=xoxb-{}-{}-{}",
+        "0000000000", "0000000000", "FakeTokenFakeTokenFake"
+    );
     let result = engine.sanitize(&input).unwrap();
     assert!(
         result.text.contains("[SLACK_TOKEN]"),
@@ -216,7 +245,9 @@ fn short_hex_not_flagged() {
 fn test_file_context_still_detects_high_confidence() {
     let engine = PrivacyEngine::with_file_path("src/tests/auth_test.rs");
     // Email has high base confidence (0.95), -0.20 for test file = 0.75, still above threshold
-    let result = engine.sanitize("user john.doe@company.org logged in").unwrap();
+    let result = engine
+        .sanitize("user john.doe@company.org logged in")
+        .unwrap();
     assert!(result.text.contains("[EMAIL]"));
 }
 
@@ -227,7 +258,11 @@ fn env_file_boosts_confidence() {
     assert!(result.text.contains("[EMAIL]"));
     if let Some(r) = result.redactions.first() {
         // Base 0.95 + 0.10 env boost = 1.0 (clamped)
-        assert!(r.confidence > 0.9, "Expected boosted confidence in .env file, got {}", r.confidence);
+        assert!(
+            r.confidence > 0.9,
+            "Expected boosted confidence in .env file, got {}",
+            r.confidence
+        );
     }
 }
 
@@ -237,7 +272,11 @@ fn env_file_boosts_confidence() {
 fn degradation_tracker_records_failures() {
     let engine = PrivacyEngine::new();
     let (result, tracker) = engine.sanitize_with_tracking("Hello world").unwrap();
-    assert!(!tracker.has_failures(), "Unexpected pattern failures: {:?}", tracker.failures());
+    assert!(
+        !tracker.has_failures(),
+        "Unexpected pattern failures: {:?}",
+        tracker.failures()
+    );
     assert_eq!(result.text, "Hello world");
 }
 
@@ -319,9 +358,21 @@ fn multiple_secrets_in_one_text() {
         "B".repeat(36)
     );
     let result = engine.sanitize(&input).unwrap();
-    assert!(result.text.contains("[AWS_KEY]"), "AWS key missing: {}", result.text);
-    assert!(result.text.contains("[GITHUB_TOKEN]"), "GitHub token missing: {}", result.text);
-    assert!(result.text.contains("[EMAIL]"), "Email missing: {}", result.text);
+    assert!(
+        result.text.contains("[AWS_KEY]"),
+        "AWS key missing: {}",
+        result.text
+    );
+    assert!(
+        result.text.contains("[GITHUB_TOKEN]"),
+        "GitHub token missing: {}",
+        result.text
+    );
+    assert!(
+        result.text.contains("[EMAIL]"),
+        "Email missing: {}",
+        result.text
+    );
 }
 
 #[test]

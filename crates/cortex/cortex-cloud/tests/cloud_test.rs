@@ -416,14 +416,23 @@ fn test_quota_sync_frequency_throttle() {
 #[test]
 fn test_api_key_auth_flow() {
     let mut auth = AuthManager::new(AuthMethod::ApiKey("test-key-123".into()));
-    assert!(matches!(auth.state(), cortex_cloud::AuthState::Unauthenticated));
+    assert!(matches!(
+        auth.state(),
+        cortex_cloud::AuthState::Unauthenticated
+    ));
 
     auth.login().unwrap();
-    assert!(matches!(auth.state(), cortex_cloud::AuthState::Authenticated));
+    assert!(matches!(
+        auth.state(),
+        cortex_cloud::AuthState::Authenticated
+    ));
     assert_eq!(auth.bearer_token(), Some("test-key-123"));
 
     auth.logout();
-    assert!(matches!(auth.state(), cortex_cloud::AuthState::Unauthenticated));
+    assert!(matches!(
+        auth.state(),
+        cortex_cloud::AuthState::Unauthenticated
+    ));
     assert!(auth.bearer_token().is_none());
 }
 

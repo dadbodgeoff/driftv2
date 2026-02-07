@@ -58,12 +58,7 @@ impl PredictionCache {
     ///
     /// `change_frequency` is the number of changes per minute for the file.
     /// Higher frequency → shorter TTL.
-    pub fn insert(
-        &self,
-        key: String,
-        candidates: Vec<PredictionCandidate>,
-        change_frequency: f64,
-    ) {
+    pub fn insert(&self, key: String, candidates: Vec<PredictionCandidate>, change_frequency: f64) {
         let ttl = adaptive_ttl(change_frequency);
         self.cache
             .policy()

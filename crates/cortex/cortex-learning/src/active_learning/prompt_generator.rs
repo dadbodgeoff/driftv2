@@ -36,8 +36,8 @@ pub fn generate_prompt(memory: &BaseMemory) -> ValidationPrompt {
 mod tests {
     use super::*;
     use chrono::Utc;
-    use cortex_core::memory::*;
     use cortex_core::memory::types::InsightContent;
+    use cortex_core::memory::*;
 
     #[test]
     fn generates_prompt_with_actions() {
@@ -65,7 +65,7 @@ mod tests {
             archived: false,
             superseded_by: None,
             supersedes: None,
-            content_hash: BaseMemory::compute_content_hash(&content),
+            content_hash: BaseMemory::compute_content_hash(&content).unwrap(),
         };
 
         let prompt = generate_prompt(&memory);

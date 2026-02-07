@@ -1,6 +1,6 @@
 use chrono::Utc;
-use cortex_core::memory::*;
 use cortex_core::memory::types::*;
+use cortex_core::memory::*;
 
 #[test]
 fn memory_type_has_23_variants() {
@@ -113,8 +113,8 @@ fn content_hash_is_deterministic() {
         description: "desc".into(),
         metadata: serde_json::json!({}),
     });
-    let hash1 = BaseMemory::compute_content_hash(&content);
-    let hash2 = BaseMemory::compute_content_hash(&content);
+    let hash1 = BaseMemory::compute_content_hash(&content).unwrap();
+    let hash2 = BaseMemory::compute_content_hash(&content).unwrap();
     assert_eq!(hash1, hash2, "same content must produce same hash");
 }
 
@@ -131,8 +131,8 @@ fn content_hash_differs_for_different_content() {
         metadata: serde_json::json!({}),
     });
     assert_ne!(
-        BaseMemory::compute_content_hash(&c1),
-        BaseMemory::compute_content_hash(&c2)
+        BaseMemory::compute_content_hash(&c1).unwrap(),
+        BaseMemory::compute_content_hash(&c2).unwrap()
     );
 }
 
@@ -173,7 +173,7 @@ fn base_memory_serde_roundtrip() {
         archived: false,
         superseded_by: None,
         supersedes: None,
-        content_hash: BaseMemory::compute_content_hash(&content),
+        content_hash: BaseMemory::compute_content_hash(&content).unwrap(),
     };
 
     let json = serde_json::to_string(&memory).unwrap();
@@ -196,4 +196,184 @@ fn memory_type_category_labels() {
     assert_eq!(MemoryType::Core.category(), "domain_agnostic");
     assert_eq!(MemoryType::PatternRationale.category(), "code_specific");
     assert_eq!(MemoryType::AgentSpawn.category(), "universal");
+}
+
+// ─── Issue 2: PartialEq documents DDD Entity pattern + content_eq ────────────
+
+#[test]
+fn partial_eq_compares_only_id() {
+    let now = Utc::now();
+    let content1 = TypedContent::Core(CoreContent {
+        project_name: "project-a".into(),
+        description: "desc-a".into(),
+        metadata: serde_json::json!({}),
+    });
+    let content2 = TypedContent::Core(CoreContent {
+        project_name: "project-b".into(),
+        description: "desc-b".into(),
+        metadata: serde_json::json!({"key": "value"}),
+    });
+
+    let m1 = BaseMemory {
+        id: "same-id".into(),
+        memory_type: MemoryType::Core,
+        content: content1,
+        summary: "summary a".into(),
+        transaction_time: now,
+        valid_time: now,
+        valid_until: None,
+        confidence: Confidence::new(0.5),
+        importance: Importance::Low,
+        last_accessed: now,
+        access_count: 1,
+        linked_patterns: vec![],
+        linked_constraints: vec![],
+        linked_files: vec![],
+        linked_functions: vec![],
+        tags: vec!["a".into()],
+        archived: false,
+        superseded_by: None,
+        supersedes: None,
+        content_hash: "hash-a".into(),
+    };
+
+    let m2 = BaseMemory {
+        id: "same-id".into(),
+        memory_type: MemoryType::Tribal,
+        content: content2,
+        summary: "summary b".into(),
+        transaction_time: now,
+        valid_time: now,
+        valid_until: None,
+        confidence: Confidence::new(0.9),
+        importance: Importance::Critical,
+        last_accessed: now,
+        access_count: 99,
+        linked_patterns: vec![],
+        linked_constraints: vec![],
+        linked_files: vec![],
+        linked_functions: vec![],
+        tags: vec!["b".into()],
+        archived: true,
+        superseded_by: None,
+        supersedes: None,
+        content_hash: "hash-b".into(),
+    };
+
+    // PartialEq only compares ID (DDD Entity pattern).
+    assert_eq!(m1, m2, "same ID means equal per DDD Entity pattern");
+    // content_eq should detect the structural difference.
+    assert!(
+        !m1.content_eq(&m2),
+        "content_eq should detect different content"
+    );
+}
+
+#[test]
+fn content_eq_matches_identical_content() {
+    let now = Utc::now();
+    let content = TypedContent::Semantic(SemanticContent {
+        knowledge: "shared knowledge".into(),
+        source_episodes: vec![],
+        consolidation_confidence: 0.8,
+    });
+
+    let m1 = BaseMemory {
+        id: "id-1".into(),
+        memory_type: MemoryType::Semantic,
+        content: content.clone(),
+        summary: "same summary".into(),
+        transaction_time: now,
+        valid_time: now,
+        valid_until: None,
+        confidence: Confidence::new(0.8),
+        importance: Importance::Normal,
+        last_accessed: now,
+        access_count: 1,
+        linked_patterns: vec![],
+        linked_constraints: vec![],
+        linked_files: vec![],
+        linked_functions: vec![],
+        tags: vec!["tag".into()],
+        archived: false,
+        superseded_by: None,
+        supersedes: None,
+        content_hash: "same-hash".into(),
+    };
+
+    let m2 = BaseMemory {
+        id: "id-2".into(), // Different ID
+        memory_type: MemoryType::Semantic,
+        content,
+        summary: "same summary".into(),
+        transaction_time: now,
+        valid_time: now,
+        valid_until: None,
+        confidence: Confidence::new(0.8),
+        importance: Importance::Normal,
+        last_accessed: now,
+        access_count: 99, // Different access count (not checked by content_eq)
+        linked_patterns: vec![],
+        linked_constraints: vec![],
+        linked_files: vec![],
+        linked_functions: vec![],
+        tags: vec!["tag".into()],
+        archived: false,
+        superseded_by: None,
+        supersedes: None,
+        content_hash: "same-hash".into(),
+    };
+
+    // Different IDs → PartialEq says not equal.
+    assert_ne!(m1, m2);
+    // Same content → content_eq says equal.
+    assert!(
+        m1.content_eq(&m2),
+        "content_eq should match identical content"
+    );
+}
+
+// ─── Issue 6: compute_content_hash returns CortexResult ──────────────────────
+
+#[test]
+fn compute_content_hash_returns_ok_for_valid_content() {
+    let content = TypedContent::Core(CoreContent {
+        project_name: "test".into(),
+        description: "desc".into(),
+        metadata: serde_json::json!({}),
+    });
+    let result = BaseMemory::compute_content_hash(&content);
+    assert!(result.is_ok(), "valid content should hash successfully");
+    assert!(!result.unwrap().is_empty(), "hash should not be empty");
+}
+
+#[test]
+fn compute_content_hash_is_deterministic_with_result() {
+    let content = TypedContent::Semantic(SemanticContent {
+        knowledge: "deterministic test".into(),
+        source_episodes: vec!["ep1".into()],
+        consolidation_confidence: 0.75,
+    });
+    let h1 = BaseMemory::compute_content_hash(&content).unwrap();
+    let h2 = BaseMemory::compute_content_hash(&content).unwrap();
+    assert_eq!(h1, h2, "same content must produce same hash");
+}
+
+#[test]
+fn compute_content_hash_differs_for_different_content_with_result() {
+    let c1 = TypedContent::Core(CoreContent {
+        project_name: "a".into(),
+        description: "desc".into(),
+        metadata: serde_json::json!({}),
+    });
+    let c2 = TypedContent::Core(CoreContent {
+        project_name: "b".into(),
+        description: "desc".into(),
+        metadata: serde_json::json!({}),
+    });
+    assert_ne!(
+        BaseMemory::compute_content_hash(&c1).unwrap(),
+        BaseMemory::compute_content_hash(&c2).unwrap(),
+        "different content must produce different hashes"
+    );
 }

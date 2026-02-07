@@ -7,10 +7,7 @@ use cortex_core::errors::CortexResult;
 use crate::queries::version_ops::{self, MemoryVersion};
 
 /// Get the full version history for a memory.
-pub fn get_history(
-    conn: &Connection,
-    memory_id: &str,
-) -> CortexResult<Vec<MemoryVersion>> {
+pub fn get_history(conn: &Connection, memory_id: &str) -> CortexResult<Vec<MemoryVersion>> {
     version_ops::get_version_history(conn, memory_id)
 }
 

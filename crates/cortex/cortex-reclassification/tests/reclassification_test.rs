@@ -59,34 +59,102 @@ impl IMemoryStorage for MockStorage {
         Ok(())
     }
     fn get(&self, id: &str) -> CortexResult<Option<BaseMemory>> {
-        Ok(self.memories.lock().unwrap().iter().find(|m| m.id == id).cloned())
+        Ok(self
+            .memories
+            .lock()
+            .unwrap()
+            .iter()
+            .find(|m| m.id == id)
+            .cloned())
     }
-    fn update(&self, _: &BaseMemory) -> CortexResult<()> { Ok(()) }
-    fn delete(&self, _: &str) -> CortexResult<()> { Ok(()) }
-    fn create_bulk(&self, _: &[BaseMemory]) -> CortexResult<usize> { Ok(0) }
-    fn get_bulk(&self, _: &[String]) -> CortexResult<Vec<BaseMemory>> { Ok(vec![]) }
+    fn update(&self, _: &BaseMemory) -> CortexResult<()> {
+        Ok(())
+    }
+    fn delete(&self, _: &str) -> CortexResult<()> {
+        Ok(())
+    }
+    fn create_bulk(&self, _: &[BaseMemory]) -> CortexResult<usize> {
+        Ok(0)
+    }
+    fn get_bulk(&self, _: &[String]) -> CortexResult<Vec<BaseMemory>> {
+        Ok(vec![])
+    }
     fn query_by_type(&self, mt: MemoryType) -> CortexResult<Vec<BaseMemory>> {
-        Ok(self.memories.lock().unwrap().iter().filter(|m| m.memory_type == mt).cloned().collect())
+        Ok(self
+            .memories
+            .lock()
+            .unwrap()
+            .iter()
+            .filter(|m| m.memory_type == mt)
+            .cloned()
+            .collect())
     }
     fn query_by_importance(&self, min: Importance) -> CortexResult<Vec<BaseMemory>> {
-        Ok(self.memories.lock().unwrap().iter().filter(|m| m.importance >= min).cloned().collect())
+        Ok(self
+            .memories
+            .lock()
+            .unwrap()
+            .iter()
+            .filter(|m| m.importance >= min)
+            .cloned()
+            .collect())
     }
-    fn query_by_confidence_range(&self, _: f64, _: f64) -> CortexResult<Vec<BaseMemory>> { Ok(vec![]) }
-    fn query_by_date_range(&self, _: chrono::DateTime<Utc>, _: chrono::DateTime<Utc>) -> CortexResult<Vec<BaseMemory>> { Ok(vec![]) }
-    fn query_by_tags(&self, _: &[String]) -> CortexResult<Vec<BaseMemory>> { Ok(vec![]) }
-    fn search_fts5(&self, _: &str, _: usize) -> CortexResult<Vec<BaseMemory>> { Ok(vec![]) }
-    fn search_vector(&self, _: &[f32], _: usize) -> CortexResult<Vec<(BaseMemory, f64)>> { Ok(vec![]) }
-    fn get_relationships(&self, _: &str, _: Option<RelationshipType>) -> CortexResult<Vec<RelationshipEdge>> { Ok(vec![]) }
-    fn add_relationship(&self, _: &RelationshipEdge) -> CortexResult<()> { Ok(()) }
-    fn remove_relationship(&self, _: &str, _: &str) -> CortexResult<()> { Ok(()) }
-    fn add_pattern_link(&self, _: &str, _: &PatternLink) -> CortexResult<()> { Ok(()) }
-    fn add_constraint_link(&self, _: &str, _: &ConstraintLink) -> CortexResult<()> { Ok(()) }
-    fn add_file_link(&self, _: &str, _: &FileLink) -> CortexResult<()> { Ok(()) }
-    fn add_function_link(&self, _: &str, _: &FunctionLink) -> CortexResult<()> { Ok(()) }
-    fn count_by_type(&self) -> CortexResult<Vec<(MemoryType, usize)>> { Ok(vec![]) }
-    fn average_confidence(&self) -> CortexResult<f64> { Ok(0.0) }
-    fn stale_count(&self, _: u64) -> CortexResult<usize> { Ok(0) }
-    fn vacuum(&self) -> CortexResult<()> { Ok(()) }
+    fn query_by_confidence_range(&self, _: f64, _: f64) -> CortexResult<Vec<BaseMemory>> {
+        Ok(vec![])
+    }
+    fn query_by_date_range(
+        &self,
+        _: chrono::DateTime<Utc>,
+        _: chrono::DateTime<Utc>,
+    ) -> CortexResult<Vec<BaseMemory>> {
+        Ok(vec![])
+    }
+    fn query_by_tags(&self, _: &[String]) -> CortexResult<Vec<BaseMemory>> {
+        Ok(vec![])
+    }
+    fn search_fts5(&self, _: &str, _: usize) -> CortexResult<Vec<BaseMemory>> {
+        Ok(vec![])
+    }
+    fn search_vector(&self, _: &[f32], _: usize) -> CortexResult<Vec<(BaseMemory, f64)>> {
+        Ok(vec![])
+    }
+    fn get_relationships(
+        &self,
+        _: &str,
+        _: Option<RelationshipType>,
+    ) -> CortexResult<Vec<RelationshipEdge>> {
+        Ok(vec![])
+    }
+    fn add_relationship(&self, _: &RelationshipEdge) -> CortexResult<()> {
+        Ok(())
+    }
+    fn remove_relationship(&self, _: &str, _: &str) -> CortexResult<()> {
+        Ok(())
+    }
+    fn add_pattern_link(&self, _: &str, _: &PatternLink) -> CortexResult<()> {
+        Ok(())
+    }
+    fn add_constraint_link(&self, _: &str, _: &ConstraintLink) -> CortexResult<()> {
+        Ok(())
+    }
+    fn add_file_link(&self, _: &str, _: &FileLink) -> CortexResult<()> {
+        Ok(())
+    }
+    fn add_function_link(&self, _: &str, _: &FunctionLink) -> CortexResult<()> {
+        Ok(())
+    }
+    fn count_by_type(&self) -> CortexResult<Vec<(MemoryType, usize)>> {
+        Ok(vec![])
+    }
+    fn average_confidence(&self) -> CortexResult<f64> {
+        Ok(0.0)
+    }
+    fn stale_count(&self, _: u64) -> CortexResult<usize> {
+        Ok(0)
+    }
+    fn vacuum(&self) -> CortexResult<()> {
+        Ok(())
+    }
 }
 
 // ── T9-RECL-01: High-access normal memory upgraded to high ────────────────
@@ -110,9 +178,7 @@ fn high_access_normal_memory_upgraded_to_high() {
         eval.composite_score
     );
     match eval.decision {
-        ReclassificationDecision::Reclassify {
-            new_importance, ..
-        } => {
+        ReclassificationDecision::Reclassify { new_importance, .. } => {
             assert_eq!(new_importance, Importance::High);
         }
         other => panic!("Expected Reclassify, got {:?}", other),
@@ -133,9 +199,7 @@ fn user_set_critical_never_auto_downgraded() {
     };
 
     let eval = ReclassificationEngine::evaluate(
-        &memory,
-        &signals,
-        true, // user-set critical
+        &memory, &signals, true, // user-set critical
         None,
     );
 
@@ -198,10 +262,10 @@ fn max_one_reclassification_per_month() {
 #[test]
 fn composite_score_computed_correctly() {
     let signals = ReclassificationSignals {
-        access_count_30d: 20,    // normalized: 1.0
+        access_count_30d: 20,              // normalized: 1.0
         avg_retrieval_rank_30d: Some(1.0), // normalized: 1.0
-        linked_entity_count: 3,  // normalized: 1.0
-        contradiction_wins: 5,   // normalized: 1.0
+        linked_entity_count: 3,            // normalized: 1.0
+        contradiction_wins: 5,             // normalized: 1.0
         user_feedback_score: 1.0,
     };
 
@@ -214,10 +278,10 @@ fn composite_score_computed_correctly() {
 
     // Partial signals
     let partial = ReclassificationSignals {
-        access_count_30d: 10,    // normalized: 0.5
+        access_count_30d: 10,              // normalized: 0.5
         avg_retrieval_rank_30d: Some(5.0), // normalized: ~0.556
-        linked_entity_count: 1,  // normalized: 0.333
-        contradiction_wins: 0,   // normalized: 0.0
+        linked_entity_count: 1,            // normalized: 0.333
+        contradiction_wins: 0,             // normalized: 0.0
         user_feedback_score: 0.5,
     };
 

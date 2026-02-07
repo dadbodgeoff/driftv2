@@ -52,12 +52,7 @@ pub fn detect_consensus(memories: &[BaseMemory]) -> Vec<ConsensusGroup> {
             let topic = group_memories
                 .first()
                 .and_then(|m| m.tags.first().cloned())
-                .unwrap_or_else(|| {
-                    key.split(':')
-                        .next()
-                        .unwrap_or("unknown")
-                        .to_string()
-                });
+                .unwrap_or_else(|| key.split(':').next().unwrap_or("unknown").to_string());
 
             groups.push(ConsensusGroup {
                 memory_ids: group_memories.iter().map(|m| m.id.clone()).collect(),
@@ -82,9 +77,6 @@ pub fn is_in_consensus(memory_id: &str, groups: &[ConsensusGroup]) -> bool {
 ///
 /// Returns `true` if the memory has consensus support and the contradiction
 /// should be weakened or ignored.
-pub fn resists_contradiction(
-    memory_id: &str,
-    groups: &[ConsensusGroup],
-) -> bool {
+pub fn resists_contradiction(memory_id: &str, groups: &[ConsensusGroup]) -> bool {
     is_in_consensus(memory_id, groups)
 }

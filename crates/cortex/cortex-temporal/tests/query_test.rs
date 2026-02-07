@@ -37,11 +37,13 @@ fn build_memory(
     tags: Vec<String>,
 ) -> BaseMemory {
     let content = match memory_type {
-        MemoryType::Semantic => TypedContent::Semantic(cortex_core::memory::types::SemanticContent {
-            knowledge: format!("knowledge for {}", id),
-            source_episodes: vec![],
-            consolidation_confidence: 0.9,
-        }),
+        MemoryType::Semantic => {
+            TypedContent::Semantic(cortex_core::memory::types::SemanticContent {
+                knowledge: format!("knowledge for {}", id),
+                source_episodes: vec![],
+                consolidation_confidence: 0.9,
+            })
+        }
         _ => TypedContent::Episodic(cortex_core::memory::types::EpisodicContent {
             interaction: format!("interaction for {}", id),
             context: "test context".to_string(),
@@ -68,7 +70,7 @@ fn build_memory(
         archived: false,
         superseded_by: None,
         supersedes: None,
-        content_hash: BaseMemory::compute_content_hash(&content),
+        content_hash: BaseMemory::compute_content_hash(&content).unwrap(),
     }
 }
 
@@ -115,8 +117,32 @@ async fn ttb_01_as_of_current_time_equals_current_state() {
     let now = Utc::now();
 
     // Insert 2 active + 1 archived memory via production path
-    insert_mem(&writer, build_memory("m1", MemoryType::Episodic, now, now, None, 0.8, vec!["a".into()])).await;
-    insert_mem(&writer, build_memory("m2", MemoryType::Semantic, now, now, None, 0.9, vec!["b".into()])).await;
+    insert_mem(
+        &writer,
+        build_memory(
+            "m1",
+            MemoryType::Episodic,
+            now,
+            now,
+            None,
+            0.8,
+            vec!["a".into()],
+        ),
+    )
+    .await;
+    insert_mem(
+        &writer,
+        build_memory(
+            "m2",
+            MemoryType::Semantic,
+            now,
+            now,
+            None,
+            0.9,
+            vec!["b".into()],
+        ),
+    )
+    .await;
     let mut m3 = build_memory("m3", MemoryType::Episodic, now, now, None, 0.7, vec![]);
     m3.archived = true;
     insert_mem(&writer, m3).await;
@@ -145,8 +171,16 @@ async fn ttb_02_as_of_past_excludes_future() {
     let t1 = Utc::now() - Duration::hours(2);
     let t2 = Utc::now() - Duration::hours(1);
 
-    insert_mem(&writer, build_memory("m1", MemoryType::Episodic, t1, t1, None, 0.8, vec![])).await;
-    insert_mem(&writer, build_memory("m2", MemoryType::Episodic, t2, t2, None, 0.9, vec![])).await;
+    insert_mem(
+        &writer,
+        build_memory("m1", MemoryType::Episodic, t1, t1, None, 0.8, vec![]),
+    )
+    .await;
+    insert_mem(
+        &writer,
+        build_memory("m2", MemoryType::Episodic, t2, t2, None, 0.9, vec![]),
+    )
+    .await;
 
     // AS OF t1+30s: m2 (transaction_time=t2) should not be visible
     let query = AsOfQuery {
@@ -167,21 +201,49 @@ async fn ttb_02_as_of_past_excludes_future() {
 #[tokio::test]
 async fn ttb_03_as_of_respects_valid_time() {
     let (writer, readers) = setup();
-    let jan = chrono::DateTime::parse_from_rfc3339("2026-01-01T00:00:00Z").unwrap().with_timezone(&Utc);
-    let march = chrono::DateTime::parse_from_rfc3339("2026-03-01T00:00:00Z").unwrap().with_timezone(&Utc);
-    let april = chrono::DateTime::parse_from_rfc3339("2026-04-01T00:00:00Z").unwrap().with_timezone(&Utc);
-    let may = chrono::DateTime::parse_from_rfc3339("2026-05-01T00:00:00Z").unwrap().with_timezone(&Utc);
+    let jan = chrono::DateTime::parse_from_rfc3339("2026-01-01T00:00:00Z")
+        .unwrap()
+        .with_timezone(&Utc);
+    let march = chrono::DateTime::parse_from_rfc3339("2026-03-01T00:00:00Z")
+        .unwrap()
+        .with_timezone(&Utc);
+    let april = chrono::DateTime::parse_from_rfc3339("2026-04-01T00:00:00Z")
+        .unwrap()
+        .with_timezone(&Utc);
+    let may = chrono::DateTime::parse_from_rfc3339("2026-05-01T00:00:00Z")
+        .unwrap()
+        .with_timezone(&Utc);
 
     // Memory valid March–April, created in January
-    insert_mem(&writer, build_memory("m1", MemoryType::Episodic, jan, march, Some(april), 0.8, vec![])).await;
+    insert_mem(
+        &writer,
+        build_memory(
+            "m1",
+            MemoryType::Episodic,
+            jan,
+            march,
+            Some(april),
+            0.8,
+            vec![],
+        ),
+    )
+    .await;
 
     // AS OF May: valid_until=April, so not visible
-    let query = AsOfQuery { system_time: may, valid_time: may, filter: None };
+    let query = AsOfQuery {
+        system_time: may,
+        valid_time: may,
+        filter: None,
+    };
     let result = readers
         .with_conn(|conn| cortex_temporal::query::as_of::execute_as_of(conn, &query))
         .unwrap();
 
-    assert_eq!(result.len(), 0, "Memory valid March–April should not be visible in May");
+    assert_eq!(
+        result.len(),
+        0,
+        "Memory valid March–April should not be visible in May"
+    );
 }
 
 // ── TTB-04: AS OF respects transaction_time ──────────────────────────────
@@ -189,19 +251,35 @@ async fn ttb_03_as_of_respects_valid_time() {
 #[tokio::test]
 async fn ttb_04_as_of_respects_transaction_time() {
     let (writer, readers) = setup();
-    let t1 = chrono::DateTime::parse_from_rfc3339("2026-01-01T00:00:00Z").unwrap().with_timezone(&Utc);
-    let t2 = chrono::DateTime::parse_from_rfc3339("2026-02-01T00:00:00Z").unwrap().with_timezone(&Utc);
+    let t1 = chrono::DateTime::parse_from_rfc3339("2026-01-01T00:00:00Z")
+        .unwrap()
+        .with_timezone(&Utc);
+    let t2 = chrono::DateTime::parse_from_rfc3339("2026-02-01T00:00:00Z")
+        .unwrap()
+        .with_timezone(&Utc);
 
     // Memory created (transaction_time) at t2, valid from t1
-    insert_mem(&writer, build_memory("m1", MemoryType::Episodic, t2, t1, None, 0.8, vec![])).await;
+    insert_mem(
+        &writer,
+        build_memory("m1", MemoryType::Episodic, t2, t1, None, 0.8, vec![]),
+    )
+    .await;
 
     // AS OF t1: memory wasn't recorded yet (transaction_time=t2 > t1)
-    let query = AsOfQuery { system_time: t1, valid_time: t1, filter: None };
+    let query = AsOfQuery {
+        system_time: t1,
+        valid_time: t1,
+        filter: None,
+    };
     let result = readers
         .with_conn(|conn| cortex_temporal::query::as_of::execute_as_of(conn, &query))
         .unwrap();
 
-    assert_eq!(result.len(), 0, "Memory with transaction_time=t2 should not be visible at t1");
+    assert_eq!(
+        result.len(),
+        0,
+        "Memory with transaction_time=t2 should not be visible at t1"
+    );
 }
 
 // ── TTB-05: Range Overlaps mode ──────────────────────────────────────────
@@ -209,17 +287,43 @@ async fn ttb_04_as_of_respects_transaction_time() {
 #[tokio::test]
 async fn ttb_05_range_overlaps() {
     let (writer, readers) = setup();
-    let jan = chrono::DateTime::parse_from_rfc3339("2026-01-01T00:00:00Z").unwrap().with_timezone(&Utc);
-    let march = chrono::DateTime::parse_from_rfc3339("2026-03-01T00:00:00Z").unwrap().with_timezone(&Utc);
-    let april = chrono::DateTime::parse_from_rfc3339("2026-04-01T00:00:00Z").unwrap().with_timezone(&Utc);
-    let may = chrono::DateTime::parse_from_rfc3339("2026-05-01T00:00:00Z").unwrap().with_timezone(&Utc);
-    let june = chrono::DateTime::parse_from_rfc3339("2026-06-01T00:00:00Z").unwrap().with_timezone(&Utc);
+    let jan = chrono::DateTime::parse_from_rfc3339("2026-01-01T00:00:00Z")
+        .unwrap()
+        .with_timezone(&Utc);
+    let march = chrono::DateTime::parse_from_rfc3339("2026-03-01T00:00:00Z")
+        .unwrap()
+        .with_timezone(&Utc);
+    let april = chrono::DateTime::parse_from_rfc3339("2026-04-01T00:00:00Z")
+        .unwrap()
+        .with_timezone(&Utc);
+    let may = chrono::DateTime::parse_from_rfc3339("2026-05-01T00:00:00Z")
+        .unwrap()
+        .with_timezone(&Utc);
+    let june = chrono::DateTime::parse_from_rfc3339("2026-06-01T00:00:00Z")
+        .unwrap()
+        .with_timezone(&Utc);
 
     // Memory valid March–May
-    insert_mem(&writer, build_memory("m1", MemoryType::Episodic, jan, march, Some(may), 0.8, vec![])).await;
+    insert_mem(
+        &writer,
+        build_memory(
+            "m1",
+            MemoryType::Episodic,
+            jan,
+            march,
+            Some(may),
+            0.8,
+            vec![],
+        ),
+    )
+    .await;
 
     // Range April–June overlaps with March–May
-    let query = TemporalRangeQuery { from: april, to: june, mode: TemporalRangeMode::Overlaps };
+    let query = TemporalRangeQuery {
+        from: april,
+        to: june,
+        mode: TemporalRangeMode::Overlaps,
+    };
     let result = readers
         .with_conn(|conn| cortex_temporal::query::range::execute_range(conn, &query))
         .unwrap();
@@ -233,25 +337,69 @@ async fn ttb_05_range_overlaps() {
 #[tokio::test]
 async fn ttb_06_range_contains() {
     let (writer, readers) = setup();
-    let jan = chrono::DateTime::parse_from_rfc3339("2026-01-01T00:00:00Z").unwrap().with_timezone(&Utc);
-    let feb = chrono::DateTime::parse_from_rfc3339("2026-02-01T00:00:00Z").unwrap().with_timezone(&Utc);
-    let march = chrono::DateTime::parse_from_rfc3339("2026-03-01T00:00:00Z").unwrap().with_timezone(&Utc);
-    let april = chrono::DateTime::parse_from_rfc3339("2026-04-01T00:00:00Z").unwrap().with_timezone(&Utc);
-    let may = chrono::DateTime::parse_from_rfc3339("2026-05-01T00:00:00Z").unwrap().with_timezone(&Utc);
-    let june = chrono::DateTime::parse_from_rfc3339("2026-06-01T00:00:00Z").unwrap().with_timezone(&Utc);
+    let jan = chrono::DateTime::parse_from_rfc3339("2026-01-01T00:00:00Z")
+        .unwrap()
+        .with_timezone(&Utc);
+    let feb = chrono::DateTime::parse_from_rfc3339("2026-02-01T00:00:00Z")
+        .unwrap()
+        .with_timezone(&Utc);
+    let march = chrono::DateTime::parse_from_rfc3339("2026-03-01T00:00:00Z")
+        .unwrap()
+        .with_timezone(&Utc);
+    let april = chrono::DateTime::parse_from_rfc3339("2026-04-01T00:00:00Z")
+        .unwrap()
+        .with_timezone(&Utc);
+    let may = chrono::DateTime::parse_from_rfc3339("2026-05-01T00:00:00Z")
+        .unwrap()
+        .with_timezone(&Utc);
+    let june = chrono::DateTime::parse_from_rfc3339("2026-06-01T00:00:00Z")
+        .unwrap()
+        .with_timezone(&Utc);
 
     // Memory valid March–May
-    insert_mem(&writer, build_memory("m1", MemoryType::Episodic, jan, march, Some(may), 0.8, vec![])).await;
+    insert_mem(
+        &writer,
+        build_memory(
+            "m1",
+            MemoryType::Episodic,
+            jan,
+            march,
+            Some(may),
+            0.8,
+            vec![],
+        ),
+    )
+    .await;
 
     // April–April: memory contains this range (March <= April, May >= April)
-    let q1 = TemporalRangeQuery { from: april, to: april, mode: TemporalRangeMode::Contains };
-    let r1 = readers.with_conn(|conn| cortex_temporal::query::range::execute_range(conn, &q1)).unwrap();
-    assert_eq!(r1.len(), 1, "Memory valid March–May should contain April–April");
+    let q1 = TemporalRangeQuery {
+        from: april,
+        to: april,
+        mode: TemporalRangeMode::Contains,
+    };
+    let r1 = readers
+        .with_conn(|conn| cortex_temporal::query::range::execute_range(conn, &q1))
+        .unwrap();
+    assert_eq!(
+        r1.len(),
+        1,
+        "Memory valid March–May should contain April–April"
+    );
 
     // Feb–June: memory does NOT contain this range (March > Feb)
-    let q2 = TemporalRangeQuery { from: feb, to: june, mode: TemporalRangeMode::Contains };
-    let r2 = readers.with_conn(|conn| cortex_temporal::query::range::execute_range(conn, &q2)).unwrap();
-    assert_eq!(r2.len(), 0, "Memory valid March–May should NOT contain Feb–June");
+    let q2 = TemporalRangeQuery {
+        from: feb,
+        to: june,
+        mode: TemporalRangeMode::Contains,
+    };
+    let r2 = readers
+        .with_conn(|conn| cortex_temporal::query::range::execute_range(conn, &q2))
+        .unwrap();
+    assert_eq!(
+        r2.len(),
+        0,
+        "Memory valid March–May should NOT contain Feb–June"
+    );
 }
 
 // ── TTB-07: Range StartedDuring mode ─────────────────────────────────────
@@ -259,17 +407,35 @@ async fn ttb_06_range_contains() {
 #[tokio::test]
 async fn ttb_07_range_started_during() {
     let (writer, readers) = setup();
-    let jan = chrono::DateTime::parse_from_rfc3339("2026-01-01T00:00:00Z").unwrap().with_timezone(&Utc);
-    let march = chrono::DateTime::parse_from_rfc3339("2026-03-01T00:00:00Z").unwrap().with_timezone(&Utc);
-    let april = chrono::DateTime::parse_from_rfc3339("2026-04-01T00:00:00Z").unwrap().with_timezone(&Utc);
-    let may = chrono::DateTime::parse_from_rfc3339("2026-05-01T00:00:00Z").unwrap().with_timezone(&Utc);
+    let jan = chrono::DateTime::parse_from_rfc3339("2026-01-01T00:00:00Z")
+        .unwrap()
+        .with_timezone(&Utc);
+    let march = chrono::DateTime::parse_from_rfc3339("2026-03-01T00:00:00Z")
+        .unwrap()
+        .with_timezone(&Utc);
+    let april = chrono::DateTime::parse_from_rfc3339("2026-04-01T00:00:00Z")
+        .unwrap()
+        .with_timezone(&Utc);
+    let may = chrono::DateTime::parse_from_rfc3339("2026-05-01T00:00:00Z")
+        .unwrap()
+        .with_timezone(&Utc);
 
     // Memory valid from April (started in April)
-    insert_mem(&writer, build_memory("m1", MemoryType::Episodic, jan, april, None, 0.8, vec![])).await;
+    insert_mem(
+        &writer,
+        build_memory("m1", MemoryType::Episodic, jan, april, None, 0.8, vec![]),
+    )
+    .await;
 
     // Range March–May: memory started during this range
-    let query = TemporalRangeQuery { from: march, to: may, mode: TemporalRangeMode::StartedDuring };
-    let result = readers.with_conn(|conn| cortex_temporal::query::range::execute_range(conn, &query)).unwrap();
+    let query = TemporalRangeQuery {
+        from: march,
+        to: may,
+        mode: TemporalRangeMode::StartedDuring,
+    };
+    let result = readers
+        .with_conn(|conn| cortex_temporal::query::range::execute_range(conn, &query))
+        .unwrap();
 
     assert_eq!(result.len(), 1);
     assert_eq!(result[0].id, "m1");
@@ -280,17 +446,43 @@ async fn ttb_07_range_started_during() {
 #[tokio::test]
 async fn ttb_08_range_ended_during() {
     let (writer, readers) = setup();
-    let jan = chrono::DateTime::parse_from_rfc3339("2026-01-01T00:00:00Z").unwrap().with_timezone(&Utc);
-    let march = chrono::DateTime::parse_from_rfc3339("2026-03-01T00:00:00Z").unwrap().with_timezone(&Utc);
-    let april = chrono::DateTime::parse_from_rfc3339("2026-04-01T00:00:00Z").unwrap().with_timezone(&Utc);
-    let may = chrono::DateTime::parse_from_rfc3339("2026-05-01T00:00:00Z").unwrap().with_timezone(&Utc);
+    let jan = chrono::DateTime::parse_from_rfc3339("2026-01-01T00:00:00Z")
+        .unwrap()
+        .with_timezone(&Utc);
+    let march = chrono::DateTime::parse_from_rfc3339("2026-03-01T00:00:00Z")
+        .unwrap()
+        .with_timezone(&Utc);
+    let april = chrono::DateTime::parse_from_rfc3339("2026-04-01T00:00:00Z")
+        .unwrap()
+        .with_timezone(&Utc);
+    let may = chrono::DateTime::parse_from_rfc3339("2026-05-01T00:00:00Z")
+        .unwrap()
+        .with_timezone(&Utc);
 
     // Memory valid Jan–April (ended in April)
-    insert_mem(&writer, build_memory("m1", MemoryType::Episodic, jan, jan, Some(april), 0.8, vec![])).await;
+    insert_mem(
+        &writer,
+        build_memory(
+            "m1",
+            MemoryType::Episodic,
+            jan,
+            jan,
+            Some(april),
+            0.8,
+            vec![],
+        ),
+    )
+    .await;
 
     // Range March–May: memory ended during this range
-    let query = TemporalRangeQuery { from: march, to: may, mode: TemporalRangeMode::EndedDuring };
-    let result = readers.with_conn(|conn| cortex_temporal::query::range::execute_range(conn, &query)).unwrap();
+    let query = TemporalRangeQuery {
+        from: march,
+        to: may,
+        mode: TemporalRangeMode::EndedDuring,
+    };
+    let result = readers
+        .with_conn(|conn| cortex_temporal::query::range::execute_range(conn, &query))
+        .unwrap();
 
     assert_eq!(result.len(), 1);
     assert_eq!(result[0].id, "m1");
@@ -303,7 +495,11 @@ async fn ttb_09_diff_identity() {
     let (_writer, readers) = setup();
     let t = Utc::now();
 
-    let query = TemporalDiffQuery { time_a: t, time_b: t, scope: DiffScope::All };
+    let query = TemporalDiffQuery {
+        time_a: t,
+        time_b: t,
+        scope: DiffScope::All,
+    };
     let result = readers
         .with_conn(|conn| cortex_temporal::query::diff::execute_diff(conn, &query))
         .unwrap();
@@ -326,34 +522,62 @@ async fn ttb_10_diff_symmetry() {
     let t2 = Utc::now();
 
     // m1 exists at t1 but expires before t2
-    insert_mem(&writer, build_memory("m1", MemoryType::Episodic, t1, t1, Some(t_mid), 0.8, vec![])).await;
+    insert_mem(
+        &writer,
+        build_memory("m1", MemoryType::Episodic, t1, t1, Some(t_mid), 0.8, vec![]),
+    )
+    .await;
     // m2 created between t1 and t2
-    insert_mem(&writer, build_memory("m2", MemoryType::Episodic, t_mid, t_mid, None, 0.9, vec![])).await;
+    insert_mem(
+        &writer,
+        build_memory("m2", MemoryType::Episodic, t_mid, t_mid, None, 0.9, vec![]),
+    )
+    .await;
 
-    let diff_ab = readers.with_conn(|conn| {
-        cortex_temporal::query::diff::execute_diff(conn, &TemporalDiffQuery {
-            time_a: t1, time_b: t2, scope: DiffScope::All,
+    let diff_ab = readers
+        .with_conn(|conn| {
+            cortex_temporal::query::diff::execute_diff(
+                conn,
+                &TemporalDiffQuery {
+                    time_a: t1,
+                    time_b: t2,
+                    scope: DiffScope::All,
+                },
+            )
         })
-    }).unwrap();
+        .unwrap();
 
-    let diff_ba = readers.with_conn(|conn| {
-        cortex_temporal::query::diff::execute_diff(conn, &TemporalDiffQuery {
-            time_a: t2, time_b: t1, scope: DiffScope::All,
+    let diff_ba = readers
+        .with_conn(|conn| {
+            cortex_temporal::query::diff::execute_diff(
+                conn,
+                &TemporalDiffQuery {
+                    time_a: t2,
+                    time_b: t1,
+                    scope: DiffScope::All,
+                },
+            )
         })
-    }).unwrap();
+        .unwrap();
 
     // Symmetry: diff(A,B).created IDs == diff(B,A).archived IDs
     let mut ab_created: Vec<String> = diff_ab.created.iter().map(|m| m.id.clone()).collect();
     let mut ba_archived: Vec<String> = diff_ba.archived.iter().map(|m| m.id.clone()).collect();
     ab_created.sort();
     ba_archived.sort();
-    assert_eq!(ab_created, ba_archived, "diff(A,B).created should equal diff(B,A).archived");
+    assert_eq!(
+        ab_created, ba_archived,
+        "diff(A,B).created should equal diff(B,A).archived"
+    );
 
     let mut ab_archived: Vec<String> = diff_ab.archived.iter().map(|m| m.id.clone()).collect();
     let mut ba_created: Vec<String> = diff_ba.created.iter().map(|m| m.id.clone()).collect();
     ab_archived.sort();
     ba_created.sort();
-    assert_eq!(ab_archived, ba_created, "diff(A,B).archived should equal diff(B,A).created");
+    assert_eq!(
+        ab_archived, ba_created,
+        "diff(A,B).archived should equal diff(B,A).created"
+    );
 }
 
 // ── TTB-11: Diff detects created memories ────────────────────────────────
@@ -366,19 +590,37 @@ async fn ttb_11_diff_detects_created() {
     let t2 = Utc::now();
 
     // m1 exists at t1
-    insert_mem(&writer, build_memory("m1", MemoryType::Episodic, t1, t1, None, 0.8, vec![])).await;
+    insert_mem(
+        &writer,
+        build_memory("m1", MemoryType::Episodic, t1, t1, None, 0.8, vec![]),
+    )
+    .await;
     // m2 created between t1 and t2
-    insert_mem(&writer, build_memory("m2", MemoryType::Semantic, t_mid, t_mid, None, 0.9, vec![])).await;
+    insert_mem(
+        &writer,
+        build_memory("m2", MemoryType::Semantic, t_mid, t_mid, None, 0.9, vec![]),
+    )
+    .await;
 
-    let diff = readers.with_conn(|conn| {
-        cortex_temporal::query::diff::execute_diff(conn, &TemporalDiffQuery {
-            time_a: t1, time_b: t2, scope: DiffScope::All,
+    let diff = readers
+        .with_conn(|conn| {
+            cortex_temporal::query::diff::execute_diff(
+                conn,
+                &TemporalDiffQuery {
+                    time_a: t1,
+                    time_b: t2,
+                    scope: DiffScope::All,
+                },
+            )
         })
-    }).unwrap();
+        .unwrap();
 
     let created_ids: Vec<&str> = diff.created.iter().map(|m| m.id.as_str()).collect();
     assert!(created_ids.contains(&"m2"), "m2 should be in diff.created");
-    assert!(!created_ids.contains(&"m1"), "m1 should NOT be in diff.created (existed at t1)");
+    assert!(
+        !created_ids.contains(&"m1"),
+        "m1 should NOT be in diff.created (existed at t1)"
+    );
 }
 
 // ── TTB-12: Diff detects archived memories ───────────────────────────────
@@ -391,16 +633,30 @@ async fn ttb_12_diff_detects_archived() {
     let t2 = Utc::now();
 
     // m1 exists at t1 but expires before t2
-    insert_mem(&writer, build_memory("m1", MemoryType::Episodic, t1, t1, Some(t_mid), 0.8, vec![])).await;
+    insert_mem(
+        &writer,
+        build_memory("m1", MemoryType::Episodic, t1, t1, Some(t_mid), 0.8, vec![]),
+    )
+    .await;
 
-    let diff = readers.with_conn(|conn| {
-        cortex_temporal::query::diff::execute_diff(conn, &TemporalDiffQuery {
-            time_a: t1, time_b: t2, scope: DiffScope::All,
+    let diff = readers
+        .with_conn(|conn| {
+            cortex_temporal::query::diff::execute_diff(
+                conn,
+                &TemporalDiffQuery {
+                    time_a: t1,
+                    time_b: t2,
+                    scope: DiffScope::All,
+                },
+            )
         })
-    }).unwrap();
+        .unwrap();
 
     let archived_ids: Vec<&str> = diff.archived.iter().map(|m| m.id.as_str()).collect();
-    assert!(archived_ids.contains(&"m1"), "m1 should be in diff.archived");
+    assert!(
+        archived_ids.contains(&"m1"),
+        "m1 should be in diff.archived"
+    );
 }
 
 // ── TTB-13: Diff detects modifications ───────────────────────────────────
@@ -413,21 +669,40 @@ async fn ttb_13_diff_detects_modifications() {
     let t2 = Utc::now();
 
     // m1 exists at both times
-    insert_mem(&writer, build_memory("m1", MemoryType::Episodic, t1, t1, None, 0.9, vec![])).await;
+    insert_mem(
+        &writer,
+        build_memory("m1", MemoryType::Episodic, t1, t1, None, 0.9, vec![]),
+    )
+    .await;
     // Insert a modification event between t1 and t2
-    insert_event(&writer, "m1", t_mid, "confidence_changed",
-        &serde_json::json!({"old": 0.8, "new": 0.9})).await;
+    insert_event(
+        &writer,
+        "m1",
+        t_mid,
+        "confidence_changed",
+        &serde_json::json!({"old": 0.8, "new": 0.9}),
+    )
+    .await;
 
-    let diff = readers.with_conn(|conn| {
-        cortex_temporal::query::diff::execute_diff(conn, &TemporalDiffQuery {
-            time_a: t1, time_b: t2, scope: DiffScope::All,
+    let diff = readers
+        .with_conn(|conn| {
+            cortex_temporal::query::diff::execute_diff(
+                conn,
+                &TemporalDiffQuery {
+                    time_a: t1,
+                    time_b: t2,
+                    scope: DiffScope::All,
+                },
+            )
         })
-    }).unwrap();
+        .unwrap();
 
     // m1 has events between t1 and t2, so it should appear in modified set
     let modified_ids: Vec<&str> = diff.modified.iter().map(|m| m.memory_id.as_str()).collect();
-    assert!(!modified_ids.is_empty() || !diff.confidence_shifts.is_empty(),
-        "m1 should show as modified or have a confidence shift");
+    assert!(
+        !modified_ids.is_empty() || !diff.confidence_shifts.is_empty(),
+        "m1 should show as modified or have a confidence shift"
+    );
 }
 
 // ── TTB-14: Diff stats are correct ──────────────────────────────────────
@@ -440,17 +715,40 @@ async fn ttb_14_diff_stats_correct() {
     let t2 = Utc::now();
 
     // 3 memories at t1
-    insert_mem(&writer, build_memory("m1", MemoryType::Episodic, t1, t1, None, 0.8, vec![])).await;
-    insert_mem(&writer, build_memory("m2", MemoryType::Episodic, t1, t1, None, 0.6, vec![])).await;
-    insert_mem(&writer, build_memory("m3", MemoryType::Episodic, t1, t1, Some(t_mid), 0.7, vec![])).await;
+    insert_mem(
+        &writer,
+        build_memory("m1", MemoryType::Episodic, t1, t1, None, 0.8, vec![]),
+    )
+    .await;
+    insert_mem(
+        &writer,
+        build_memory("m2", MemoryType::Episodic, t1, t1, None, 0.6, vec![]),
+    )
+    .await;
+    insert_mem(
+        &writer,
+        build_memory("m3", MemoryType::Episodic, t1, t1, Some(t_mid), 0.7, vec![]),
+    )
+    .await;
     // 1 new memory between t1 and t2
-    insert_mem(&writer, build_memory("m4", MemoryType::Semantic, t_mid, t_mid, None, 0.9, vec![])).await;
+    insert_mem(
+        &writer,
+        build_memory("m4", MemoryType::Semantic, t_mid, t_mid, None, 0.9, vec![]),
+    )
+    .await;
 
-    let diff = readers.with_conn(|conn| {
-        cortex_temporal::query::diff::execute_diff(conn, &TemporalDiffQuery {
-            time_a: t1, time_b: t2, scope: DiffScope::All,
+    let diff = readers
+        .with_conn(|conn| {
+            cortex_temporal::query::diff::execute_diff(
+                conn,
+                &TemporalDiffQuery {
+                    time_a: t1,
+                    time_b: t2,
+                    scope: DiffScope::All,
+                },
+            )
         })
-    }).unwrap();
+        .unwrap();
 
     // At t1: m1, m2, m3 (3 memories)
     // At t2: m1, m2, m4 (3 memories — m3 expired, m4 created)
@@ -473,8 +771,12 @@ async fn ttb_14_diff_stats_correct() {
 #[tokio::test]
 async fn ttb_15_integrity_filters_dangling_refs() {
     let (writer, readers) = setup();
-    let t1 = chrono::DateTime::parse_from_rfc3339("2026-01-01T00:00:00Z").unwrap().with_timezone(&Utc);
-    let t2 = chrono::DateTime::parse_from_rfc3339("2026-02-01T00:00:00Z").unwrap().with_timezone(&Utc);
+    let t1 = chrono::DateTime::parse_from_rfc3339("2026-01-01T00:00:00Z")
+        .unwrap()
+        .with_timezone(&Utc);
+    let t2 = chrono::DateTime::parse_from_rfc3339("2026-02-01T00:00:00Z")
+        .unwrap()
+        .with_timezone(&Utc);
 
     // m1 created at t1, references m2 via superseded_by
     let mut m1 = build_memory("m1", MemoryType::Episodic, t1, t1, None, 0.8, vec![]);
@@ -487,7 +789,11 @@ async fn ttb_15_integrity_filters_dangling_refs() {
     insert_mem(&writer, m2).await;
 
     // AS OF t1: m2 doesn't exist yet, so m1's superseded_by should be cleared
-    let query = AsOfQuery { system_time: t1, valid_time: t1, filter: None };
+    let query = AsOfQuery {
+        system_time: t1,
+        valid_time: t1,
+        filter: None,
+    };
     let result = readers
         .with_conn(|conn| cortex_temporal::query::as_of::execute_as_of(conn, &query))
         .unwrap();
@@ -505,8 +811,12 @@ async fn ttb_15_integrity_filters_dangling_refs() {
 #[tokio::test]
 async fn ttb_16_integrity_preserves_valid_refs() {
     let (writer, readers) = setup();
-    let t1 = chrono::DateTime::parse_from_rfc3339("2026-01-01T00:00:00Z").unwrap().with_timezone(&Utc);
-    let t_future = chrono::DateTime::parse_from_rfc3339("2026-06-01T00:00:00Z").unwrap().with_timezone(&Utc);
+    let t1 = chrono::DateTime::parse_from_rfc3339("2026-01-01T00:00:00Z")
+        .unwrap()
+        .with_timezone(&Utc);
+    let t_future = chrono::DateTime::parse_from_rfc3339("2026-06-01T00:00:00Z")
+        .unwrap()
+        .with_timezone(&Utc);
 
     // Both m1 and m2 exist at t1, m1 superseded by m2
     let mut m1 = build_memory("m1", MemoryType::Episodic, t1, t1, None, 0.8, vec![]);
@@ -517,7 +827,11 @@ async fn ttb_16_integrity_preserves_valid_refs() {
     m2.supersedes = Some("m1".to_string());
     insert_mem(&writer, m2).await;
 
-    let query = AsOfQuery { system_time: t_future, valid_time: t_future, filter: None };
+    let query = AsOfQuery {
+        system_time: t_future,
+        valid_time: t_future,
+        filter: None,
+    };
     let result = readers
         .with_conn(|conn| cortex_temporal::query::as_of::execute_as_of(conn, &query))
         .unwrap();
@@ -539,10 +853,16 @@ fn ttb_17_transaction_time_immutability() {
     let t2 = t1 + Duration::seconds(1);
 
     let result = cortex_temporal::dual_time::validate_transaction_time_immutability(t1, t2);
-    assert!(result.is_err(), "Modifying transaction_time should return error");
+    assert!(
+        result.is_err(),
+        "Modifying transaction_time should return error"
+    );
 
     let err_msg = format!("{}", result.unwrap_err());
-    assert!(err_msg.contains("transaction_time"), "Error should mention transaction_time");
+    assert!(
+        err_msg.contains("transaction_time"),
+        "Error should mention transaction_time"
+    );
 
     // Same time should be OK
     let result_ok = cortex_temporal::dual_time::validate_transaction_time_immutability(t1, t1);
@@ -581,11 +901,14 @@ fn ttb_18_temporal_bounds_validation() {
         archived: false,
         superseded_by: None,
         supersedes: None,
-        content_hash: BaseMemory::compute_content_hash(&content),
+        content_hash: BaseMemory::compute_content_hash(&content).unwrap(),
     };
 
     let result = cortex_temporal::dual_time::validate_temporal_bounds(&mem);
-    assert!(result.is_err(), "valid_time > valid_until should return error");
+    assert!(
+        result.is_err(),
+        "valid_time > valid_until should return error"
+    );
 
     // valid_time < valid_until should be OK
     mem.valid_until = Some(now + Duration::hours(1));
@@ -628,7 +951,10 @@ async fn ttb_19_temporal_correction_creates_new_version() {
     .unwrap();
 
     // Verify corrected memory
-    assert!(corrected.id.contains("corrected"), "Corrected memory should have new ID");
+    assert!(
+        corrected.id.contains("corrected"),
+        "Corrected memory should have new ID"
+    );
     assert_eq!(corrected.supersedes.as_deref(), Some(mem_id.as_str()));
     assert_eq!(corrected.valid_time, corrected_valid_time);
 
@@ -641,7 +967,10 @@ async fn ttb_19_temporal_correction_creates_new_version() {
         .unwrap();
 
     let old = old.expect("Old memory should still exist");
-    assert!(old.valid_until.is_some(), "Old memory should have valid_until set");
+    assert!(
+        old.valid_until.is_some(),
+        "Old memory should have valid_until set"
+    );
     assert_eq!(old.superseded_by.as_deref(), Some(corrected.id.as_str()));
 }
 
@@ -674,7 +1003,7 @@ fn ttb_20_late_arriving_fact() {
         archived: false,
         superseded_by: None,
         supersedes: None,
-        content_hash: BaseMemory::compute_content_hash(&content),
+        content_hash: BaseMemory::compute_content_hash(&content).unwrap(),
     };
 
     let past_time = Utc::now() - Duration::days(7);
@@ -682,13 +1011,22 @@ fn ttb_20_late_arriving_fact() {
     assert!(result.is_ok());
 
     let late = result.unwrap();
-    assert_eq!(late.valid_time, past_time, "valid_time should be the past time");
-    assert!(late.transaction_time > past_time, "transaction_time should be now (after past_time)");
+    assert_eq!(
+        late.valid_time, past_time,
+        "valid_time should be the past time"
+    );
+    assert!(
+        late.transaction_time > past_time,
+        "transaction_time should be now (after past_time)"
+    );
 
     // Future valid_time should error
     let future_time = Utc::now() + Duration::days(1);
     let result_err = cortex_temporal::dual_time::handle_late_arriving_fact(mem, future_time);
-    assert!(result_err.is_err(), "Future valid_time should error for late-arriving fact");
+    assert!(
+        result_err.is_err(),
+        "Future valid_time should error for late-arriving fact"
+    );
 }
 
 // ── TTB-21: No existing test regressions ─────────────────────────────────
@@ -707,7 +1045,11 @@ async fn ttb_extra_dispatcher_routes_as_of() {
     let (writer, readers) = setup();
     let now = Utc::now();
 
-    insert_mem(&writer, build_memory("m1", MemoryType::Episodic, now, now, None, 0.8, vec![])).await;
+    insert_mem(
+        &writer,
+        build_memory("m1", MemoryType::Episodic, now, now, None, 0.8, vec![]),
+    )
+    .await;
 
     let query = cortex_temporal::query::TemporalQuery::AsOf(AsOfQuery {
         system_time: Utc::now() + Duration::seconds(1),
@@ -715,9 +1057,9 @@ async fn ttb_extra_dispatcher_routes_as_of() {
         filter: None,
     });
 
-    let result = readers.with_conn(|conn| {
-        cortex_temporal::query::TemporalQueryDispatcher::dispatch(conn, query)
-    }).unwrap();
+    let result = readers
+        .with_conn(|conn| cortex_temporal::query::TemporalQueryDispatcher::dispatch(conn, query))
+        .unwrap();
 
     match result {
         cortex_temporal::query::TemporalQueryResult::Memories(mems) => {
@@ -739,9 +1081,9 @@ async fn ttb_extra_dispatcher_routes_diff() {
         scope: DiffScope::All,
     });
 
-    let result = readers.with_conn(|conn| {
-        cortex_temporal::query::TemporalQueryDispatcher::dispatch(conn, query)
-    }).unwrap();
+    let result = readers
+        .with_conn(|conn| cortex_temporal::query::TemporalQueryDispatcher::dispatch(conn, query))
+        .unwrap();
 
     match result {
         cortex_temporal::query::TemporalQueryResult::Diff(diff) => {
@@ -759,8 +1101,32 @@ async fn ttb_extra_as_of_with_filter() {
     let (writer, readers) = setup();
     let now = Utc::now();
 
-    insert_mem(&writer, build_memory("m1", MemoryType::Episodic, now, now, None, 0.8, vec!["alpha".into()])).await;
-    insert_mem(&writer, build_memory("m2", MemoryType::Semantic, now, now, None, 0.9, vec!["beta".into()])).await;
+    insert_mem(
+        &writer,
+        build_memory(
+            "m1",
+            MemoryType::Episodic,
+            now,
+            now,
+            None,
+            0.8,
+            vec!["alpha".into()],
+        ),
+    )
+    .await;
+    insert_mem(
+        &writer,
+        build_memory(
+            "m2",
+            MemoryType::Semantic,
+            now,
+            now,
+            None,
+            0.9,
+            vec!["beta".into()],
+        ),
+    )
+    .await;
 
     // Filter by type: only Semantic
     let query = AsOfQuery {
@@ -806,22 +1172,45 @@ async fn ttb_extra_diff_scope_types() {
     let t_mid = t1 + Duration::hours(1);
     let t2 = Utc::now();
 
-    insert_mem(&writer, build_memory("m1", MemoryType::Episodic, t1, t1, None, 0.8, vec![])).await;
-    insert_mem(&writer, build_memory("m2", MemoryType::Semantic, t_mid, t_mid, None, 0.9, vec![])).await;
-    insert_mem(&writer, build_memory("m3", MemoryType::Episodic, t_mid, t_mid, None, 0.7, vec![])).await;
+    insert_mem(
+        &writer,
+        build_memory("m1", MemoryType::Episodic, t1, t1, None, 0.8, vec![]),
+    )
+    .await;
+    insert_mem(
+        &writer,
+        build_memory("m2", MemoryType::Semantic, t_mid, t_mid, None, 0.9, vec![]),
+    )
+    .await;
+    insert_mem(
+        &writer,
+        build_memory("m3", MemoryType::Episodic, t_mid, t_mid, None, 0.7, vec![]),
+    )
+    .await;
 
     // Diff scoped to Semantic only
-    let diff = readers.with_conn(|conn| {
-        cortex_temporal::query::diff::execute_diff(conn, &TemporalDiffQuery {
-            time_a: t1,
-            time_b: t2,
-            scope: DiffScope::Types(vec![MemoryType::Semantic]),
+    let diff = readers
+        .with_conn(|conn| {
+            cortex_temporal::query::diff::execute_diff(
+                conn,
+                &TemporalDiffQuery {
+                    time_a: t1,
+                    time_b: t2,
+                    scope: DiffScope::Types(vec![MemoryType::Semantic]),
+                },
+            )
         })
-    }).unwrap();
+        .unwrap();
 
     let created_ids: Vec<&str> = diff.created.iter().map(|m| m.id.as_str()).collect();
-    assert!(created_ids.contains(&"m2"), "Semantic memory should be in created");
-    assert!(!created_ids.contains(&"m3"), "Episodic memory should be filtered out by DiffScope::Types");
+    assert!(
+        created_ids.contains(&"m2"),
+        "Semantic memory should be in created"
+    );
+    assert!(
+        !created_ids.contains(&"m3"),
+        "Episodic memory should be filtered out by DiffScope::Types"
+    );
 }
 
 // ── TTB-Extra: Engine query_as_of, query_range, query_diff ───────────────
@@ -834,7 +1223,11 @@ async fn ttb_extra_engine_query_methods() {
     let (writer, readers) = setup();
     let now = Utc::now();
 
-    insert_mem(&writer, build_memory("eng-m1", MemoryType::Episodic, now, now, None, 0.8, vec![])).await;
+    insert_mem(
+        &writer,
+        build_memory("eng-m1", MemoryType::Episodic, now, now, None, 0.8, vec![]),
+    )
+    .await;
 
     let config = TemporalConfig::default();
     let engine = cortex_temporal::TemporalEngine::new(writer, readers, config);
@@ -902,7 +1295,7 @@ fn build_decision_memory(
         archived: false,
         superseded_by: None,
         supersedes: None,
-        content_hash: BaseMemory::compute_content_hash(&content),
+        content_hash: BaseMemory::compute_content_hash(&content).unwrap(),
     }
 }
 
@@ -957,7 +1350,15 @@ async fn ttc_02_decision_replay_returns_correct_available_context() {
     let t3 = Utc::now() - Duration::hours(1);
 
     // Context memory created before the decision
-    let ctx = build_memory("ctx-01", MemoryType::Semantic, t1, t1, None, 0.8, vec!["auth".into()]);
+    let ctx = build_memory(
+        "ctx-01",
+        MemoryType::Semantic,
+        t1,
+        t1,
+        None,
+        0.8,
+        vec!["auth".into()],
+    );
     insert_mem(&writer, ctx).await;
     insert_event(&writer, "ctx-01", t1, "created", &serde_json::json!({})).await;
 
@@ -987,8 +1388,15 @@ async fn ttc_02_decision_replay_returns_correct_available_context() {
 
     // available_context should include ctx-01 (created before decision)
     // but NOT later-01 (created after decision)
-    let ctx_ids: Vec<&str> = result.available_context.iter().map(|m| m.id.as_str()).collect();
-    assert!(ctx_ids.contains(&"ctx-01"), "Context created before decision should be available");
+    let ctx_ids: Vec<&str> = result
+        .available_context
+        .iter()
+        .map(|m| m.id.as_str())
+        .collect();
+    assert!(
+        ctx_ids.contains(&"ctx-01"),
+        "Context created before decision should be available"
+    );
     assert!(
         !ctx_ids.contains(&"later-01"),
         "Memory created after decision should NOT be in available_context"
@@ -1023,11 +1431,17 @@ async fn ttc_03_decision_replay_computes_hindsight() {
         t2,
         None,
         0.9,
-        vec!["auth".into(), "database".into(), "postgresql".into(), "deprecated".into()],
+        vec![
+            "auth".into(),
+            "database".into(),
+            "postgresql".into(),
+            "deprecated".into(),
+        ],
     );
     // Override summary to have high overlap with decision topic
     let mut contra = contradicting;
-    contra.summary = "PostgreSQL auth service database has critical ACID compliance issues".to_string();
+    contra.summary =
+        "PostgreSQL auth service database has critical ACID compliance issues".to_string();
     insert_mem(&writer, contra).await;
 
     let query = DecisionReplayQuery {
@@ -1086,7 +1500,11 @@ async fn ttc_04_decision_replay_hindsight_relevance_threshold() {
     let result = cortex_temporal::query::replay::execute_replay(&readers, &query).unwrap();
 
     // Irrelevant memory should NOT be in hindsight (similarity < 0.7)
-    let hindsight_ids: Vec<&str> = result.hindsight.iter().map(|h| h.memory.id.as_str()).collect();
+    let hindsight_ids: Vec<&str> = result
+        .hindsight
+        .iter()
+        .map(|h| h.memory.id.as_str())
+        .collect();
     assert!(
         !hindsight_ids.contains(&"irrelevant-01"),
         "Irrelevant memory (similarity < 0.7) should not be in hindsight"
@@ -1110,7 +1528,10 @@ async fn ttc_05_decision_replay_non_decision_errors() {
     };
 
     let result = cortex_temporal::query::replay::execute_replay(&readers, &query);
-    assert!(result.is_err(), "Replay on non-decision memory should error");
+    assert!(
+        result.is_err(),
+        "Replay on non-decision memory should error"
+    );
 
     let err_msg = format!("{}", result.unwrap_err());
     assert!(
@@ -1128,8 +1549,16 @@ async fn ttc_06_temporal_causal_current_time_equals_current() {
     let now = Utc::now();
 
     // Insert memories for graph nodes
-    insert_mem(&writer, build_memory("node-a", MemoryType::Core, now, now, None, 0.8, vec![])).await;
-    insert_mem(&writer, build_memory("node-b", MemoryType::Core, now, now, None, 0.8, vec![])).await;
+    insert_mem(
+        &writer,
+        build_memory("node-a", MemoryType::Core, now, now, None, 0.8, vec![]),
+    )
+    .await;
+    insert_mem(
+        &writer,
+        build_memory("node-b", MemoryType::Core, now, now, None, 0.8, vec![]),
+    )
+    .await;
 
     // Insert relationship events
     insert_event(
@@ -1153,10 +1582,14 @@ async fn ttc_06_temporal_causal_current_time_equals_current() {
         max_depth: 5,
     };
 
-    let result = cortex_temporal::query::temporal_causal::execute_temporal_causal(&readers, &query).unwrap();
+    let result =
+        cortex_temporal::query::temporal_causal::execute_temporal_causal(&readers, &query).unwrap();
 
     assert_eq!(result.origin_id, "node-a");
-    assert!(!result.nodes.is_empty(), "Should find node-b via forward traversal");
+    assert!(
+        !result.nodes.is_empty(),
+        "Should find node-b via forward traversal"
+    );
     assert_eq!(result.nodes[0].memory_id, "node-b");
 }
 
@@ -1168,8 +1601,16 @@ async fn ttc_07_temporal_causal_excludes_future_edges() {
     let t1 = Utc::now() - Duration::hours(2);
     let t2 = Utc::now() - Duration::hours(1);
 
-    insert_mem(&writer, build_memory("fa", MemoryType::Core, t1, t1, None, 0.8, vec![])).await;
-    insert_mem(&writer, build_memory("fb", MemoryType::Core, t1, t1, None, 0.8, vec![])).await;
+    insert_mem(
+        &writer,
+        build_memory("fa", MemoryType::Core, t1, t1, None, 0.8, vec![]),
+    )
+    .await;
+    insert_mem(
+        &writer,
+        build_memory("fb", MemoryType::Core, t1, t1, None, 0.8, vec![]),
+    )
+    .await;
 
     // Edge added at t2
     insert_event(
@@ -1194,7 +1635,8 @@ async fn ttc_07_temporal_causal_excludes_future_edges() {
         max_depth: 5,
     };
 
-    let result = cortex_temporal::query::temporal_causal::execute_temporal_causal(&readers, &query).unwrap();
+    let result =
+        cortex_temporal::query::temporal_causal::execute_temporal_causal(&readers, &query).unwrap();
 
     assert!(
         result.nodes.is_empty(),
@@ -1211,8 +1653,16 @@ async fn ttc_08_temporal_causal_respects_edge_removal() {
     let t2 = Utc::now() - Duration::hours(2);
     let t3 = Utc::now() - Duration::hours(1);
 
-    insert_mem(&writer, build_memory("ra", MemoryType::Core, t1, t1, None, 0.8, vec![])).await;
-    insert_mem(&writer, build_memory("rb", MemoryType::Core, t1, t1, None, 0.8, vec![])).await;
+    insert_mem(
+        &writer,
+        build_memory("ra", MemoryType::Core, t1, t1, None, 0.8, vec![]),
+    )
+    .await;
+    insert_mem(
+        &writer,
+        build_memory("rb", MemoryType::Core, t1, t1, None, 0.8, vec![]),
+    )
+    .await;
 
     // Edge added at t1
     insert_event(
@@ -1250,7 +1700,8 @@ async fn ttc_08_temporal_causal_respects_edge_removal() {
         max_depth: 5,
     };
 
-    let result = cortex_temporal::query::temporal_causal::execute_temporal_causal(&readers, &query).unwrap();
+    let result =
+        cortex_temporal::query::temporal_causal::execute_temporal_causal(&readers, &query).unwrap();
 
     assert!(
         result.nodes.is_empty(),
@@ -1266,8 +1717,16 @@ async fn ttc_09_temporal_causal_respects_strength_updates() {
     let t1 = Utc::now() - Duration::hours(3);
     let t2 = Utc::now() - Duration::hours(2);
 
-    insert_mem(&writer, build_memory("sa", MemoryType::Core, t1, t1, None, 0.8, vec![])).await;
-    insert_mem(&writer, build_memory("sb", MemoryType::Core, t1, t1, None, 0.8, vec![])).await;
+    insert_mem(
+        &writer,
+        build_memory("sa", MemoryType::Core, t1, t1, None, 0.8, vec![]),
+    )
+    .await;
+    insert_mem(
+        &writer,
+        build_memory("sb", MemoryType::Core, t1, t1, None, 0.8, vec![]),
+    )
+    .await;
 
     // Edge added at t1 with strength 0.5
     insert_event(
@@ -1446,7 +1905,9 @@ async fn ttc_extra_dispatcher_routes_replay() {
         budget_override: None,
     });
 
-    let result = cortex_temporal::query::TemporalQueryDispatcher::dispatch_with_pool(&readers, query).unwrap();
+    let result =
+        cortex_temporal::query::TemporalQueryDispatcher::dispatch_with_pool(&readers, query)
+            .unwrap();
 
     match result {
         cortex_temporal::query::TemporalQueryResult::Replay(replay) => {
@@ -1461,8 +1922,16 @@ async fn ttc_extra_dispatcher_routes_temporal_causal() {
     let (writer, readers) = setup();
     let now = Utc::now();
 
-    insert_mem(&writer, build_memory("tc-a", MemoryType::Core, now, now, None, 0.8, vec![])).await;
-    insert_mem(&writer, build_memory("tc-b", MemoryType::Core, now, now, None, 0.8, vec![])).await;
+    insert_mem(
+        &writer,
+        build_memory("tc-a", MemoryType::Core, now, now, None, 0.8, vec![]),
+    )
+    .await;
+    insert_mem(
+        &writer,
+        build_memory("tc-b", MemoryType::Core, now, now, None, 0.8, vec![]),
+    )
+    .await;
 
     insert_event(
         &writer,
@@ -1485,7 +1954,9 @@ async fn ttc_extra_dispatcher_routes_temporal_causal() {
         max_depth: 5,
     });
 
-    let result = cortex_temporal::query::TemporalQueryDispatcher::dispatch_with_pool(&readers, query).unwrap();
+    let result =
+        cortex_temporal::query::TemporalQueryDispatcher::dispatch_with_pool(&readers, query)
+            .unwrap();
 
     match result {
         cortex_temporal::query::TemporalQueryResult::Traversal(trav) => {
@@ -1539,8 +2010,16 @@ async fn ttc_extra_engine_query_temporal_causal() {
     let (writer, readers) = setup();
     let now = Utc::now();
 
-    insert_mem(&writer, build_memory("eng-ca", MemoryType::Core, now, now, None, 0.8, vec![])).await;
-    insert_mem(&writer, build_memory("eng-cb", MemoryType::Core, now, now, None, 0.8, vec![])).await;
+    insert_mem(
+        &writer,
+        build_memory("eng-ca", MemoryType::Core, now, now, None, 0.8, vec![]),
+    )
+    .await;
+    insert_mem(
+        &writer,
+        build_memory("eng-cb", MemoryType::Core, now, now, None, 0.8, vec![]),
+    )
+    .await;
 
     insert_event(
         &writer,

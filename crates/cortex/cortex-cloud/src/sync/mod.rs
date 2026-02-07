@@ -51,12 +51,7 @@ impl SyncManager {
         let mut report = SyncReport::default();
 
         // 1. Push local changes.
-        let push_result = push_pending(
-            client,
-            &mut self.log,
-            local_changes,
-            self.batch_size,
-        )?;
+        let push_result = push_pending(client, &mut self.log, local_changes, self.batch_size)?;
         report.pushed = push_result.accepted;
         report.push_conflicts = push_result.conflicts.clone();
         if let Some(token) = push_result.sync_token {

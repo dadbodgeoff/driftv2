@@ -4,8 +4,9 @@
 //! narrative confidence/templates, graph sync conversions, relation methods,
 //! inference engine batch, traversal edge cases.
 
-use cortex_causal::graph::stable_graph::{CausalEdgeWeight, EdgeEvidence, IndexedGraph};
+use chrono::Utc;
 use cortex_causal::graph::pruning;
+use cortex_causal::graph::stable_graph::{CausalEdgeWeight, EdgeEvidence, IndexedGraph};
 use cortex_causal::graph::sync;
 use cortex_causal::inference::scorer;
 use cortex_causal::inference::strategies;
@@ -17,7 +18,6 @@ use cortex_causal::relations::CausalRelation;
 use cortex_causal::CausalEngine;
 use cortex_core::memory::*;
 use cortex_core::traits::{CausalEdge, CausalEvidence};
-use chrono::Utc;
 
 // ─── Helper ──────────────────────────────────────────────────────────────────
 
@@ -77,8 +77,12 @@ fn prune_weak_edges_removes_below_threshold() {
     let b = graph.ensure_node("b", "domain_agnostic", "Node B");
     let c = graph.ensure_node("c", "domain_agnostic", "Node C");
 
-    graph.graph.add_edge(a, b, make_edge(CausalRelation::Supports, 0.1));
-    graph.graph.add_edge(b, c, make_edge(CausalRelation::Caused, 0.8));
+    graph
+        .graph
+        .add_edge(a, b, make_edge(CausalRelation::Supports, 0.1));
+    graph
+        .graph
+        .add_edge(b, c, make_edge(CausalRelation::Caused, 0.8));
 
     let result = pruning::prune_weak_edges(&mut graph, 0.2);
     assert_eq!(result.edges_removed, 1);
@@ -94,9 +98,13 @@ fn prune_unvalidated_inferred_removes_empty_evidence() {
     let c = graph.ensure_node("c", "domain_agnostic", "C");
 
     // Inferred with no evidence — should be pruned.
-    graph.graph.add_edge(a, b, make_inferred_edge(CausalRelation::Supports, 0.5));
+    graph
+        .graph
+        .add_edge(a, b, make_inferred_edge(CausalRelation::Supports, 0.5));
     // Non-inferred — should stay.
-    graph.graph.add_edge(b, c, make_edge(CausalRelation::Caused, 0.5));
+    graph
+        .graph
+        .add_edge(b, c, make_edge(CausalRelation::Caused, 0.5));
 
     let removed = pruning::prune_unvalidated_inferred(&mut graph);
     assert_eq!(removed, 1);
@@ -129,9 +137,13 @@ fn full_cleanup_combines_weak_and_unvalidated() {
     let d = graph.ensure_node("d", "domain_agnostic", "D");
 
     // Weak edge.
-    graph.graph.add_edge(a, b, make_edge(CausalRelation::Supports, 0.05));
+    graph
+        .graph
+        .add_edge(a, b, make_edge(CausalRelation::Supports, 0.05));
     // Unvalidated inferred.
-    graph.graph.add_edge(c, d, make_inferred_edge(CausalRelation::Enabled, 0.9));
+    graph
+        .graph
+        .add_edge(c, d, make_inferred_edge(CausalRelation::Enabled, 0.9));
 
     let result = pruning::full_cleanup(&mut graph, 0.2);
     assert_eq!(result.edges_removed, 2);
@@ -309,7 +321,9 @@ fn narrative_with_edges_has_sections() {
     let mut graph = IndexedGraph::new();
     let a = graph.ensure_node("origin", "domain_agnostic", "Origin memory");
     let b = graph.ensure_node("target", "domain_agnostic", "Target memory");
-    graph.graph.add_edge(a, b, make_edge(CausalRelation::Caused, 0.9));
+    graph
+        .graph
+        .add_edge(a, b, make_edge(CausalRelation::Caused, 0.9));
 
     let narrative = builder::build_narrative(&graph, "target");
     assert!(!narrative.sections.is_empty());
@@ -600,12 +614,16 @@ fn file_co_occurrence_shared_file() {
     let mut a = make_memory("fc3", vec![]);
     a.linked_files = vec![cortex_core::memory::links::FileLink {
         file_path: "src/main.rs".to_string(),
-        line_start: None, line_end: None, content_hash: None,
+        line_start: None,
+        line_end: None,
+        content_hash: None,
     }];
     let mut b = make_memory("fc4", vec![]);
     b.linked_files = vec![cortex_core::memory::links::FileLink {
         file_path: "src/main.rs".to_string(),
-        line_start: None, line_end: None, content_hash: None,
+        line_start: None,
+        line_end: None,
+        content_hash: None,
     }];
     let score = cortex_causal::inference::strategies::file_co_occurrence::score(&a, &b);
     assert!((score - 1.0).abs() < 0.01); // Perfect overlap.
@@ -641,13 +659,25 @@ fn pattern_matching_shared_pattern() {
 fn pattern_matching_multiple_shared_patterns_boost() {
     let mut a = make_memory("pm5", vec![]);
     a.linked_patterns = vec![
-        cortex_core::memory::links::PatternLink { pattern_id: "p1".to_string(), pattern_name: "observer".to_string() },
-        cortex_core::memory::links::PatternLink { pattern_id: "p2".to_string(), pattern_name: "factory".to_string() },
+        cortex_core::memory::links::PatternLink {
+            pattern_id: "p1".to_string(),
+            pattern_name: "observer".to_string(),
+        },
+        cortex_core::memory::links::PatternLink {
+            pattern_id: "p2".to_string(),
+            pattern_name: "factory".to_string(),
+        },
     ];
     let mut b = make_memory("pm6", vec![]);
     b.linked_patterns = vec![
-        cortex_core::memory::links::PatternLink { pattern_id: "p1".to_string(), pattern_name: "observer".to_string() },
-        cortex_core::memory::links::PatternLink { pattern_id: "p2".to_string(), pattern_name: "factory".to_string() },
+        cortex_core::memory::links::PatternLink {
+            pattern_id: "p1".to_string(),
+            pattern_name: "observer".to_string(),
+        },
+        cortex_core::memory::links::PatternLink {
+            pattern_id: "p2".to_string(),
+            pattern_name: "factory".to_string(),
+        },
     ];
     let score = cortex_causal::inference::strategies::pattern_matching::score(&a, &b);
     // Should be higher than single pattern due to multi-boost.
@@ -671,8 +701,12 @@ fn traversal_neighbors_on_graph() {
     let n2 = make_memory("n2", vec!["tag"]);
     let n3 = make_memory("n3", vec!["tag"]);
 
-    engine.add_edge(&n1, &n2, CausalRelation::Caused, 0.8, vec![], None).unwrap();
-    engine.add_edge(&n3, &n1, CausalRelation::Supports, 0.7, vec![], None).unwrap();
+    engine
+        .add_edge(&n1, &n2, CausalRelation::Caused, 0.8, vec![], None)
+        .unwrap();
+    engine
+        .add_edge(&n3, &n1, CausalRelation::Supports, 0.7, vec![], None)
+        .unwrap();
 
     let result = engine.neighbors("n1").unwrap();
     // n1 has outgoing to n2 and incoming from n3.
@@ -697,9 +731,15 @@ fn traversal_intervention_analysis() {
     let i2 = make_memory("i2", vec!["tag"]);
     let i3 = make_memory("i3", vec!["tag"]);
 
-    engine.add_edge(&i1, &i2, CausalRelation::Caused, 0.9, vec![], None).unwrap();
-    engine.add_edge(&i2, &i3, CausalRelation::Caused, 0.8, vec![], None).unwrap();
-    engine.add_edge(&i0, &i1, CausalRelation::Supports, 0.7, vec![], None).unwrap();
+    engine
+        .add_edge(&i1, &i2, CausalRelation::Caused, 0.9, vec![], None)
+        .unwrap();
+    engine
+        .add_edge(&i2, &i3, CausalRelation::Caused, 0.8, vec![], None)
+        .unwrap();
+    engine
+        .add_edge(&i0, &i1, CausalRelation::Supports, 0.7, vec![], None)
+        .unwrap();
 
     let result = engine.intervention("i1").unwrap();
     // Should include both upstream (i0) and downstream (i2, i3).
@@ -723,8 +763,12 @@ fn traversal_trace_origins_with_edges() {
     let b = make_memory("b", vec!["tag"]);
     let c = make_memory("c", vec!["tag"]);
 
-    engine.add_edge(&a, &b, CausalRelation::Caused, 0.9, vec![], None).unwrap();
-    engine.add_edge(&b, &c, CausalRelation::Enabled, 0.8, vec![], None).unwrap();
+    engine
+        .add_edge(&a, &b, CausalRelation::Caused, 0.9, vec![], None)
+        .unwrap();
+    engine
+        .add_edge(&b, &c, CausalRelation::Enabled, 0.8, vec![], None)
+        .unwrap();
 
     // Trace origins of c: should find b (and possibly a).
     let result = engine.trace_origins("c").unwrap();
@@ -748,8 +792,12 @@ fn traversal_trace_effects_with_edges() {
     let b = make_memory("b2", vec!["tag"]);
     let c = make_memory("c2", vec!["tag"]);
 
-    engine.add_edge(&a, &b, CausalRelation::Caused, 0.9, vec![], None).unwrap();
-    engine.add_edge(&b, &c, CausalRelation::Enabled, 0.8, vec![], None).unwrap();
+    engine
+        .add_edge(&a, &b, CausalRelation::Caused, 0.9, vec![], None)
+        .unwrap();
+    engine
+        .add_edge(&b, &c, CausalRelation::Enabled, 0.8, vec![], None)
+        .unwrap();
 
     // Trace effects of a: should find b and c.
     let result = engine.trace_effects("a2").unwrap();
@@ -773,8 +821,12 @@ fn traversal_bidirectional_with_edges() {
     let y = make_memory("y1", vec!["tag"]);
     let z = make_memory("z1", vec!["tag"]);
 
-    engine.add_edge(&x, &y, CausalRelation::Caused, 0.9, vec![], None).unwrap();
-    engine.add_edge(&y, &z, CausalRelation::Enabled, 0.8, vec![], None).unwrap();
+    engine
+        .add_edge(&x, &y, CausalRelation::Caused, 0.9, vec![], None)
+        .unwrap();
+    engine
+        .add_edge(&y, &z, CausalRelation::Enabled, 0.8, vec![], None)
+        .unwrap();
 
     // Bidirectional from y: should find both x (origin) and z (effect).
     let result = engine.bidirectional("y1").unwrap();
@@ -797,7 +849,9 @@ fn traversal_counterfactual_with_edges() {
     let p = make_memory("p1", vec!["tag"]);
     let q = make_memory("q1", vec!["tag"]);
 
-    engine.add_edge(&p, &q, CausalRelation::Caused, 0.9, vec![], None).unwrap();
+    engine
+        .add_edge(&p, &q, CausalRelation::Caused, 0.9, vec![], None)
+        .unwrap();
 
     let result = engine.counterfactual("p1").unwrap();
     assert_eq!(result.origin_id, "p1");
@@ -825,7 +879,8 @@ fn graph_manager_get_edges() {
         evidence: vec![],
         inferred: false,
     };
-    gm.add_edge("src", "tgt", "semantic", "semantic", weight).unwrap();
+    gm.add_edge("src", "tgt", "semantic", "semantic", weight)
+        .unwrap();
 
     let edges = gm.get_edges("src").unwrap();
     assert_eq!(edges.len(), 1);
@@ -881,8 +936,12 @@ fn dag_enforcement_rejects_cycle() {
     let b = make_memory("cyc_b", vec![]);
     let c = make_memory("cyc_c", vec![]);
 
-    engine.add_edge(&a, &b, CausalRelation::Caused, 0.9, vec![], None).unwrap();
-    engine.add_edge(&b, &c, CausalRelation::Caused, 0.8, vec![], None).unwrap();
+    engine
+        .add_edge(&a, &b, CausalRelation::Caused, 0.9, vec![], None)
+        .unwrap();
+    engine
+        .add_edge(&b, &c, CausalRelation::Caused, 0.8, vec![], None)
+        .unwrap();
     // c -> a would create a cycle.
     let result = engine.add_edge(&c, &a, CausalRelation::Caused, 0.7, vec![], None);
     assert!(result.is_err());
@@ -958,7 +1017,9 @@ fn engine_add_edge_with_evidence() {
         },
     ];
 
-    engine.add_edge(&a, &b, CausalRelation::Caused, 0.9, evidence, None).unwrap();
+    engine
+        .add_edge(&a, &b, CausalRelation::Caused, 0.9, evidence, None)
+        .unwrap();
     let (_, edge_count) = engine.stats().unwrap();
     assert_eq!(edge_count, 1);
 }
@@ -971,7 +1032,9 @@ fn engine_narrative_with_edges() {
     let a = make_memory("narr_a", vec![]);
     let b = make_memory("narr_b", vec![]);
 
-    engine.add_edge(&a, &b, CausalRelation::Caused, 0.9, vec![], None).unwrap();
+    engine
+        .add_edge(&a, &b, CausalRelation::Caused, 0.9, vec![], None)
+        .unwrap();
 
     let narrative = engine.narrative("narr_a").unwrap();
     // Narrative for a node with edges should have sections.

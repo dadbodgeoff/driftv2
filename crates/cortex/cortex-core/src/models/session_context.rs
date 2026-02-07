@@ -1,8 +1,10 @@
 use serde::{Deserialize, Serialize};
 use std::collections::HashSet;
+use ts_rs::TS;
 
 /// Session state for deduplication and token tracking.
-#[derive(Debug, Clone, Serialize, Deserialize)]
+#[derive(Debug, Clone, Serialize, Deserialize, TS)]
+#[ts(export)]
 pub struct SessionContext {
     pub session_id: String,
     /// Memory IDs already sent in this session.

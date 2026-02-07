@@ -37,10 +37,12 @@ pub use session_context::SessionContext;
 pub use temporal_diff::{
     ConfidenceShift, DiffStats, MemoryModification, Reclassification, TemporalDiff,
 };
-pub use temporal_event::{EventActor, MemoryEvent, MemoryEventType, MemorySnapshot, SnapshotReason};
+pub use temporal_event::{
+    EventActor, MemoryEvent, MemoryEventType, MemorySnapshot, SnapshotReason,
+};
 pub use temporal_query::{
-    AsOfQuery, DecisionReplayQuery, DiffScope, MemoryFilter, TemporalCausalQuery, TemporalDiffQuery,
-    TemporalRangeMode, TemporalRangeQuery, TraversalDirection,
+    AsOfQuery, DecisionReplayQuery, DiffScope, MemoryFilter, TemporalCausalQuery,
+    TemporalDiffQuery, TemporalRangeMode, TemporalRangeQuery, TraversalDirection,
 };
 pub use validation_result::{DimensionScores, HealingAction, HealingActionType, ValidationResult};
 pub use why_context::{WhyContext, WhyEntry};

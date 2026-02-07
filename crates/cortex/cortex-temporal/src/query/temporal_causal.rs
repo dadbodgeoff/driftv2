@@ -123,8 +123,8 @@ struct RawRelEvent {
 fn raw_to_memory_event(raw: RawRelEvent) -> CortexResult<MemoryEvent> {
     use cortex_core::models::EventActor;
 
-    let event_type: MemoryEventType =
-        serde_json::from_str(&format!("\"{}\"", raw.event_type)).map_err(|e| {
+    let event_type: MemoryEventType = serde_json::from_str(&format!("\"{}\"", raw.event_type))
+        .map_err(|e| {
             cortex_core::CortexError::TemporalError(
                 cortex_core::errors::TemporalError::QueryFailed(format!(
                     "parse event_type '{}': {}",

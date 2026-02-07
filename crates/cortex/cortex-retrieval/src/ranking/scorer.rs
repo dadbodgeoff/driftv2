@@ -28,12 +28,12 @@ impl Default for ScorerWeights {
     fn default() -> Self {
         Self {
             semantic_similarity: 0.25,
-            keyword_match: 0.15,
+            keyword_match: 0.10,
             file_proximity: 0.10,
             pattern_alignment: 0.10,
             recency: 0.10,
             confidence: 0.10,
-            importance: 0.10,
+            importance: 0.15,
             intent_type_match: 0.10,
         }
     }
@@ -72,8 +72,13 @@ pub fn score(
             // Factor 1: Semantic similarity (normalized RRF as proxy).
             let f_semantic = c.rrf_score / max_rrf;
 
-            // Factor 2: Keyword match (approximated by RRF contribution).
-            let f_keyword = f_semantic * 0.8; // Correlated with semantic.
+            // Factor 2: Keyword match — real BM25 rank from FTS5 search.
+            // Uses RRF-style normalization: 1/(1 + rank) to produce a smooth signal
+            // that doesn't create extreme spread with few candidates.
+            let f_keyword = match c.fts5_rank {
+                Some(rank) => 1.0 / (1.0 + rank as f64),
+                None => 0.0,
+            };
 
             // Factor 3: File proximity — do any linked files match active files?
             let f_file = file_proximity_score(m, active_files);

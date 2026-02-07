@@ -47,7 +47,11 @@ pub fn pack_to_budget(
         .collect();
 
     // Sort by priority descending.
-    candidates.sort_by(|a, b| b.priority.partial_cmp(&a.priority).unwrap_or(std::cmp::Ordering::Equal));
+    candidates.sort_by(|a, b| {
+        b.priority
+            .partial_cmp(&a.priority)
+            .unwrap_or(std::cmp::Ordering::Equal)
+    });
 
     let mut remaining = budget;
     let mut result = Vec::with_capacity(candidates.len());

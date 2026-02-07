@@ -2,8 +2,8 @@
 //! principle extraction, and edge cases.
 
 use chrono::Utc;
-use cortex_core::memory::*;
 use cortex_core::memory::types::InsightContent;
+use cortex_core::memory::*;
 use cortex_core::traits::{Correction, ILearner};
 use cortex_learning::analysis;
 use cortex_learning::deduplication::{self, DedupAction};
@@ -44,11 +44,31 @@ fn make_insight(id: &str, summary: &str, hash: &str) -> BaseMemory {
 #[test]
 fn stress_categorization_1000_corrections() {
     let test_cases = [
-        ("This violates the SOLID design pattern", "class design", analysis::CorrectionCategory::PatternViolation),
-        ("Use parameterized queries to prevent SQL injection", "security", analysis::CorrectionCategory::SecurityIssue),
-        ("This loop is O(n^2), use a hash map instead", "performance", analysis::CorrectionCategory::PerformanceIssue),
-        ("The function name should be snake_case", "naming", analysis::CorrectionCategory::NamingConvention),
-        ("Add proper error handling for the network call", "error handling constraint", analysis::CorrectionCategory::ConstraintViolation),
+        (
+            "This violates the SOLID design pattern",
+            "class design",
+            analysis::CorrectionCategory::PatternViolation,
+        ),
+        (
+            "Use parameterized queries to prevent SQL injection",
+            "security",
+            analysis::CorrectionCategory::SecurityIssue,
+        ),
+        (
+            "This loop is O(n^2), use a hash map instead",
+            "performance",
+            analysis::CorrectionCategory::PerformanceIssue,
+        ),
+        (
+            "The function name should be snake_case",
+            "naming",
+            analysis::CorrectionCategory::NamingConvention,
+        ),
+        (
+            "Add proper error handling for the network call",
+            "error handling constraint",
+            analysis::CorrectionCategory::ConstraintViolation,
+        ),
     ];
 
     let start = Instant::now();
@@ -62,7 +82,11 @@ fn stress_categorization_1000_corrections() {
         );
     }
     let elapsed = start.elapsed();
-    assert!(elapsed.as_secs() < 5, "1000 categorizations took {:?}", elapsed);
+    assert!(
+        elapsed.as_secs() < 5,
+        "1000 categorizations took {:?}",
+        elapsed
+    );
 }
 
 // ── Dedup stress ─────────────────────────────────────────────────────────
@@ -70,11 +94,13 @@ fn stress_categorization_1000_corrections() {
 #[test]
 fn stress_dedup_exact_hash_match_1000() {
     let existing: Vec<BaseMemory> = (0..100)
-        .map(|i| make_insight(
-            &format!("existing-{i}"),
-            &format!("Principle about topic {i}"),
-            &format!("hash-{i}"),
-        ))
+        .map(|i| {
+            make_insight(
+                &format!("existing-{i}"),
+                &format!("Principle about topic {i}"),
+                &format!("hash-{i}"),
+            )
+        })
         .collect();
 
     let start = Instant::now();
@@ -84,15 +110,27 @@ fn stress_dedup_exact_hash_match_1000() {
         assert_eq!(action, DedupAction::Noop, "Exact hash match should be Noop");
     }
     let elapsed = start.elapsed();
-    assert!(elapsed.as_secs() < 5, "1000 dedup checks took {:?}", elapsed);
+    assert!(
+        elapsed.as_secs() < 5,
+        "1000 dedup checks took {:?}",
+        elapsed
+    );
 }
 
 #[test]
 fn stress_dedup_fuzzy_match() {
     let existing = vec![
-        make_insight("e1", "always validate user input before processing", "hash-1"),
+        make_insight(
+            "e1",
+            "always validate user input before processing",
+            "hash-1",
+        ),
         make_insight("e2", "use bcrypt for password hashing not md5", "hash-2"),
-        make_insight("e3", "prefer composition over inheritance in design", "hash-3"),
+        make_insight(
+            "e3",
+            "prefer composition over inheritance in design",
+            "hash-3",
+        ),
     ];
 
     // Very similar summaries should trigger Update.
@@ -106,7 +144,10 @@ fn stress_dedup_fuzzy_match() {
         let action = deduplication::check_dedup("new-hash", summary, &existing);
         match action {
             DedupAction::Update(id) => assert_eq!(&id, expected_id),
-            _ => panic!("Expected Update for similar summary '{summary}', got {:?}", action),
+            _ => panic!(
+                "Expected Update for similar summary '{summary}', got {:?}",
+                action
+            ),
         }
     }
 
@@ -122,7 +163,11 @@ fn stress_dedup_fuzzy_match() {
 #[test]
 fn stress_dedup_no_existing_memories() {
     let action = deduplication::check_dedup("any-hash", "any summary", &[]);
-    assert_eq!(action, DedupAction::Add, "No existing memories should always Add");
+    assert_eq!(
+        action,
+        DedupAction::Add,
+        "No existing memories should always Add"
+    );
 }
 
 // ── Learning pipeline stress ─────────────────────────────────────────────
@@ -134,8 +179,14 @@ fn stress_learning_pipeline_100_corrections() {
     let start = Instant::now();
     for i in 0..100 {
         let correction = Correction {
-            original_memory_id: if i % 2 == 0 { Some(format!("orig-{i}")) } else { None },
-            correction_text: format!("Correction number {i}: use pattern X instead of Y for task {i}"),
+            original_memory_id: if i % 2 == 0 {
+                Some(format!("orig-{i}"))
+            } else {
+                None
+            },
+            correction_text: format!(
+                "Correction number {i}: use pattern X instead of Y for task {i}"
+            ),
             context: format!("code review round {}", i % 10),
             source: "stress_test".to_string(),
         };
@@ -143,7 +194,10 @@ fn stress_learning_pipeline_100_corrections() {
         let result = engine.analyze(&correction).unwrap();
 
         // Every correction should produce a category.
-        assert!(!result.category.is_empty(), "Correction {i} has empty category");
+        assert!(
+            !result.category.is_empty(),
+            "Correction {i} has empty category"
+        );
 
         // Most corrections should produce a memory.
         // (Some might not if dedup kicks in, but with unique text they should.)
@@ -155,7 +209,11 @@ fn stress_learning_pipeline_100_corrections() {
         }
     }
     let elapsed = start.elapsed();
-    assert!(elapsed.as_secs() < 10, "100 learning analyses took {:?}", elapsed);
+    assert!(
+        elapsed.as_secs() < 10,
+        "100 learning analyses took {:?}",
+        elapsed
+    );
 }
 
 #[test]
@@ -185,7 +243,11 @@ fn stress_principle_extraction_diverse_inputs() {
             text
         );
         let principle = result.principle.unwrap();
-        assert!(!principle.is_empty(), "Principle should not be empty for '{}'", text);
+        assert!(
+            !principle.is_empty(),
+            "Principle should not be empty for '{}'",
+            text
+        );
     }
 }
 

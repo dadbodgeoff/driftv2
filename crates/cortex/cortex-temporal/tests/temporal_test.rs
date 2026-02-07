@@ -120,7 +120,7 @@ fn make_test_memory() -> BaseMemory {
         archived: false,
         superseded_by: None,
         supersedes: None,
-        content_hash: BaseMemory::compute_content_hash(&content),
+        content_hash: BaseMemory::compute_content_hash(&content).unwrap(),
     }
 }
 
@@ -482,8 +482,9 @@ async fn tta_08_compaction_moves_old_events() {
 
     // Compact events older than 30 days, with verified snapshot at event_id 5
     let cutoff = Utc::now() - Duration::days(30);
-    let result =
-        cortex_temporal::event_store::compaction::compact_events(&writer, cutoff, 5).await.unwrap();
+    let result = cortex_temporal::event_store::compaction::compact_events(&writer, cutoff, 5)
+        .await
+        .unwrap();
     assert_eq!(result.events_moved, 5);
 
     // After compaction, only recent events remain in main table
@@ -832,7 +833,12 @@ fn tta_16_mutation_paths_emit_events() {
 
             let delta2 = serde_json::json!({ "old": 0.8, "new": 0.6 });
             cortex_storage::temporal_events::emit_event(
-                conn, &mem.id, "confidence_changed", &delta2, "system", "test",
+                conn,
+                &mem.id,
+                "confidence_changed",
+                &delta2,
+                "system",
+                "test",
             )?;
 
             let delta3 = serde_json::json!({ "archived": true });
@@ -957,9 +963,7 @@ fn tta_19_replay_consistency() {
         one_by_one = cortex_temporal::event_store::replay::apply_event(one_by_one, event);
     }
 
-    assert!(
-        (batch_result.confidence.value() - one_by_one.confidence.value()).abs() < 0.001
-    );
+    assert!((batch_result.confidence.value() - one_by_one.confidence.value()).abs() < 0.001);
     assert_eq!(batch_result.archived, one_by_one.archived);
     assert_eq!(batch_result.tags, one_by_one.tags);
 }
@@ -992,8 +996,7 @@ async fn tta_20_temporal_monotonicity() {
     }
 
     // Also verify via query
-    let events =
-        cortex_temporal::event_store::query::get_events(&readers, mem_id, None).unwrap();
+    let events = cortex_temporal::event_store::query::get_events(&readers, mem_id, None).unwrap();
     for window in events.windows(2) {
         assert!(window[1].event_id > window[0].event_id);
     }
@@ -1018,8 +1021,7 @@ async fn tta_21_event_count_conservation() {
     let count = cortex_temporal::event_store::query::get_event_count(&readers, mem_id).unwrap();
     assert_eq!(count, n);
 
-    let events =
-        cortex_temporal::event_store::query::get_events(&readers, mem_id, None).unwrap();
+    let events = cortex_temporal::event_store::query::get_events(&readers, mem_id, None).unwrap();
     assert_eq!(events.len() as u64, n);
 }
 
@@ -1028,12 +1030,9 @@ async fn tta_21_event_count_conservation() {
 #[tokio::test]
 async fn reconstruction_returns_none_for_unknown_memory() {
     let (_writer, readers) = setup();
-    let result = cortex_temporal::snapshot::reconstruct::reconstruct_at(
-        &readers,
-        "nonexistent",
-        Utc::now(),
-    )
-    .unwrap();
+    let result =
+        cortex_temporal::snapshot::reconstruct::reconstruct_at(&readers, "nonexistent", Utc::now())
+            .unwrap();
     assert!(result.is_none());
 }
 
@@ -1065,8 +1064,7 @@ async fn events_in_range_across_memories() {
     }
 
     let events =
-        cortex_temporal::event_store::query::get_events_in_range(&readers, t_start, t_end)
-            .unwrap();
+        cortex_temporal::event_store::query::get_events_in_range(&readers, t_start, t_end).unwrap();
     assert_eq!(events.len(), 3);
 }
 

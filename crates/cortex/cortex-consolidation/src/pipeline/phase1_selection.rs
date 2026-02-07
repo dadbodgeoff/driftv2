@@ -35,8 +35,8 @@ pub fn select_candidates(memories: &[BaseMemory]) -> Vec<&BaseMemory> {
 mod tests {
     use super::*;
     use chrono::Duration;
-    use cortex_core::memory::{Confidence, Importance, TypedContent};
     use cortex_core::memory::types::EpisodicContent;
+    use cortex_core::memory::{Confidence, Importance, TypedContent};
 
     fn make_episodic(days_old: i64, confidence: f64, archived: bool) -> BaseMemory {
         let content = TypedContent::Episodic(EpisodicContent {
@@ -65,7 +65,7 @@ mod tests {
             archived,
             superseded_by: None,
             supersedes: None,
-            content_hash: BaseMemory::compute_content_hash(&content),
+            content_hash: BaseMemory::compute_content_hash(&content).unwrap(),
         }
     }
 

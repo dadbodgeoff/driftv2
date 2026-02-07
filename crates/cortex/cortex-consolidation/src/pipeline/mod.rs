@@ -67,11 +67,8 @@ pub fn run_pipeline(
             indices.iter().map(|&i| all_embeddings[i].clone()).collect();
 
         // Phase 3: Recall Gate.
-        let recall = phase3_recall_gate::check_recall(
-            &cluster,
-            &cluster_embeddings,
-            &all_embeddings,
-        )?;
+        let recall =
+            phase3_recall_gate::check_recall(&cluster, &cluster_embeddings, &all_embeddings)?;
 
         if !recall.passed {
             debug!(
@@ -84,7 +81,7 @@ pub fn run_pipeline(
 
         // Phase 4: Abstraction.
         let abstraction = phase4_abstraction::abstract_cluster(&cluster, &cluster_embeddings);
-        let new_memory = phase4_abstraction::build_semantic_memory(&abstraction);
+        let new_memory = phase4_abstraction::build_semantic_memory(&abstraction)?;
 
         // Track token counts.
         for mem in &cluster {
@@ -94,8 +91,7 @@ pub fn run_pipeline(
 
         // Phase 5: Integration.
         let new_emb = embedding_provider.embed(&new_memory.summary)?;
-        let action =
-            phase5_integration::determine_action(new_memory, &new_emb, existing_semantics);
+        let action = phase5_integration::determine_action(new_memory, &new_emb, existing_semantics);
 
         match action {
             IntegrationAction::Create(mem) => {

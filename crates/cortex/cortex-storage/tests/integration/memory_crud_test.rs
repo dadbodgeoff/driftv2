@@ -1,8 +1,8 @@
 //! Integration test: full CRUD lifecycle.
 
 use chrono::Utc;
-use cortex_core::memory::*;
 use cortex_core::memory::types::*;
+use cortex_core::memory::*;
 use cortex_core::traits::IMemoryStorage;
 use cortex_storage::StorageEngine;
 
@@ -67,7 +67,10 @@ fn test_create_and_get_with_links() {
     let memory = make_test_memory("mem-links");
 
     engine.create(&memory).unwrap();
-    let retrieved = engine.get("mem-links").unwrap().expect("memory should exist");
+    let retrieved = engine
+        .get("mem-links")
+        .unwrap()
+        .expect("memory should exist");
 
     assert_eq!(retrieved.linked_patterns.len(), 1);
     assert_eq!(retrieved.linked_patterns[0].pattern_name, "singleton");
@@ -89,7 +92,10 @@ fn test_update() {
 
     engine.update(&memory).unwrap();
 
-    let retrieved = engine.get("mem-update").unwrap().expect("memory should exist");
+    let retrieved = engine
+        .get("mem-update")
+        .unwrap()
+        .expect("memory should exist");
     assert_eq!(retrieved.summary, "updated summary");
     assert_eq!(retrieved.importance, Importance::Critical);
     assert_eq!(retrieved.tags, vec!["updated"]);
@@ -168,14 +174,10 @@ fn test_query_by_tags() {
     let memory = make_test_memory("mem-tags");
     engine.create(&memory).unwrap();
 
-    let results = engine
-        .query_by_tags(&["test".to_string()])
-        .unwrap();
+    let results = engine.query_by_tags(&["test".to_string()]).unwrap();
     assert_eq!(results.len(), 1);
 
-    let results = engine
-        .query_by_tags(&["nonexistent".to_string()])
-        .unwrap();
+    let results = engine.query_by_tags(&["nonexistent".to_string()]).unwrap();
     assert!(results.is_empty());
 }
 
@@ -205,7 +207,9 @@ fn test_fts5_search() {
 fn test_aggregation() {
     let engine = StorageEngine::open_in_memory().unwrap();
     for i in 0..5 {
-        engine.create(&make_test_memory(&format!("agg-{i}"))).unwrap();
+        engine
+            .create(&make_test_memory(&format!("agg-{i}")))
+            .unwrap();
     }
 
     let counts = engine.count_by_type().unwrap();

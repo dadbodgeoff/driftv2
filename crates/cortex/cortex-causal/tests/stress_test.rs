@@ -39,7 +39,9 @@ fn build_large_graph(n: usize) -> (IndexedGraph, Vec<String>) {
         let rel = relations[i % relations.len()];
         let src = graph.get_node(&ids[i]).unwrap();
         let tgt = graph.get_node(&ids[i + 1]).unwrap();
-        graph.graph.add_edge(src, tgt, make_edge(rel, 0.5 + (i % 5) as f64 * 0.1));
+        graph
+            .graph
+            .add_edge(src, tgt, make_edge(rel, 0.5 + (i % 5) as f64 * 0.1));
     }
 
     // Cross-links: every 10th node links to a node 50 ahead (if it exists).
@@ -48,7 +50,9 @@ fn build_large_graph(n: usize) -> (IndexedGraph, Vec<String>) {
         if target_idx < n {
             let src = graph.get_node(&ids[i]).unwrap();
             let tgt = graph.get_node(&ids[target_idx]).unwrap();
-            graph.graph.add_edge(src, tgt, make_edge(CausalRelation::Supports, 0.7));
+            graph
+                .graph
+                .add_edge(src, tgt, make_edge(CausalRelation::Supports, 0.7));
         }
     }
 
@@ -60,7 +64,10 @@ fn stress_1000_nodes_narrative_generation() {
     let (graph, ids) = build_large_graph(1000);
 
     assert_eq!(graph.node_count(), 1000);
-    assert!(graph.edge_count() >= 999, "Should have at least chain edges");
+    assert!(
+        graph.edge_count() >= 999,
+        "Should have at least chain edges"
+    );
 
     let start = Instant::now();
 
@@ -70,8 +77,14 @@ fn stress_1000_nodes_narrative_generation() {
         let narrative = NarrativeGenerator::generate(&graph, &ids[idx]);
 
         // Basic coherence checks.
-        assert!(!narrative.memory_id.is_empty(), "Narrative should have a memory_id");
-        assert!(!narrative.summary.is_empty(), "Narrative should have a summary");
+        assert!(
+            !narrative.memory_id.is_empty(),
+            "Narrative should have a memory_id"
+        );
+        assert!(
+            !narrative.summary.is_empty(),
+            "Narrative should have a summary"
+        );
         assert!(
             narrative.confidence >= 0.0 && narrative.confidence <= 1.0,
             "Confidence should be in [0,1], got {}",
@@ -126,7 +139,10 @@ fn stress_narrative_sections_are_coherent() {
 
     // Each section should have a non-empty title and at least one entry.
     for section in &narrative.sections {
-        assert!(!section.title.is_empty(), "Section title should not be empty");
+        assert!(
+            !section.title.is_empty(),
+            "Section title should not be empty"
+        );
         assert!(
             !section.entries.is_empty(),
             "Section '{}' should have entries",
@@ -158,7 +174,11 @@ fn stress_disconnected_node_graceful() {
 
     // Narrative for a disconnected node should still work.
     let narrative = NarrativeGenerator::generate(&graph, "isolated_500");
-    assert_eq!(narrative.sections.len(), 0, "Disconnected node should have no sections");
+    assert_eq!(
+        narrative.sections.len(),
+        0,
+        "Disconnected node should have no sections"
+    );
     assert!(narrative.key_points.is_empty());
     assert!(!narrative.summary.is_empty());
 

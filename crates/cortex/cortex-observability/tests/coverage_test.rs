@@ -3,10 +3,10 @@
 //! Focuses on: health reporter, subsystem checks, recommendations,
 //! degradation tracker/alerting, metrics collector, query log, engine.
 
-use cortex_core::models::{DegradationEvent, HealthStatus};
-use cortex_observability::health::{HealthSnapshot, HealthReporter};
-use cortex_observability::ObservabilityEngine;
 use chrono::Utc;
+use cortex_core::models::{DegradationEvent, HealthStatus};
+use cortex_observability::health::{HealthReporter, HealthSnapshot};
+use cortex_observability::ObservabilityEngine;
 
 // ─── Health Reporter ─────────────────────────────────────────────────────────
 
@@ -189,12 +189,15 @@ fn metrics_collector_retrieval_record_and_reset() {
 #[test]
 fn metrics_collector_consolidation_metrics() {
     let mut collector = cortex_observability::MetricsCollector::new();
-    collector.consolidation.record(cortex_core::models::ConsolidationMetrics {
-        precision: 0.9,
-        compression_ratio: 0.5,
-        lift: 0.8,
-        stability: 0.95,
-    }, 2);
+    collector.consolidation.record(
+        cortex_core::models::ConsolidationMetrics {
+            precision: 0.9,
+            compression_ratio: 0.5,
+            lift: 0.8,
+            stability: 0.95,
+        },
+        2,
+    );
     assert!(collector.consolidation.avg_precision() > 0.0);
 }
 
@@ -224,8 +227,24 @@ fn query_log_avg_latency() {
     use std::time::Duration;
 
     let mut log = QueryLog::new();
-    log.record(QueryLogEntry::new("q1", None, Duration::from_millis(10), 5, 1000, 200, 1));
-    log.record(QueryLogEntry::new("q2", None, Duration::from_millis(20), 5, 1000, 200, 1));
+    log.record(QueryLogEntry::new(
+        "q1",
+        None,
+        Duration::from_millis(10),
+        5,
+        1000,
+        200,
+        1,
+    ));
+    log.record(QueryLogEntry::new(
+        "q2",
+        None,
+        Duration::from_millis(20),
+        5,
+        1000,
+        200,
+        1,
+    ));
     let avg = log.avg_latency();
     assert_eq!(avg, Duration::from_millis(15));
 }
@@ -241,7 +260,10 @@ fn query_log_latency_percentile() {
             format!("q{i}"),
             None,
             Duration::from_millis(i),
-            1, 1000, 100, 0,
+            1,
+            1000,
+            100,
+            0,
         ));
     }
     let p95 = log.latency_percentile(0.95);
@@ -256,7 +278,7 @@ fn embedding_metrics_cache_lookups() {
     m.record_lookup(Some(1)); // L1 hit
     m.record_lookup(Some(2)); // L2 hit
     m.record_lookup(Some(3)); // L3 hit
-    m.record_lookup(None);    // Miss
+    m.record_lookup(None); // Miss
     assert_eq!(m.total_lookups, 4);
     assert_eq!(m.l1_hits, 1);
     assert!((m.l1_hit_rate() - 0.25).abs() < 0.01);

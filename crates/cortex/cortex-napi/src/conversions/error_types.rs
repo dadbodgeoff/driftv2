@@ -29,18 +29,16 @@ pub fn to_napi_error(err: CortexError) -> napi::Error {
         CortexError::MemoryNotFound { id } => {
             (codes::MEMORY_NOT_FOUND, format!("Memory not found: {id}"))
         }
-        CortexError::InvalidType { type_name } => {
-            (codes::INVALID_TYPE, format!("Invalid memory type: {type_name}"))
-        }
-        CortexError::EmbeddingError(e) => {
-            (codes::EMBEDDING_ERROR, format!("Embedding error: {e}"))
-        }
-        CortexError::StorageError(e) => {
-            (codes::STORAGE_ERROR, format!("Storage error: {e}"))
-        }
-        CortexError::CausalCycle { path } => {
-            (codes::CAUSAL_CYCLE, format!("Causal cycle detected: {path}"))
-        }
+        CortexError::InvalidType { type_name } => (
+            codes::INVALID_TYPE,
+            format!("Invalid memory type: {type_name}"),
+        ),
+        CortexError::EmbeddingError(e) => (codes::EMBEDDING_ERROR, format!("Embedding error: {e}")),
+        CortexError::StorageError(e) => (codes::STORAGE_ERROR, format!("Storage error: {e}")),
+        CortexError::CausalCycle { path } => (
+            codes::CAUSAL_CYCLE,
+            format!("Causal cycle detected: {path}"),
+        ),
         CortexError::TokenBudgetExceeded { needed, available } => (
             codes::TOKEN_BUDGET_EXCEEDED,
             format!("Token budget exceeded: needed {needed}, available {available}"),
@@ -48,27 +46,29 @@ pub fn to_napi_error(err: CortexError) -> napi::Error {
         CortexError::MigrationError(msg) => {
             (codes::MIGRATION_ERROR, format!("Migration error: {msg}"))
         }
-        CortexError::SanitizationError(msg) => {
-            (codes::SANITIZATION_ERROR, format!("Sanitization error: {msg}"))
-        }
-        CortexError::ConsolidationError(e) => {
-            (codes::CONSOLIDATION_ERROR, format!("Consolidation error: {e}"))
-        }
+        CortexError::SanitizationError(msg) => (
+            codes::SANITIZATION_ERROR,
+            format!("Sanitization error: {msg}"),
+        ),
+        CortexError::ConsolidationError(e) => (
+            codes::CONSOLIDATION_ERROR,
+            format!("Consolidation error: {e}"),
+        ),
         CortexError::ValidationError(msg) => {
             (codes::VALIDATION_ERROR, format!("Validation error: {msg}"))
         }
-        CortexError::SerializationError(e) => {
-            (codes::SERIALIZATION_ERROR, format!("Serialization error: {e}"))
-        }
-        CortexError::ConcurrencyError(msg) => {
-            (codes::CONCURRENCY_ERROR, format!("Concurrency error: {msg}"))
-        }
+        CortexError::SerializationError(e) => (
+            codes::SERIALIZATION_ERROR,
+            format!("Serialization error: {e}"),
+        ),
+        CortexError::ConcurrencyError(msg) => (
+            codes::CONCURRENCY_ERROR,
+            format!("Concurrency error: {msg}"),
+        ),
         CortexError::CloudSyncError(e) => {
             (codes::CLOUD_SYNC_ERROR, format!("Cloud sync error: {e}"))
         }
-        CortexError::ConfigError(msg) => {
-            (codes::CONFIG_ERROR, format!("Config error: {msg}"))
-        }
+        CortexError::ConfigError(msg) => (codes::CONFIG_ERROR, format!("Config error: {msg}")),
         CortexError::DegradedMode {
             component,
             fallback,
@@ -76,9 +76,7 @@ pub fn to_napi_error(err: CortexError) -> napi::Error {
             codes::DEGRADED_MODE,
             format!("Degraded mode: {component} using fallback: {fallback}"),
         ),
-        CortexError::TemporalError(ref e) => {
-            (codes::CONFIG_ERROR, format!("Temporal error: {e}"))
-        }
+        CortexError::TemporalError(ref e) => (codes::CONFIG_ERROR, format!("Temporal error: {e}")),
     };
 
     napi::Error::new(Status::GenericFailure, format!("[{code}] {message}"))
@@ -93,6 +91,9 @@ pub fn from_cortex<T>(result: cortex_core::CortexResult<T>) -> napi::Result<T> {
 pub fn runtime_not_initialized() -> napi::Error {
     napi::Error::new(
         Status::GenericFailure,
-        format!("[{}] CortexRuntime not initialized. Call initialize() first.", codes::RUNTIME_NOT_INITIALIZED),
+        format!(
+            "[{}] CortexRuntime not initialized. Call initialize() first.",
+            codes::RUNTIME_NOT_INITIALIZED
+        ),
     )
 }

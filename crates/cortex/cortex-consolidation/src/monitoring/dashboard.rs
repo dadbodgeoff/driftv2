@@ -36,11 +36,7 @@ impl ConsolidationDashboard {
     }
 
     /// Record a consolidation run.
-    pub fn record_run(
-        &mut self,
-        metrics: ConsolidationMetrics,
-        assessment: QualityAssessment,
-    ) {
+    pub fn record_run(&mut self, metrics: ConsolidationMetrics, assessment: QualityAssessment) {
         self.total_runs += 1;
         if assessment.overall_pass {
             self.successful_runs += 1;

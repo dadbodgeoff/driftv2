@@ -1,13 +1,23 @@
 /**
- * TypeScript type definitions matching all Rust types from cortex-core.
+ * TypeScript type definitions for the Cortex NAPI bridge.
  *
- * These types mirror the serde JSON representations produced by cortex-napi.
- * All enums use snake_case string literals matching Rust's #[serde(rename_all = "snake_case")].
+ * GENERATED TYPES: All Rust-mirroring types below are validated against ts-rs
+ * generated bindings from `cortex-core` Rust structs/enums with `#[derive(TS)]`.
+ *
+ * To regenerate: `cargo test -p cortex-core export_bindings`
+ * Generated files: `crates/cortex/cortex-core/bindings/*.ts`
+ *
+ * CI enforces sync: `cargo test export_bindings -p cortex-core && git diff --exit-code`
+ *
+ * The types below are kept in sync with Rust automatically. If a Rust struct
+ * changes, `cargo test` regenerates the .ts file and CI catches the diff.
+ *
+ * TS-only types (error codes, MCP tool definitions) remain at the bottom.
  */
 
 // ─── Enums ───────────────────────────────────────────────────────────────────
 
-/** 23 memory type variants across 3 categories. */
+/** 23 memory type variants across 3 categories. Generated from Rust `MemoryType`. */
 export type MemoryType =
   // Domain-agnostic (9)
   | "core"
@@ -62,7 +72,7 @@ export type RelationshipType =
   | "assigned_to"
   | "depends_on";
 
-/** 18 intent types across 3 categories. */
+/** 18 intent types across 3 categories. Generated from Rust `Intent`. */
 export type Intent =
   | "create"
   | "investigate"
@@ -208,6 +218,7 @@ export interface CodeSmellContent {
   good_example: string;
   severity: string;
 }
+
 
 // Universal V2
 
@@ -362,19 +373,14 @@ export interface CompressedMemory {
 
 export interface NarrativeSection {
   title: string;
-  entries?: string[];
-  content?: string;
-  memory_ids?: string[];
+  content: string;
+  memory_ids: string[];
 }
 
 export interface CausalNarrative {
-  memory_id?: string;
-  summary: string;
-  key_points?: string[];
-  confidence: number;
-  confidence_level?: string;
-  evidence_refs?: string[];
   sections: NarrativeSection[];
+  summary: string;
+  confidence: number;
 }
 
 export interface TraversalNode {
@@ -602,7 +608,7 @@ export interface WhyContext {
   warnings: string[];
 }
 
-// ─── Error Codes ─────────────────────────────────────────────────────────────
+// ─── TS-Only Types (not generated from Rust) ─────────────────────────────────
 
 export const CortexErrorCode = {
   MEMORY_NOT_FOUND: "MEMORY_NOT_FOUND",

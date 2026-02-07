@@ -1,5 +1,6 @@
 use chrono::{DateTime, Utc};
 use serde::{Deserialize, Serialize};
+use ts_rs::TS;
 
 use super::confidence::Confidence;
 use super::importance::Importance;
@@ -8,7 +9,8 @@ use super::types::MemoryType;
 
 /// Typed content wrapper — each memory type has its own content struct.
 /// Serialized as a tagged enum so the type is preserved in JSON.
-#[derive(Debug, Clone, Serialize, Deserialize, PartialEq)]
+#[derive(Debug, Clone, Serialize, Deserialize, PartialEq, TS)]
+#[ts(export)]
 #[serde(tag = "type", content = "data")]
 #[serde(rename_all = "snake_case")]
 pub enum TypedContent {
@@ -41,7 +43,8 @@ pub enum TypedContent {
 }
 
 /// The universal memory struct. Every memory in the system is a BaseMemory.
-#[derive(Debug, Clone, Serialize, Deserialize)]
+#[derive(Debug, Clone, Serialize, Deserialize, TS)]
+#[ts(export)]
 pub struct BaseMemory {
     /// UUID v4 identifier.
     pub id: String,
@@ -87,12 +90,33 @@ pub struct BaseMemory {
 
 impl BaseMemory {
     /// Compute the blake3 content hash from the serialized content.
-    pub fn compute_content_hash(content: &TypedContent) -> String {
-        let serialized = serde_json::to_string(content).unwrap_or_default();
-        blake3::hash(serialized.as_bytes()).to_hex().to_string()
+    ///
+    /// Returns an error if the content cannot be serialized (e.g., NaN in f64 fields).
+    /// Callers should propagate the error with `?` in production code, or `.unwrap()` in tests.
+    pub fn compute_content_hash(content: &TypedContent) -> crate::errors::CortexResult<String> {
+        let serialized = serde_json::to_string(content)?;
+        Ok(blake3::hash(serialized.as_bytes()).to_hex().to_string())
+    }
+
+    /// Structural/content comparison: checks whether two memories have the same
+    /// content hash, type, summary, confidence, importance, and tags.
+    ///
+    /// This is distinct from `PartialEq`, which only compares IDs (DDD Entity pattern).
+    pub fn content_eq(&self, other: &Self) -> bool {
+        self.content_hash == other.content_hash
+            && self.memory_type == other.memory_type
+            && self.summary == other.summary
+            && self.confidence == other.confidence
+            && self.importance == other.importance
+            && self.tags == other.tags
     }
 }
 
+/// Identity equality: two memories are equal if they have the same ID.
+///
+/// This follows the DDD Entity pattern — a memory's identity is its UUID,
+/// not its content. For structural/content comparison, use
+/// [`BaseMemory::content_eq`] instead.
 impl PartialEq for BaseMemory {
     fn eq(&self, other: &Self) -> bool {
         self.id == other.id

@@ -2,12 +2,12 @@
 //! detection, healing actions, and edge cases.
 
 use chrono::{Duration, Utc};
-use cortex_core::memory::*;
 use cortex_core::memory::base::TypedContent;
 use cortex_core::memory::types::{EpisodicContent, SemanticContent};
-use cortex_validation::contradiction::detection;
+use cortex_core::memory::*;
 use cortex_validation::contradiction::consensus;
-use cortex_validation::dimensions::{citation, temporal, pattern_alignment};
+use cortex_validation::contradiction::detection;
+use cortex_validation::dimensions::{citation, pattern_alignment, temporal};
 use cortex_validation::engine::{ValidationContext, ValidationEngine};
 use std::time::Instant;
 
@@ -24,7 +24,7 @@ fn make_memory(id: &str, summary: &str, mem_type: MemoryType) -> BaseMemory {
             consolidation_confidence: 0.8,
         }),
     };
-    let content_hash = BaseMemory::compute_content_hash(&content);
+    let content_hash = BaseMemory::compute_content_hash(&content).unwrap();
     BaseMemory {
         id: id.to_string(),
         memory_type: mem_type,
@@ -118,7 +118,10 @@ fn stress_citation_all_files_present_and_fresh() {
 
     let all_present = |path: &str| -> Option<citation::FileInfo> {
         // Extract the hash from the path to match.
-        let idx = path.chars().filter(|c| c.is_ascii_digit()).collect::<String>();
+        let idx = path
+            .chars()
+            .filter(|c| c.is_ascii_digit())
+            .collect::<String>();
         Some(citation::FileInfo {
             content_hash: Some(format!("hash_{idx}")),
             total_lines: Some(100),
@@ -196,7 +199,8 @@ fn stress_contradiction_detection_100_pairs() {
     assert!(
         detected >= 50,
         "Expected >= 50% contradiction detection for always/never pairs, got {}/{}",
-        detected, total
+        detected,
+        total
     );
 }
 
@@ -227,7 +231,8 @@ fn stress_no_false_contradictions_unrelated() {
     assert!(
         false_positives < 10,
         "Too many false contradictions for unrelated memories: {}/{}",
-        false_positives, total
+        false_positives,
+        total
     );
 }
 
@@ -264,14 +269,21 @@ fn stress_full_validation_with_contradictions() {
 
     let target = make_memory("target", "Always use async for IO", MemoryType::Semantic);
     let contradicting = make_memory("contra", "Never use async for IO", MemoryType::Semantic);
-    let supporting = make_memory("support", "Async IO improves throughput", MemoryType::Semantic);
+    let supporting = make_memory(
+        "support",
+        "Async IO improves throughput",
+        MemoryType::Semantic,
+    );
 
     let related = vec![contradicting, supporting];
 
     let no_files = |_: &str| -> Option<citation::FileInfo> { None };
     let no_renames = |_: &str| -> Option<String> { None };
     let all_patterns = |_: &str| -> pattern_alignment::PatternInfo {
-        pattern_alignment::PatternInfo { exists: true, confidence: None }
+        pattern_alignment::PatternInfo {
+            exists: true,
+            confidence: None,
+        }
     };
 
     let ctx = ValidationContext {
@@ -319,7 +331,11 @@ fn stress_validate_archived_memory() {
 #[test]
 fn stress_validate_with_many_patterns() {
     let engine = ValidationEngine::default();
-    let mut mem = make_memory("many-patterns", "Memory with patterns", MemoryType::Semantic);
+    let mut mem = make_memory(
+        "many-patterns",
+        "Memory with patterns",
+        MemoryType::Semantic,
+    );
     for i in 0..50 {
         mem.linked_patterns.push(PatternLink {
             pattern_id: format!("pat-{i}"),

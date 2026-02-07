@@ -43,7 +43,9 @@ pub fn reconstruct_at(
             if events.is_empty() {
                 Ok(Some(base_state))
             } else {
-                Ok(Some(event_store::replay::replay_events(&events, base_state)))
+                Ok(Some(event_store::replay::replay_events(
+                    &events, base_state,
+                )))
             }
         }
         None => {
@@ -69,9 +71,7 @@ pub fn reconstruct_all_at(
     // Get all distinct memory_ids that had events before target_time
     let memory_ids = readers.with_conn(|conn| {
         let mut stmt = conn
-            .prepare(
-                "SELECT DISTINCT memory_id FROM memory_events WHERE recorded_at <= ?1",
-            )
+            .prepare("SELECT DISTINCT memory_id FROM memory_events WHERE recorded_at <= ?1")
             .map_err(|e| cortex_storage::to_storage_err(e.to_string()))?;
 
         let rows = stmt

@@ -56,8 +56,10 @@ pub fn execute_diff(conn: &Connection, query: &TemporalDiffQuery) -> CortexResul
     let state_b = temporal_ops::get_memories_valid_at(conn, later, later)?;
 
     // Build maps for efficient lookup
-    let map_a: HashMap<String, BaseMemory> = state_a.into_iter().map(|m| (m.id.clone(), m)).collect();
-    let map_b: HashMap<String, BaseMemory> = state_b.into_iter().map(|m| (m.id.clone(), m)).collect();
+    let map_a: HashMap<String, BaseMemory> =
+        state_a.into_iter().map(|m| (m.id.clone(), m)).collect();
+    let map_b: HashMap<String, BaseMemory> =
+        state_b.into_iter().map(|m| (m.id.clone(), m)).collect();
 
     // Classify changes (always computed as earlier→later internally)
     let mut created = Vec::new();
@@ -104,7 +106,8 @@ pub fn execute_diff(conn: &Connection, query: &TemporalDiffQuery) -> CortexResul
             // events record intermediate changes (e.g., confidence was changed
             // and the current row already reflects the final state).
             if delta.abs() <= 0.2 {
-                if let Ok(shifts) = extract_confidence_shifts_from_events(conn, &id, earlier, later) {
+                if let Ok(shifts) = extract_confidence_shifts_from_events(conn, &id, earlier, later)
+                {
                     confidence_shifts.extend(shifts);
                 }
             }
@@ -129,15 +132,14 @@ pub fn execute_diff(conn: &Connection, query: &TemporalDiffQuery) -> CortexResul
     }
 
     // Apply scope filter (DiffScope::All, Types, Files, Namespace)
-    let (created, archived, modified, confidence_shifts, reclassifications) =
-        apply_scope_filter(
-            &query.scope,
-            created,
-            archived,
-            modified,
-            confidence_shifts,
-            reclassifications,
-        );
+    let (created, archived, modified, confidence_shifts, reclassifications) = apply_scope_filter(
+        &query.scope,
+        created,
+        archived,
+        modified,
+        confidence_shifts,
+        reclassifications,
+    );
 
     // Compute stats — use the maps oriented to the query direction
     let stats = if reversed {
@@ -177,17 +179,22 @@ fn extract_confidence_shifts_from_events(
              AND event_type = 'confidence_changed' \
              ORDER BY recorded_at ASC",
         )
-        .map_err(|e| cortex_core::CortexError::TemporalError(
-            cortex_core::errors::TemporalError::EventAppendFailed(e.to_string()),
-        ))?;
+        .map_err(|e| {
+            cortex_core::CortexError::TemporalError(
+                cortex_core::errors::TemporalError::EventAppendFailed(e.to_string()),
+            )
+        })?;
 
     let rows = stmt
-        .query_map(rusqlite::params![memory_id, earlier_str, later_str], |row| {
-            row.get::<_, String>(0)
-        })
-        .map_err(|e| cortex_core::CortexError::TemporalError(
-            cortex_core::errors::TemporalError::EventAppendFailed(e.to_string()),
-        ))?;
+        .query_map(
+            rusqlite::params![memory_id, earlier_str, later_str],
+            |row| row.get::<_, String>(0),
+        )
+        .map_err(|e| {
+            cortex_core::CortexError::TemporalError(
+                cortex_core::errors::TemporalError::EventAppendFailed(e.to_string()),
+            )
+        })?;
 
     let mut shifts = Vec::new();
     for delta_str in rows.flatten() {
@@ -206,7 +213,6 @@ fn extract_confidence_shifts_from_events(
 
     Ok(shifts)
 }
-
 
 fn empty_diff() -> TemporalDiff {
     TemporalDiff {
@@ -335,7 +341,13 @@ fn apply_scope_filter(
     reclassifications: Vec<Reclassification>,
 ) -> FilteredDiff {
     match scope {
-        DiffScope::All => (created, archived, modified, confidence_shifts, reclassifications),
+        DiffScope::All => (
+            created,
+            archived,
+            modified,
+            confidence_shifts,
+            reclassifications,
+        ),
         DiffScope::Types(types) => {
             let created = created
                 .into_iter()
@@ -347,7 +359,13 @@ fn apply_scope_filter(
                 .collect();
             // For modifications, we can't easily filter by type without the memory,
             // so we keep all modifications for now
-            (created, archived, modified, confidence_shifts, reclassifications)
+            (
+                created,
+                archived,
+                modified,
+                confidence_shifts,
+                reclassifications,
+            )
         }
         DiffScope::Files(files) => {
             let has_file = |m: &BaseMemory| {
@@ -357,12 +375,24 @@ fn apply_scope_filter(
             };
             let created = created.into_iter().filter(|m| has_file(m)).collect();
             let archived = archived.into_iter().filter(|m| has_file(m)).collect();
-            (created, archived, modified, confidence_shifts, reclassifications)
+            (
+                created,
+                archived,
+                modified,
+                confidence_shifts,
+                reclassifications,
+            )
         }
         DiffScope::Namespace(_ns) => {
             // Namespace filtering is for multi-agent support (Phase D+)
             // For now, return all results
-            (created, archived, modified, confidence_shifts, reclassifications)
+            (
+                created,
+                archived,
+                modified,
+                confidence_shifts,
+                reclassifications,
+            )
         }
     }
 }

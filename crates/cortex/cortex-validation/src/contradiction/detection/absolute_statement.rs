@@ -37,9 +37,7 @@ pub fn detect(a: &BaseMemory, b: &BaseMemory) -> Option<Contradiction> {
     let b_text = &b.summary;
 
     // Check: A says "always" and B says "never" (or vice versa) about similar topics.
-    if let (Some(a_match), Some(b_match)) =
-        (ALWAYS_RE.find(a_text), NEVER_RE.find(b_text))
-    {
+    if let (Some(a_match), Some(b_match)) = (ALWAYS_RE.find(a_text), NEVER_RE.find(b_text)) {
         let a_topic = extract_topic(a_text, &a_match);
         let b_topic = extract_topic(b_text, &b_match);
         if topics_overlap(&a_topic, &b_topic) {
@@ -57,9 +55,7 @@ pub fn detect(a: &BaseMemory, b: &BaseMemory) -> Option<Contradiction> {
     }
 
     // Check the reverse: A says "never" and B says "always".
-    if let (Some(a_match), Some(b_match)) =
-        (NEVER_RE.find(a_text), ALWAYS_RE.find(b_text))
-    {
+    if let (Some(a_match), Some(b_match)) = (NEVER_RE.find(a_text), ALWAYS_RE.find(b_text)) {
         let a_topic = extract_topic(a_text, &a_match);
         let b_topic = extract_topic(b_text, &b_match);
         if topics_overlap(&a_topic, &b_topic) {
@@ -88,10 +84,7 @@ fn topics_overlap(a: &str, b: &str) -> bool {
         return false;
     }
 
-    let overlap = a_words
-        .iter()
-        .filter(|w| b_words.contains(w))
-        .count();
+    let overlap = a_words.iter().filter(|w| b_words.contains(w)).count();
 
     let min_len = a_words.len().min(b_words.len());
     // At least 30% word overlap.

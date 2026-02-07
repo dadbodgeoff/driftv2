@@ -62,9 +62,9 @@ pub fn enrich_query(text: &str) -> String {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use cortex_core::memory::*;
-    use cortex_core::memory::links::{FileLink, PatternLink};
     use chrono::Utc;
+    use cortex_core::memory::links::{FileLink, PatternLink};
+    use cortex_core::memory::*;
 
     fn make_memory() -> BaseMemory {
         BaseMemory {

@@ -69,14 +69,16 @@ fn synonym_expand_multiple_terms() {
 
 #[test]
 fn hyde_fix_bug_intent() {
-    let doc = cortex_retrieval::expansion::hyde::generate_hypothetical("null pointer", Intent::FixBug);
+    let doc =
+        cortex_retrieval::expansion::hyde::generate_hypothetical("null pointer", Intent::FixBug);
     assert!(doc.contains("Bug fix"));
     assert!(doc.contains("null pointer"));
 }
 
 #[test]
 fn hyde_add_feature_intent() {
-    let doc = cortex_retrieval::expansion::hyde::generate_hypothetical("auth module", Intent::AddFeature);
+    let doc =
+        cortex_retrieval::expansion::hyde::generate_hypothetical("auth module", Intent::AddFeature);
     assert!(doc.contains("Feature implementation"));
 }
 
@@ -100,7 +102,7 @@ fn expand_query_produces_both_fields() {
 #[test]
 fn rrf_fuse_empty_lists() {
     let memories: HashMap<String, BaseMemory> = HashMap::new();
-    let result = cortex_retrieval::search::rrf_fusion::fuse(&[], &memories, 60);
+    let result = cortex_retrieval::search::rrf_fusion::fuse(None, None, None, &memories, 60);
     assert!(result.is_empty());
 }
 
@@ -113,7 +115,7 @@ fn rrf_fuse_single_list() {
     memories.insert("m2".to_string(), m2);
 
     let list = vec![("m1".to_string(), 1), ("m2".to_string(), 2)];
-    let result = cortex_retrieval::search::rrf_fusion::fuse(&[list], &memories, 60);
+    let result = cortex_retrieval::search::rrf_fusion::fuse(Some(&list), None, None, &memories, 60);
     assert_eq!(result.len(), 2);
     // m1 at rank 1 should score higher than m2 at rank 2.
     assert!(result[0].rrf_score >= result[1].rrf_score);
@@ -129,7 +131,8 @@ fn rrf_fuse_multiple_lists_boosts_overlap() {
 
     let list1 = vec![("m1".to_string(), 1), ("m2".to_string(), 2)];
     let list2 = vec![("m1".to_string(), 1)]; // m1 appears in both.
-    let result = cortex_retrieval::search::rrf_fusion::fuse(&[list1, list2], &memories, 60);
+    let result =
+        cortex_retrieval::search::rrf_fusion::fuse(Some(&list1), Some(&list2), None, &memories, 60);
     assert_eq!(result[0].memory.id, "m1"); // m1 should be ranked first.
 }
 
@@ -138,8 +141,14 @@ fn rrf_fuse_multiple_lists_boosts_overlap() {
 #[test]
 fn scorer_default_weights_sum_to_one() {
     let w = cortex_retrieval::ranking::scorer::ScorerWeights::default();
-    let sum = w.semantic_similarity + w.keyword_match + w.file_proximity
-        + w.pattern_alignment + w.recency + w.confidence + w.importance + w.intent_type_match;
+    let sum = w.semantic_similarity
+        + w.keyword_match
+        + w.file_proximity
+        + w.pattern_alignment
+        + w.recency
+        + w.confidence
+        + w.importance
+        + w.intent_type_match;
     assert!((sum - 1.0).abs() < 0.01);
 }
 
@@ -150,6 +159,9 @@ fn scorer_scores_candidates() {
     let candidates = vec![RrfCandidate {
         memory: m1,
         rrf_score: 0.5,
+        fts5_rank: Some(0),
+        vector_rank: Some(0),
+        entity_rank: None,
     }];
     let weights = cortex_retrieval::ranking::scorer::ScorerWeights::default();
     let intent_engine = IntentEngine::new();
@@ -177,8 +189,20 @@ fn scorer_file_proximity_boosts_score() {
     let m2 = make_memory("fp2", "no files", MemoryType::Semantic);
 
     let candidates = vec![
-        RrfCandidate { memory: m1, rrf_score: 0.5 },
-        RrfCandidate { memory: m2, rrf_score: 0.5 },
+        RrfCandidate {
+            memory: m1,
+            rrf_score: 0.5,
+            fts5_rank: Some(0),
+            vector_rank: Some(0),
+            entity_rank: None,
+        },
+        RrfCandidate {
+            memory: m2,
+            rrf_score: 0.5,
+            fts5_rank: None,
+            vector_rank: Some(1),
+            entity_rank: None,
+        },
     ];
     let weights = cortex_retrieval::ranking::scorer::ScorerWeights::default();
     let intent_engine = IntentEngine::new();
@@ -201,13 +225,19 @@ fn scorer_file_proximity_boosts_score() {
 fn dedup_removes_sent_ids() {
     use cortex_retrieval::ranking::scorer::ScoredCandidate;
     let candidates = vec![
-        ScoredCandidate { memory: make_memory("d1", "a", MemoryType::Semantic), score: 0.9, rrf_score: 0.5 },
-        ScoredCandidate { memory: make_memory("d2", "b", MemoryType::Semantic), score: 0.8, rrf_score: 0.4 },
+        ScoredCandidate {
+            memory: make_memory("d1", "a", MemoryType::Semantic),
+            score: 0.9,
+            rrf_score: 0.5,
+        },
+        ScoredCandidate {
+            memory: make_memory("d2", "b", MemoryType::Semantic),
+            score: 0.8,
+            rrf_score: 0.4,
+        },
     ];
-    let result = cortex_retrieval::ranking::deduplication::deduplicate(
-        candidates,
-        &["d1".to_string()],
-    );
+    let result =
+        cortex_retrieval::ranking::deduplication::deduplicate(candidates, &["d1".to_string()]);
     assert_eq!(result.len(), 1);
     assert_eq!(result[0].memory.id, "d2");
 }
@@ -216,8 +246,16 @@ fn dedup_removes_sent_ids() {
 fn dedup_removes_duplicate_ids() {
     use cortex_retrieval::ranking::scorer::ScoredCandidate;
     let candidates = vec![
-        ScoredCandidate { memory: make_memory("d3", "a", MemoryType::Semantic), score: 0.9, rrf_score: 0.5 },
-        ScoredCandidate { memory: make_memory("d3", "a dup", MemoryType::Semantic), score: 0.7, rrf_score: 0.3 },
+        ScoredCandidate {
+            memory: make_memory("d3", "a", MemoryType::Semantic),
+            score: 0.9,
+            rrf_score: 0.5,
+        },
+        ScoredCandidate {
+            memory: make_memory("d3", "a dup", MemoryType::Semantic),
+            score: 0.7,
+            rrf_score: 0.3,
+        },
     ];
     let result = cortex_retrieval::ranking::deduplication::deduplicate(candidates, &[]);
     assert_eq!(result.len(), 1);
@@ -229,9 +267,12 @@ fn dedup_removes_duplicate_ids() {
 #[test]
 fn reranker_passthrough() {
     use cortex_retrieval::ranking::scorer::ScoredCandidate;
-    let candidates = vec![
-        ScoredCandidate { memory: make_memory("rr1", "a", MemoryType::Semantic), score: 0.9, rrf_score: 0.5 },
-    ];
+    let candidates = vec![ScoredCandidate {
+        memory: make_memory("rr1", "a", MemoryType::Semantic),
+        score: 0.9,
+        rrf_score: 0.5,
+    }];
+    // Without the `reranker` feature, rerank is a no-op passthrough.
     let result = cortex_retrieval::ranking::reranker::rerank(candidates, 10);
     assert_eq!(result.len(), 1);
 }
@@ -278,8 +319,16 @@ fn aggregator_empty() {
 fn aggregator_dedup_same_message() {
     use cortex_retrieval::why::aggregator::WarningSeverity;
     let warnings = vec![
-        ("Stale pattern".to_string(), WarningSeverity::Low, "m1".to_string()),
-        ("Stale pattern".to_string(), WarningSeverity::High, "m2".to_string()),
+        (
+            "Stale pattern".to_string(),
+            WarningSeverity::Low,
+            "m1".to_string(),
+        ),
+        (
+            "Stale pattern".to_string(),
+            WarningSeverity::High,
+            "m2".to_string(),
+        ),
     ];
     let result = cortex_retrieval::why::aggregator::aggregate(warnings);
     assert_eq!(result.len(), 1);
@@ -291,9 +340,21 @@ fn aggregator_dedup_same_message() {
 fn aggregator_sorts_by_severity() {
     use cortex_retrieval::why::aggregator::WarningSeverity;
     let warnings = vec![
-        ("Low warning".to_string(), WarningSeverity::Low, "m1".to_string()),
-        ("Critical warning".to_string(), WarningSeverity::Critical, "m2".to_string()),
-        ("Medium warning".to_string(), WarningSeverity::Medium, "m3".to_string()),
+        (
+            "Low warning".to_string(),
+            WarningSeverity::Low,
+            "m1".to_string(),
+        ),
+        (
+            "Critical warning".to_string(),
+            WarningSeverity::Critical,
+            "m2".to_string(),
+        ),
+        (
+            "Medium warning".to_string(),
+            WarningSeverity::Medium,
+            "m3".to_string(),
+        ),
     ];
     let result = cortex_retrieval::why::aggregator::aggregate(warnings);
     assert_eq!(result[0].severity, WarningSeverity::Critical);
@@ -316,8 +377,8 @@ fn provenance_empty_context() {
 
 #[test]
 fn provenance_generates_tags() {
-    use cortex_core::models::{GenerationContext, BudgetAllocation, CompressedMemory};
     use cortex_core::memory::Importance;
+    use cortex_core::models::{BudgetAllocation, CompressedMemory, GenerationContext};
     let ctx = GenerationContext {
         allocations: vec![BudgetAllocation {
             category: "patterns".to_string(),
@@ -343,8 +404,8 @@ fn provenance_generates_tags() {
 
 #[test]
 fn provenance_inline_comments() {
-    use cortex_core::models::{GenerationContext, BudgetAllocation, CompressedMemory};
     use cortex_core::memory::Importance;
+    use cortex_core::models::{BudgetAllocation, CompressedMemory, GenerationContext};
     let ctx = GenerationContext {
         allocations: vec![BudgetAllocation {
             category: "tribal".to_string(),
@@ -374,4 +435,131 @@ fn ranking_pipeline_default() {
     let pipeline = cortex_retrieval::RankingPipeline::default();
     // Just ensure it doesn't panic.
     let _ = pipeline;
+}
+
+// ─── Issue 1: RRF Provenance & Real Keyword Factor ──────────────────────────
+
+#[test]
+fn rrf_fuse_preserves_fts5_rank() {
+    let m1 = make_memory("m1", "first", MemoryType::Semantic);
+    let mut memories = HashMap::new();
+    memories.insert("m1".to_string(), m1);
+
+    let fts5 = vec![("m1".to_string(), 3)];
+    let result = cortex_retrieval::search::rrf_fusion::fuse(Some(&fts5), None, None, &memories, 60);
+    assert_eq!(result.len(), 1);
+    assert_eq!(result[0].fts5_rank, Some(3));
+    assert_eq!(result[0].vector_rank, None);
+    assert_eq!(result[0].entity_rank, None);
+}
+
+#[test]
+fn rrf_fuse_preserves_all_source_ranks() {
+    let m1 = make_memory("m1", "multi-source", MemoryType::Semantic);
+    let mut memories = HashMap::new();
+    memories.insert("m1".to_string(), m1);
+
+    let fts5 = vec![("m1".to_string(), 0)];
+    let vector = vec![("m1".to_string(), 2)];
+    let entity = vec![("m1".to_string(), 5)];
+    let result = cortex_retrieval::search::rrf_fusion::fuse(
+        Some(&fts5),
+        Some(&vector),
+        Some(&entity),
+        &memories,
+        60,
+    );
+    assert_eq!(result.len(), 1);
+    assert_eq!(result[0].fts5_rank, Some(0));
+    assert_eq!(result[0].vector_rank, Some(2));
+    assert_eq!(result[0].entity_rank, Some(5));
+    // Score should be sum of 3 RRF contributions.
+    assert!(result[0].rrf_score > 1.0 / 61.0); // More than a single source.
+}
+
+#[test]
+fn rrf_fuse_partial_source_coverage() {
+    let m1 = make_memory("m1", "fts only", MemoryType::Semantic);
+    let m2 = make_memory("m2", "vector only", MemoryType::Semantic);
+    let mut memories = HashMap::new();
+    memories.insert("m1".to_string(), m1);
+    memories.insert("m2".to_string(), m2);
+
+    let fts5 = vec![("m1".to_string(), 0)];
+    let vector = vec![("m2".to_string(), 0)];
+    let result =
+        cortex_retrieval::search::rrf_fusion::fuse(Some(&fts5), Some(&vector), None, &memories, 60);
+    assert_eq!(result.len(), 2);
+
+    let m1_candidate = result.iter().find(|c| c.memory.id == "m1").unwrap();
+    let m2_candidate = result.iter().find(|c| c.memory.id == "m2").unwrap();
+
+    assert_eq!(m1_candidate.fts5_rank, Some(0));
+    assert_eq!(m1_candidate.vector_rank, None);
+    assert_eq!(m2_candidate.fts5_rank, None);
+    assert_eq!(m2_candidate.vector_rank, Some(0));
+}
+
+#[test]
+fn scorer_keyword_factor_is_independent_of_semantic() {
+    use cortex_retrieval::search::rrf_fusion::RrfCandidate;
+
+    // Two candidates with same RRF score but different FTS5 ranks.
+    let m1 = make_memory("kw1", "has fts5 match", MemoryType::Semantic);
+    let m2 = make_memory("kw2", "no fts5 match", MemoryType::Semantic);
+
+    let candidates = vec![
+        RrfCandidate {
+            memory: m1,
+            rrf_score: 0.5,
+            fts5_rank: Some(0),
+            vector_rank: None,
+            entity_rank: None,
+        },
+        RrfCandidate {
+            memory: m2,
+            rrf_score: 0.5,
+            fts5_rank: None,
+            vector_rank: Some(0),
+            entity_rank: None,
+        },
+    ];
+
+    let weights = cortex_retrieval::ranking::scorer::ScorerWeights::default();
+    let intent_engine = IntentEngine::new();
+    let scored = cortex_retrieval::ranking::scorer::score(
+        &candidates,
+        Intent::Investigate,
+        &[],
+        &intent_engine,
+        &weights,
+    );
+
+    let kw1 = scored.iter().find(|s| s.memory.id == "kw1").unwrap();
+    let kw2 = scored.iter().find(|s| s.memory.id == "kw2").unwrap();
+
+    // The candidate with FTS5 rank should score differently from the one without,
+    // proving the keyword factor is now independent.
+    assert_ne!(
+        (kw1.score * 1000.0).round(),
+        (kw2.score * 1000.0).round(),
+        "keyword factor should create score difference"
+    );
+}
+
+#[test]
+fn scorer_weights_still_sum_to_one() {
+    let w = cortex_retrieval::ranking::scorer::ScorerWeights::default();
+    let sum = w.semantic_similarity
+        + w.keyword_match
+        + w.file_proximity
+        + w.pattern_alignment
+        + w.recency
+        + w.confidence
+        + w.importance
+        + w.intent_type_match;
+    assert!(
+        (sum - 1.0).abs() < 0.01,
+        "weights must sum to 1.0, got {sum}"
+    );
 }

@@ -22,14 +22,14 @@ pub struct RawEvent {
 
 /// Event parameters for batch insertion.
 pub type EventParams<'a> = (
-    &'a str,        // memory_id
-    &'a str,        // recorded_at
-    &'a str,        // event_type
-    &'a str,        // delta
-    &'a str,        // actor_type
-    &'a str,        // actor_id
+    &'a str,         // memory_id
+    &'a str,         // recorded_at
+    &'a str,         // event_type
+    &'a str,         // delta
+    &'a str,         // actor_type
+    &'a str,         // actor_id
     Option<&'a str>, // caused_by
-    u16,            // schema_version
+    u16,             // schema_version
 );
 
 /// Insert a single event. Returns the assigned event_id.
@@ -67,10 +67,7 @@ pub fn insert_event(
 }
 
 /// Insert a batch of events in a single transaction. Returns assigned event_ids.
-pub fn insert_event_batch(
-    conn: &Connection,
-    events: &[EventParams<'_>],
-) -> CortexResult<Vec<u64>> {
+pub fn insert_event_batch(conn: &Connection, events: &[EventParams<'_>]) -> CortexResult<Vec<u64>> {
     let mut ids = Vec::with_capacity(events.len());
     for &(memory_id, recorded_at, event_type, delta, actor_type, actor_id, caused_by, sv) in events
     {
@@ -114,7 +111,9 @@ pub fn get_events_for_memory(
         ),
     };
 
-    let mut stmt = conn.prepare(&sql).map_err(|e| to_storage_err(e.to_string()))?;
+    let mut stmt = conn
+        .prepare(&sql)
+        .map_err(|e| to_storage_err(e.to_string()))?;
     let params_refs: Vec<&dyn rusqlite::types::ToSql> =
         params_vec.iter().map(|p| p.as_ref()).collect();
 
@@ -127,11 +126,7 @@ pub fn get_events_for_memory(
 }
 
 /// Get events in a time range across all memories.
-pub fn get_events_in_range(
-    conn: &Connection,
-    from: &str,
-    to: &str,
-) -> CortexResult<Vec<RawEvent>> {
+pub fn get_events_in_range(conn: &Connection, from: &str, to: &str) -> CortexResult<Vec<RawEvent>> {
     let mut stmt = conn
         .prepare(
             "SELECT event_id, memory_id, recorded_at, event_type, delta, actor_type, actor_id, caused_by, schema_version
@@ -172,7 +167,9 @@ pub fn get_events_by_type(
         ),
     };
 
-    let mut stmt = conn.prepare(&sql).map_err(|e| to_storage_err(e.to_string()))?;
+    let mut stmt = conn
+        .prepare(&sql)
+        .map_err(|e| to_storage_err(e.to_string()))?;
     let params_refs: Vec<&dyn rusqlite::types::ToSql> =
         params_vec.iter().map(|p| p.as_ref()).collect();
 
@@ -224,7 +221,9 @@ pub fn get_events_after_id(
         ),
     };
 
-    let mut stmt = conn.prepare(&sql).map_err(|e| to_storage_err(e.to_string()))?;
+    let mut stmt = conn
+        .prepare(&sql)
+        .map_err(|e| to_storage_err(e.to_string()))?;
     let params_refs: Vec<&dyn rusqlite::types::ToSql> =
         params_vec.iter().map(|p| p.as_ref()).collect();
 

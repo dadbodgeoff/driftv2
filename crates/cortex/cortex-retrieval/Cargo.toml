@@ -17,6 +17,10 @@ serde = { workspace = true }
 serde_json = { workspace = true }
 toml = { workspace = true }
 tracing = { workspace = true }
+fastembed = { version = "5", optional = true }
+
+[features]
+reranker = ["fastembed"]
 
 [dev-dependencies]
 proptest = { workspace = true }

@@ -64,8 +64,7 @@ pub fn evaluate_triggers(signals: &TriggerSignals) -> Vec<TriggerReason> {
     }
 
     if signals.total_memory_count > 0 {
-        let density =
-            signals.contradiction_count as f64 / signals.total_memory_count as f64;
+        let density = signals.contradiction_count as f64 / signals.total_memory_count as f64;
         if density > CONTRADICTION_DENSITY_THRESHOLD {
             reasons.push(TriggerReason::ContradictionDensity);
         }

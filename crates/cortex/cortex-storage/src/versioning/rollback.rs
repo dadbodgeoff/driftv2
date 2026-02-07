@@ -16,8 +16,8 @@ pub fn rollback_to_version(
     memory_id: &str,
     target_version: i64,
 ) -> CortexResult<()> {
-    let version = version_ops::get_at_version(conn, memory_id, target_version)?
-        .ok_or_else(|| {
+    let version =
+        version_ops::get_at_version(conn, memory_id, target_version)?.ok_or_else(|| {
             to_storage_err(format!(
                 "version {target_version} not found for memory {memory_id}"
             ))

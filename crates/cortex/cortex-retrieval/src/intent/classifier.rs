@@ -6,21 +6,126 @@ use cortex_core::models::RetrievalContext;
 
 /// Keyword patterns mapped to intents.
 const INTENT_KEYWORDS: &[(Intent, &[&str])] = &[
-    (Intent::FixBug, &["fix", "bug", "error", "crash", "broken", "issue", "debug", "failing", "exception"]),
-    (Intent::AddFeature, &["add", "feature", "implement", "create", "build", "new"]),
-    (Intent::Refactor, &["refactor", "clean", "restructure", "simplify", "extract", "rename", "move"]),
-    (Intent::SecurityAudit, &["security", "vulnerability", "audit", "cve", "injection", "xss", "csrf", "auth"]),
-    (Intent::UnderstandCode, &["understand", "explain", "how", "what", "why", "where", "trace", "flow"]),
-    (Intent::AddTest, &["test", "coverage", "spec", "assert", "mock", "fixture"]),
-    (Intent::ReviewCode, &["review", "pr", "pull request", "feedback", "approve", "comment"]),
-    (Intent::DeployMigrate, &["deploy", "migrate", "release", "rollback", "ci", "cd", "pipeline"]),
-    (Intent::Create, &["scaffold", "init", "bootstrap", "setup", "generate", "template"]),
-    (Intent::Investigate, &["investigate", "analyze", "diagnose", "root cause", "bisect"]),
-    (Intent::Decide, &["decide", "choose", "compare", "tradeoff", "pros", "cons", "alternative"]),
-    (Intent::Recall, &["remember", "recall", "last time", "previously", "before"]),
-    (Intent::Learn, &["learn", "tutorial", "guide", "documentation", "example"]),
-    (Intent::Summarize, &["summarize", "summary", "overview", "tldr", "recap"]),
-    (Intent::Compare, &["compare", "diff", "versus", "vs", "difference"]),
+    (
+        Intent::FixBug,
+        &[
+            "fix",
+            "bug",
+            "error",
+            "crash",
+            "broken",
+            "issue",
+            "debug",
+            "failing",
+            "exception",
+        ],
+    ),
+    (
+        Intent::AddFeature,
+        &["add", "feature", "implement", "create", "build", "new"],
+    ),
+    (
+        Intent::Refactor,
+        &[
+            "refactor",
+            "clean",
+            "restructure",
+            "simplify",
+            "extract",
+            "rename",
+            "move",
+        ],
+    ),
+    (
+        Intent::SecurityAudit,
+        &[
+            "security",
+            "vulnerability",
+            "audit",
+            "cve",
+            "injection",
+            "xss",
+            "csrf",
+            "auth",
+        ],
+    ),
+    (
+        Intent::UnderstandCode,
+        &[
+            "understand",
+            "explain",
+            "how",
+            "what",
+            "why",
+            "where",
+            "trace",
+            "flow",
+        ],
+    ),
+    (
+        Intent::AddTest,
+        &["test", "coverage", "spec", "assert", "mock", "fixture"],
+    ),
+    (
+        Intent::ReviewCode,
+        &[
+            "review",
+            "pr",
+            "pull request",
+            "feedback",
+            "approve",
+            "comment",
+        ],
+    ),
+    (
+        Intent::DeployMigrate,
+        &[
+            "deploy", "migrate", "release", "rollback", "ci", "cd", "pipeline",
+        ],
+    ),
+    (
+        Intent::Create,
+        &[
+            "scaffold",
+            "init",
+            "bootstrap",
+            "setup",
+            "generate",
+            "template",
+        ],
+    ),
+    (
+        Intent::Investigate,
+        &["investigate", "analyze", "diagnose", "root cause", "bisect"],
+    ),
+    (
+        Intent::Decide,
+        &[
+            "decide",
+            "choose",
+            "compare",
+            "tradeoff",
+            "pros",
+            "cons",
+            "alternative",
+        ],
+    ),
+    (
+        Intent::Recall,
+        &["remember", "recall", "last time", "previously", "before"],
+    ),
+    (
+        Intent::Learn,
+        &["learn", "tutorial", "guide", "documentation", "example"],
+    ),
+    (
+        Intent::Summarize,
+        &["summarize", "summary", "overview", "tldr", "recap"],
+    ),
+    (
+        Intent::Compare,
+        &["compare", "diff", "versus", "vs", "difference"],
+    ),
 ];
 
 /// File extension heuristics for intent classification.

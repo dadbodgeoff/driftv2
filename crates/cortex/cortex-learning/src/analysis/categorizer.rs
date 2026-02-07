@@ -42,8 +42,17 @@ pub fn categorize(correction_text: &str, context: &str) -> CorrectionCategory {
     if contains_any(
         &text,
         &[
-            "security", "vulnerab", "injection", "xss", "csrf", "auth",
-            "password", "secret", "credential", "sanitiz", "escape",
+            "security",
+            "vulnerab",
+            "injection",
+            "xss",
+            "csrf",
+            "auth",
+            "password",
+            "secret",
+            "credential",
+            "sanitiz",
+            "escape",
         ],
     ) {
         return CorrectionCategory::SecurityIssue;
@@ -53,8 +62,16 @@ pub fn categorize(correction_text: &str, context: &str) -> CorrectionCategory {
     if contains_any(
         &text,
         &[
-            "performance", "slow", "optimize", "cache", "memory leak",
-            "n+1", "batch", "lazy", "eager", "index",
+            "performance",
+            "slow",
+            "optimize",
+            "cache",
+            "memory leak",
+            "n+1",
+            "batch",
+            "lazy",
+            "eager",
+            "index",
         ],
     ) {
         return CorrectionCategory::PerformanceIssue;
@@ -64,8 +81,14 @@ pub fn categorize(correction_text: &str, context: &str) -> CorrectionCategory {
     if contains_any(
         &text,
         &[
-            "pattern", "anti-pattern", "design pattern", "solid",
-            "dry", "kiss", "yagni", "single responsibility",
+            "pattern",
+            "anti-pattern",
+            "design pattern",
+            "solid",
+            "dry",
+            "kiss",
+            "yagni",
+            "single responsibility",
         ],
     ) {
         return CorrectionCategory::PatternViolation;
@@ -75,8 +98,14 @@ pub fn categorize(correction_text: &str, context: &str) -> CorrectionCategory {
     if contains_any(
         &text,
         &[
-            "architecture", "layer", "module", "coupling", "cohesion",
-            "dependency", "circular", "separation of concerns",
+            "architecture",
+            "layer",
+            "module",
+            "coupling",
+            "cohesion",
+            "dependency",
+            "circular",
+            "separation of concerns",
         ],
     ) {
         return CorrectionCategory::ArchitectureMismatch;
@@ -86,8 +115,14 @@ pub fn categorize(correction_text: &str, context: &str) -> CorrectionCategory {
     if contains_any(
         &text,
         &[
-            "constraint", "invariant", "precondition", "postcondition",
-            "assert", "validation", "boundary", "limit",
+            "constraint",
+            "invariant",
+            "precondition",
+            "postcondition",
+            "assert",
+            "validation",
+            "boundary",
+            "limit",
         ],
     ) {
         return CorrectionCategory::ConstraintViolation;
@@ -97,8 +132,13 @@ pub fn categorize(correction_text: &str, context: &str) -> CorrectionCategory {
     if contains_any(
         &text,
         &[
-            "api", "deprecated", "wrong method", "incorrect usage",
-            "misuse", "wrong parameter", "wrong argument",
+            "api",
+            "deprecated",
+            "wrong method",
+            "incorrect usage",
+            "misuse",
+            "wrong parameter",
+            "wrong argument",
         ],
     ) {
         return CorrectionCategory::ApiMisuse;
@@ -108,8 +148,14 @@ pub fn categorize(correction_text: &str, context: &str) -> CorrectionCategory {
     if contains_any(
         &text,
         &[
-            "naming", "name", "rename", "camelcase", "snake_case",
-            "convention", "prefix", "suffix",
+            "naming",
+            "name",
+            "rename",
+            "camelcase",
+            "snake_case",
+            "convention",
+            "prefix",
+            "suffix",
         ],
     ) {
         return CorrectionCategory::NamingConvention;
@@ -119,8 +165,15 @@ pub fn categorize(correction_text: &str, context: &str) -> CorrectionCategory {
     if contains_any(
         &text,
         &[
-            "style", "format", "indent", "spacing", "bracket",
-            "semicolon", "quote", "lint", "prettier",
+            "style",
+            "format",
+            "indent",
+            "spacing",
+            "bracket",
+            "semicolon",
+            "quote",
+            "lint",
+            "prettier",
         ],
     ) {
         return CorrectionCategory::StylePreference;
@@ -130,8 +183,14 @@ pub fn categorize(correction_text: &str, context: &str) -> CorrectionCategory {
     if contains_any(
         &text,
         &[
-            "tribal", "undocumented", "gotcha", "workaround",
-            "hack", "known issue", "legacy", "historical",
+            "tribal",
+            "undocumented",
+            "gotcha",
+            "workaround",
+            "hack",
+            "known issue",
+            "legacy",
+            "historical",
         ],
     ) {
         return CorrectionCategory::TribalMiss;

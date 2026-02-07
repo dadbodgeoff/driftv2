@@ -1,8 +1,8 @@
 //! Integration test: WAL recovery, backup restore.
 
 use chrono::Utc;
-use cortex_core::memory::*;
 use cortex_core::memory::types::*;
+use cortex_core::memory::*;
 use cortex_core::traits::IMemoryStorage;
 use cortex_storage::StorageEngine;
 
@@ -47,9 +47,11 @@ fn test_backup_and_restore() {
     engine.create(&make_memory("backup-2")).unwrap();
 
     // Create backup.
-    engine.pool().writer.with_conn_sync(|conn| {
-        cortex_storage::recovery::backup::create_backup(conn, &backup_path)
-    }).unwrap();
+    engine
+        .pool()
+        .writer
+        .with_conn_sync(|conn| cortex_storage::recovery::backup::create_backup(conn, &backup_path))
+        .unwrap();
 
     // Verify backup exists and is valid.
     let backup_engine = StorageEngine::open(&backup_path).unwrap();
@@ -61,11 +63,15 @@ fn test_backup_and_restore() {
 fn test_integrity_check() {
     let engine = StorageEngine::open_in_memory().unwrap();
 
-    engine.pool().writer.with_conn_sync(|conn| {
-        let ok = cortex_storage::recovery::integrity_check::check_integrity(conn)?;
-        assert!(ok, "integrity check should pass on fresh DB");
-        Ok(())
-    }).unwrap();
+    engine
+        .pool()
+        .writer
+        .with_conn_sync(|conn| {
+            let ok = cortex_storage::recovery::integrity_check::check_integrity(conn)?;
+            assert!(ok, "integrity check should pass on fresh DB");
+            Ok(())
+        })
+        .unwrap();
 }
 
 #[test]
@@ -74,9 +80,13 @@ fn test_wal_recovery() {
     let db_path = dir.path().join("wal_recovery.db");
     let engine = StorageEngine::open(&db_path).unwrap();
 
-    engine.pool().writer.with_conn_sync(|conn| {
-        let recovered = cortex_storage::recovery::wal_recovery::attempt_wal_recovery(conn)?;
-        assert!(recovered, "WAL recovery should succeed on healthy DB");
-        Ok(())
-    }).unwrap();
+    engine
+        .pool()
+        .writer
+        .with_conn_sync(|conn| {
+            let recovered = cortex_storage::recovery::wal_recovery::attempt_wal_recovery(conn)?;
+            assert!(recovered, "WAL recovery should succeed on healthy DB");
+            Ok(())
+        })
+        .unwrap();
 }

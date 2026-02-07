@@ -28,10 +28,7 @@ pub fn query_by_type(conn: &Connection, memory_type: MemoryType) -> CortexResult
 }
 
 /// Query memories with importance >= min.
-pub fn query_by_importance(
-    conn: &Connection,
-    min: Importance,
-) -> CortexResult<Vec<BaseMemory>> {
+pub fn query_by_importance(conn: &Connection, min: Importance) -> CortexResult<Vec<BaseMemory>> {
     let importance_values = match min {
         Importance::Low => vec!["low", "normal", "high", "critical"],
         Importance::Normal => vec!["normal", "high", "critical"],
@@ -39,7 +36,11 @@ pub fn query_by_importance(
         Importance::Critical => vec!["critical"],
     };
 
-    let placeholders: Vec<String> = importance_values.iter().enumerate().map(|(i, _)| format!("?{}", i + 1)).collect();
+    let placeholders: Vec<String> = importance_values
+        .iter()
+        .enumerate()
+        .map(|(i, _)| format!("?{}", i + 1))
+        .collect();
     let sql = format!(
         "SELECT id, memory_type, content, summary, transaction_time, valid_time,
                 valid_until, confidence, importance, last_accessed, access_count,
@@ -48,7 +49,9 @@ pub fn query_by_importance(
         placeholders.join(", ")
     );
 
-    let mut stmt = conn.prepare(&sql).map_err(|e| to_storage_err(e.to_string()))?;
+    let mut stmt = conn
+        .prepare(&sql)
+        .map_err(|e| to_storage_err(e.to_string()))?;
     let params: Vec<&dyn rusqlite::types::ToSql> = importance_values
         .iter()
         .map(|v| v as &dyn rusqlite::types::ToSql)

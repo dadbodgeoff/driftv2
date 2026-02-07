@@ -6,7 +6,10 @@ fn cortex_error_memory_not_found_carries_id() {
         id: "abc-123".into(),
     };
     let msg = err.to_string();
-    assert!(msg.contains("abc-123"), "error should contain the memory id");
+    assert!(
+        msg.contains("abc-123"),
+        "error should contain the memory id"
+    );
 }
 
 #[test]

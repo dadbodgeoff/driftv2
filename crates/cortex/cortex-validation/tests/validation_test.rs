@@ -3,9 +3,7 @@
 use chrono::{Duration, Utc};
 use cortex_core::memory::base::TypedContent;
 use cortex_core::memory::types::{EpisodicContent, SemanticContent};
-use cortex_core::memory::{
-    BaseMemory, Confidence, FileLink, Importance, MemoryType, PatternLink,
-};
+use cortex_core::memory::{BaseMemory, Confidence, FileLink, Importance, MemoryType, PatternLink};
 use cortex_core::models::ContradictionType;
 use cortex_validation::contradiction::consensus;
 use cortex_validation::contradiction::detection;
@@ -28,7 +26,7 @@ fn make_memory(id: &str, summary: &str, mem_type: MemoryType) -> BaseMemory {
             consolidation_confidence: 0.8,
         }),
     };
-    let content_hash = BaseMemory::compute_content_hash(&content);
+    let content_hash = BaseMemory::compute_content_hash(&content).unwrap();
     BaseMemory {
         id: id.to_string(),
         memory_type: mem_type,
@@ -101,7 +99,10 @@ fn citation_detects_content_drift() {
     let result = citation::validate(&mem, &checker, &rename);
     // File exists so it's partially valid, but hash mismatch should trigger healing.
     assert!(
-        result.healing_actions.iter().any(|a| a.description.contains("hash drift")),
+        result
+            .healing_actions
+            .iter()
+            .any(|a| a.description.contains("hash drift")),
         "Should flag content hash drift"
     );
 }
@@ -131,11 +132,22 @@ fn temporal_detects_expired_memory() {
 
 #[test]
 fn contradiction_detected_between_opposing_memories() {
-    let a = make_memory("m4a", "Always use bcrypt for password hashing", MemoryType::Semantic);
-    let b = make_memory("m4b", "Never use bcrypt for password hashing", MemoryType::Semantic);
+    let a = make_memory(
+        "m4a",
+        "Always use bcrypt for password hashing",
+        MemoryType::Semantic,
+    );
+    let b = make_memory(
+        "m4b",
+        "Never use bcrypt for password hashing",
+        MemoryType::Semantic,
+    );
 
     let result = detection::detect_all(&a, &b, None);
-    assert!(result.is_some(), "Should detect contradiction between 'always' and 'never'");
+    assert!(
+        result.is_some(),
+        "Should detect contradiction between 'always' and 'never'"
+    );
 
     let contradiction = result.unwrap();
     assert_eq!(contradiction.contradiction_type, ContradictionType::Direct);
@@ -190,12 +202,8 @@ fn confidence_propagation_ripples_correctly() {
         },
     ];
 
-    let adjustments = propagation::propagate(
-        &["m1".into()],
-        ContradictionType::Direct,
-        &edges,
-        None,
-    );
+    let adjustments =
+        propagation::propagate(&["m1".into()], ContradictionType::Direct, &edges, None);
 
     // m1 gets direct delta.
     let m1_adj = adjustments.iter().find(|a| a.memory_id == "m1").unwrap();
@@ -210,8 +218,9 @@ fn confidence_propagation_ripples_correctly() {
 
     // m3 gets further propagated delta (0.5× of m2's).
     let m3_adj = adjustments.iter().find(|a| a.memory_id == "m3").unwrap();
-    let expected_m3 =
-        propagation::DELTA_DIRECT * propagation::PROPAGATION_FACTOR * propagation::PROPAGATION_FACTOR;
+    let expected_m3 = propagation::DELTA_DIRECT
+        * propagation::PROPAGATION_FACTOR
+        * propagation::PROPAGATION_FACTOR;
     assert!(
         (m3_adj.delta - expected_m3).abs() < f64::EPSILON,
         "m3 delta should be {}, got {}",
@@ -273,7 +282,10 @@ fn pattern_alignment_detects_removed_pattern() {
     };
 
     let result = pattern_alignment::validate(&mem, &checker);
-    assert!(result.score < 1.0, "Score should be < 1.0 for missing pattern");
+    assert!(
+        result.score < 1.0,
+        "Score should be < 1.0 for missing pattern"
+    );
     assert!(
         !result.details[0].exists,
         "Pattern should be marked as not existing"

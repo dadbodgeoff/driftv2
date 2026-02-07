@@ -50,7 +50,10 @@ fn bench_rrf_100(c: &mut Criterion) {
     }
 
     let list1: Vec<(String, usize)> = (0..n).map(|i| (format!("mem-{i}"), i)).collect();
-    let list2: Vec<(String, usize)> = (0..n).rev().map(|i| (format!("mem-{i}"), n - 1 - i)).collect();
+    let list2: Vec<(String, usize)> = (0..n)
+        .rev()
+        .map(|i| (format!("mem-{i}"), n - 1 - i))
+        .collect();
 
     c.bench_function("rrf_fusion_100", |b| {
         b.iter(|| {
@@ -68,7 +71,10 @@ fn bench_rrf_10k(c: &mut Criterion) {
     }
 
     let list1: Vec<(String, usize)> = (0..n).map(|i| (format!("mem-{i}"), i)).collect();
-    let list2: Vec<(String, usize)> = (0..n).rev().map(|i| (format!("mem-{i}"), n - 1 - i)).collect();
+    let list2: Vec<(String, usize)> = (0..n)
+        .rev()
+        .map(|i| (format!("mem-{i}"), n - 1 - i))
+        .collect();
 
     c.bench_function("rrf_fusion_10k", |b| {
         b.iter(|| {

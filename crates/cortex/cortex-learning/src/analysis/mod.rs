@@ -4,6 +4,6 @@ pub mod categorizer;
 pub mod category_mapping;
 pub mod diff_analyzer;
 
-pub use categorizer::{CorrectionCategory, categorize};
-pub use category_mapping::{CategoryMapping, map_category};
-pub use diff_analyzer::{DiffAnalysis, analyze_diff};
+pub use categorizer::{categorize, CorrectionCategory};
+pub use category_mapping::{map_category, CategoryMapping};
+pub use diff_analyzer::{analyze_diff, DiffAnalysis};

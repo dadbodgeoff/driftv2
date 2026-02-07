@@ -12,7 +12,11 @@ fn stress_all_pii_types_detected() {
     let engine = PrivacyEngine::new();
 
     let pii_samples = [
-        ("email", "Contact john.doe@company.org for details", "[EMAIL]"),
+        (
+            "email",
+            "Contact john.doe@company.org for details",
+            "[EMAIL]",
+        ),
         ("phone_us", "Call (555) 123-4567 now", "[PHONE]"),
         ("ssn", "SSN: 123-45-6789", "[SSN]"),
         ("credit_card", "Card: 4111 1111 1111 1111", "[CREDIT_CARD]"),
@@ -24,7 +28,9 @@ fn stress_all_pii_types_detected() {
         assert!(
             result.text.contains(expected_placeholder),
             "PII type '{}' not detected in '{}' → '{}'",
-            name, input, result.text
+            name,
+            input,
+            result.text
         );
     }
 }
@@ -44,7 +50,8 @@ fn stress_all_secret_types_detected() {
         assert!(
             result.text.contains(expected_placeholder),
             "Secret type '{}' not detected → '{}'",
-            name, result.text
+            name,
+            result.text
         );
     }
 }
@@ -66,7 +73,8 @@ fn stress_idempotency_100_rounds() {
         let second = engine.sanitize(&first.text).unwrap();
 
         assert_eq!(
-            first.text, second.text,
+            first.text,
+            second.text,
             "Sanitization not idempotent for input starting with '{}'",
             &input[..30.min(input.len())]
         );
@@ -102,7 +110,8 @@ fn stress_false_positives_code_patterns() {
         assert!(
             redaction_count <= 1,
             "Too many false positives ({}) for safe input: '{}'",
-            redaction_count, input
+            redaction_count,
+            input
         );
     }
 }
@@ -128,7 +137,10 @@ fn stress_multiple_secrets_single_text() {
 
     // Original secrets should not appear in output.
     assert!(!result.text.contains("admin@company.org"), "Email leaked");
-    assert!(!result.text.contains("AKIAIOSFODNN7PRODUCE"), "AWS key leaked");
+    assert!(
+        !result.text.contains("AKIAIOSFODNN7PRODUCE"),
+        "AWS key leaked"
+    );
 }
 
 // ── Throughput ───────────────────────────────────────────────────────────
@@ -175,7 +187,10 @@ fn stress_very_long_text() {
     let engine = PrivacyEngine::new();
     // 10KB of text with a secret buried in the middle.
     let padding = "Normal text about software engineering. ".repeat(250);
-    let input = format!("{}Secret: AKIAIOSFODNN7PRODUCE buried here. {}", padding, padding);
+    let input = format!(
+        "{}Secret: AKIAIOSFODNN7PRODUCE buried here. {}",
+        padding, padding
+    );
 
     let start = Instant::now();
     let result = engine.sanitize(&input).unwrap();
@@ -206,8 +221,9 @@ fn stress_file_context_reduces_false_positives() {
 
     // Both should detect something, but context-aware might have fewer redactions
     // or lower confidence. At minimum, both should not crash.
-    assert!(result_no_ctx.redactions.len() >= result_with_ctx.redactions.len()
-        || result_with_ctx.redactions.len() <= result_no_ctx.redactions.len(),
+    assert!(
+        result_no_ctx.redactions.len() >= result_with_ctx.redactions.len()
+            || result_with_ctx.redactions.len() <= result_no_ctx.redactions.len(),
         "Context scoring should work without errors"
     );
 }

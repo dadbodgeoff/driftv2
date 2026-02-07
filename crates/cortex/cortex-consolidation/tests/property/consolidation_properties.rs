@@ -4,8 +4,8 @@ use proptest::prelude::*;
 
 use chrono::{Duration, Utc};
 use cortex_core::errors::CortexResult;
-use cortex_core::memory::*;
 use cortex_core::memory::types::EpisodicContent;
+use cortex_core::memory::*;
 use cortex_core::traits::{IConsolidator, IEmbeddingProvider};
 
 use cortex_consolidation::engine::ConsolidationEngine;
@@ -22,9 +22,15 @@ impl IEmbeddingProvider for TestEmbedder {
     fn embed_batch(&self, texts: &[String]) -> CortexResult<Vec<Vec<f32>>> {
         texts.iter().map(|t| self.embed(t)).collect()
     }
-    fn dimensions(&self) -> usize { 32 }
-    fn name(&self) -> &str { "test" }
-    fn is_available(&self) -> bool { true }
+    fn dimensions(&self) -> usize {
+        32
+    }
+    fn name(&self) -> &str {
+        "test"
+    }
+    fn is_available(&self) -> bool {
+        true
+    }
 }
 
 fn make_episodic(summary: &str, confidence: f64, access_count: u64) -> BaseMemory {
@@ -54,7 +60,7 @@ fn make_episodic(summary: &str, confidence: f64, access_count: u64) -> BaseMemor
         archived: false,
         superseded_by: None,
         supersedes: None,
-        content_hash: BaseMemory::compute_content_hash(&content),
+        content_hash: BaseMemory::compute_content_hash(&content).unwrap(),
     }
 }
 
@@ -139,7 +145,7 @@ proptest! {
             .collect();
 
         let result = phase4_abstraction::abstract_cluster(&refs, &embs);
-        let semantic = phase4_abstraction::build_semantic_memory(&result);
+        let semantic = phase4_abstraction::build_semantic_memory(&result).unwrap();
 
         let input_tags: std::collections::HashSet<&str> = memories
             .iter()
@@ -171,7 +177,7 @@ proptest! {
             .collect();
 
         let result = phase4_abstraction::abstract_cluster(&refs, &embs);
-        let semantic = phase4_abstraction::build_semantic_memory(&result);
+        let semantic = phase4_abstraction::build_semantic_memory(&result).unwrap();
 
         let input_total: usize = memories.iter().map(|m| m.summary.len()).sum();
         prop_assert!(semantic.summary.len() <= input_total);

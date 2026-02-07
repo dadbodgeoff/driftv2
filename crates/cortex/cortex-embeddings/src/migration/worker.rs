@@ -96,8 +96,8 @@ pub fn reembed_batch(
 #[cfg(test)]
 mod tests {
     use super::*;
-    use cortex_core::memory::*;
     use chrono::Utc;
+    use cortex_core::memory::*;
 
     fn make_memory(importance: Importance, access_count: u64) -> BaseMemory {
         BaseMemory {

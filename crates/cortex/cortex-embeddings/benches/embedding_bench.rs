@@ -1,6 +1,6 @@
-use criterion::{criterion_group, criterion_main, Criterion};
 use cortex_core::config::EmbeddingConfig;
 use cortex_embeddings::EmbeddingEngine;
+use criterion::{criterion_group, criterion_main, Criterion};
 
 fn bench_tfidf_single(c: &mut Criterion) {
     let mut engine = EmbeddingEngine::new(EmbeddingConfig {
@@ -52,5 +52,10 @@ fn bench_cache_hit(c: &mut Criterion) {
     });
 }
 
-criterion_group!(benches, bench_tfidf_single, bench_tfidf_batch, bench_cache_hit);
+criterion_group!(
+    benches,
+    bench_tfidf_single,
+    bench_tfidf_batch,
+    bench_cache_hit
+);
 criterion_main!(benches);

@@ -4,23 +4,25 @@
 //! auth manager, token manager, conflict resolution, transport protocol,
 //! sync log, delta detection.
 
-use cortex_cloud::engine::{CloudEngine, CloudStatus, SyncResultStatus};
+use chrono::Utc;
 use cortex_cloud::auth::login_flow::AuthMethod;
 use cortex_cloud::auth::offline_mode::{MutationOp, OfflineManager, QueuedMutation};
 use cortex_cloud::auth::token_manager::{AuthToken, TokenManager};
 use cortex_cloud::auth::{AuthManager, AuthState};
-use cortex_cloud::conflict::ConflictResolver;
-use cortex_cloud::conflict::conflict_log::{ConflictLog, ConflictRecord, ConflictResolver as ConflictResolverActor};
+use cortex_cloud::conflict::conflict_log::{
+    ConflictLog, ConflictRecord, ConflictResolver as ConflictResolverActor,
+};
 use cortex_cloud::conflict::detection::{detect_conflicts, DetectedConflict};
-use cortex_cloud::conflict::resolution::{self, ResolutionStrategy, ResolutionOutcome};
+use cortex_cloud::conflict::resolution::{self, ResolutionOutcome, ResolutionStrategy};
+use cortex_cloud::conflict::ConflictResolver;
+use cortex_cloud::engine::{CloudEngine, CloudStatus, SyncResultStatus};
 use cortex_cloud::quota::{QuotaCheck, QuotaLimits, QuotaManager, QuotaUsage};
 use cortex_cloud::sync::delta::compute_delta;
-use cortex_cloud::sync::sync_log::{SyncLog, SyncLogEntry, SyncDirection, SyncStatus};
 use cortex_cloud::sync::pull::PullResult;
 use cortex_cloud::sync::push::PushResult;
+use cortex_cloud::sync::sync_log::{SyncDirection, SyncLog, SyncLogEntry, SyncStatus};
 use cortex_cloud::transport::protocol::{CloudRequest, CloudResponse, MemoryPayload, SyncBatch};
 use cortex_cloud::transport::{HttpClient, HttpClientConfig};
-use chrono::Utc;
 use std::time::Duration;
 
 // ─── Quota Manager ───────────────────────────────────────────────────────────
@@ -87,7 +89,11 @@ fn quota_check_exceeded() {
         secs_since_last_sync: 120,
     });
     match qm.check_memory_create() {
-        QuotaCheck::Exceeded { resource, used, limit } => {
+        QuotaCheck::Exceeded {
+            resource,
+            used,
+            limit,
+        } => {
             assert_eq!(resource, "memories");
             assert_eq!(used, 100);
             assert_eq!(limit, 100);
@@ -402,7 +408,8 @@ fn cloud_response_ok() {
 
 #[test]
 fn cloud_response_err() {
-    let resp: CloudResponse<String> = CloudResponse::err("req-1".to_string(), "quota exceeded".to_string());
+    let resp: CloudResponse<String> =
+        CloudResponse::err("req-1".to_string(), "quota exceeded".to_string());
     assert!(!resp.success);
     assert_eq!(resp.error.as_deref(), Some("quota exceeded"));
     assert!(resp.data.is_none());
@@ -948,13 +955,13 @@ fn cloud_engine_sync_network_error_goes_offline() {
     match result {
         Ok(r) => {
             // If it went offline, status should be Offline.
-            assert!(
-                r.status == SyncResultStatus::Offline || engine.status() == CloudStatus::Error
-            );
+            assert!(r.status == SyncResultStatus::Offline || engine.status() == CloudStatus::Error);
         }
         Err(_) => {
             // Network error that wasn't classified as NetworkError.
-            assert!(engine.status() == CloudStatus::Error || engine.status() == CloudStatus::Syncing);
+            assert!(
+                engine.status() == CloudStatus::Error || engine.status() == CloudStatus::Syncing
+            );
         }
     }
 }
@@ -1055,8 +1062,16 @@ fn cloud_engine_sync_with_queued_mutations() {
     });
 
     // Queue some offline mutations first.
-    engine.queue_mutation("offline1", MutationOp::Create, Some(r#"{"test":true}"#.to_string()));
-    engine.queue_mutation("offline2", MutationOp::Update, Some(r#"{"test":false}"#.to_string()));
+    engine.queue_mutation(
+        "offline1",
+        MutationOp::Create,
+        Some(r#"{"test":true}"#.to_string()),
+    );
+    engine.queue_mutation(
+        "offline2",
+        MutationOp::Update,
+        Some(r#"{"test":false}"#.to_string()),
+    );
     // Also queue one with no payload (delete).
     engine.queue_mutation("offline3", MutationOp::Delete, None);
     assert_eq!(engine.offline_queue_len(), 3);

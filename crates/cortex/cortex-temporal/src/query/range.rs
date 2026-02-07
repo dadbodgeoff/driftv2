@@ -18,7 +18,10 @@ use super::integrity::enforce_temporal_integrity;
 /// - EndedDuring: memory stopped being valid during [from, to]
 ///
 /// Optimized via temporal indexes on the memories table.
-pub fn execute_range(conn: &Connection, query: &TemporalRangeQuery) -> CortexResult<Vec<BaseMemory>> {
+pub fn execute_range(
+    conn: &Connection,
+    query: &TemporalRangeQuery,
+) -> CortexResult<Vec<BaseMemory>> {
     // Use the optimized SQL query with temporal indexes
     let memories = temporal_ops::get_memories_in_range(conn, query.from, query.to, query.mode)?;
 

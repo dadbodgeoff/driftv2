@@ -42,6 +42,14 @@ impl GitSignals {
 fn is_branch_prefix(s: &str) -> bool {
     matches!(
         s.to_lowercase().as_str(),
-        "feature" | "fix" | "bugfix" | "hotfix" | "release" | "chore" | "main" | "master" | "develop"
+        "feature"
+            | "fix"
+            | "bugfix"
+            | "hotfix"
+            | "release"
+            | "chore"
+            | "main"
+            | "master"
+            | "develop"
     )
 }

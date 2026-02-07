@@ -22,13 +22,15 @@ pub fn cortex_learning_analyze_correction(
         context,
         source,
     };
-    let learning = rt.learning.lock().map_err(|e| {
-        napi::Error::from_reason(format!("Learning lock poisoned: {e}"))
-    })?;
-    let result = learning.analyze(&correction).map_err(error_types::to_napi_error)?;
-    serde_json::to_value(&result).map_err(|e| {
-        napi::Error::from_reason(format!("Failed to serialize LearningResult: {e}"))
-    })
+    let learning = rt
+        .learning
+        .lock()
+        .map_err(|e| napi::Error::from_reason(format!("Learning lock poisoned: {e}")))?;
+    let result = learning
+        .analyze(&correction)
+        .map_err(error_types::to_napi_error)?;
+    serde_json::to_value(&result)
+        .map_err(|e| napi::Error::from_reason(format!("Failed to serialize LearningResult: {e}")))
 }
 
 /// Learn from a correction (alias for analyze_correction).
@@ -76,11 +78,13 @@ pub fn cortex_learning_process_feedback(
         },
         source: "user_feedback".to_string(),
     };
-    let learning = rt.learning.lock().map_err(|e| {
-        napi::Error::from_reason(format!("Learning lock poisoned: {e}"))
-    })?;
-    let result = learning.analyze(&correction).map_err(error_types::to_napi_error)?;
-    serde_json::to_value(&result).map_err(|e| {
-        napi::Error::from_reason(format!("Failed to serialize LearningResult: {e}"))
-    })
+    let learning = rt
+        .learning
+        .lock()
+        .map_err(|e| napi::Error::from_reason(format!("Learning lock poisoned: {e}")))?;
+    let result = learning
+        .analyze(&correction)
+        .map_err(error_types::to_napi_error)?;
+    serde_json::to_value(&result)
+        .map_err(|e| napi::Error::from_reason(format!("Failed to serialize LearningResult: {e}")))
 }

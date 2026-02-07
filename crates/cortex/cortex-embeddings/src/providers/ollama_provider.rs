@@ -106,14 +106,11 @@ impl OllamaProvider {
         let dims = self.dimensions;
         let result: CortexResult<Vec<Vec<f32>>> = rt.block_on(async {
             let client = reqwest::Client::new();
-            let response = client
-                .post(&url)
-                .json(&request)
-                .send()
-                .await
-                .map_err(|e| EmbeddingError::InferenceFailed {
+            let response = client.post(&url).json(&request).send().await.map_err(|e| {
+                EmbeddingError::InferenceFailed {
                     reason: format!("Ollama HTTP error: {e}"),
-                })?;
+                }
+            })?;
 
             if !response.status().is_success() {
                 let status = response.status();

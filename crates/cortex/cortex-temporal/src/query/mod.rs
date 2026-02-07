@@ -21,9 +21,9 @@ use cortex_core::models::{
     AsOfQuery, DecisionReplay, DecisionReplayQuery, TemporalCausalQuery, TemporalDiff,
     TemporalDiffQuery, TemporalRangeQuery,
 };
+use cortex_storage::pool::ReadPool;
 use rusqlite::Connection;
 use std::sync::Arc;
-use cortex_storage::pool::ReadPool;
 
 /// Temporal query variants that the dispatcher can route.
 #[derive(Debug)]

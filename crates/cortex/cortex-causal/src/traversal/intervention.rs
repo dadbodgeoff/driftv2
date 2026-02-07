@@ -9,11 +9,7 @@ use super::{trace_effects, trace_origins, TraversalConfig, TraversalResult};
 
 /// Analyze the impact of changing a memory.
 /// Returns all memories that are causally connected (both causes and effects).
-pub fn analyze(
-    graph: &IndexedGraph,
-    memory_id: &str,
-    config: &TraversalConfig,
-) -> TraversalResult {
+pub fn analyze(graph: &IndexedGraph, memory_id: &str, config: &TraversalConfig) -> TraversalResult {
     // An intervention affects everything downstream (effects)
     // and may invalidate upstream assumptions (origins).
     let effects = trace_effects::trace(graph, memory_id, config);

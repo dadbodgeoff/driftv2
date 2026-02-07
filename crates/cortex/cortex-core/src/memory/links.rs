@@ -1,21 +1,25 @@
 use serde::{Deserialize, Serialize};
+use ts_rs::TS;
 
 /// Link to a code pattern.
-#[derive(Debug, Clone, Serialize, Deserialize, PartialEq)]
+#[derive(Debug, Clone, Serialize, Deserialize, PartialEq, TS)]
+#[ts(export)]
 pub struct PatternLink {
     pub pattern_id: String,
     pub pattern_name: String,
 }
 
 /// Link to a constraint.
-#[derive(Debug, Clone, Serialize, Deserialize, PartialEq)]
+#[derive(Debug, Clone, Serialize, Deserialize, PartialEq, TS)]
+#[ts(export)]
 pub struct ConstraintLink {
     pub constraint_id: String,
     pub constraint_name: String,
 }
 
 /// Link to a file with citation information.
-#[derive(Debug, Clone, Serialize, Deserialize, PartialEq)]
+#[derive(Debug, Clone, Serialize, Deserialize, PartialEq, TS)]
+#[ts(export)]
 pub struct FileLink {
     pub file_path: String,
     pub line_start: Option<u32>,
@@ -25,7 +29,8 @@ pub struct FileLink {
 }
 
 /// Link to a function or method.
-#[derive(Debug, Clone, Serialize, Deserialize, PartialEq)]
+#[derive(Debug, Clone, Serialize, Deserialize, PartialEq, TS)]
+#[ts(export)]
 pub struct FunctionLink {
     pub function_name: String,
     pub file_path: String,

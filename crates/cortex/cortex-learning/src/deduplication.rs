@@ -63,8 +63,8 @@ fn word_overlap_similarity(a: &str, b: &str) -> f64 {
 mod tests {
     use super::*;
     use chrono::Utc;
-    use cortex_core::memory::*;
     use cortex_core::memory::types::InsightContent;
+    use cortex_core::memory::*;
 
     fn make_insight(summary: &str, hash: &str) -> BaseMemory {
         let content = TypedContent::Insight(InsightContent {

@@ -4,8 +4,8 @@
 //! and verifies output matches expected results.
 
 use chrono::{DateTime, Utc};
-use cortex_core::memory::*;
 use cortex_core::memory::types::SemanticContent;
+use cortex_core::memory::*;
 use cortex_validation::contradiction::consensus;
 use cortex_validation::contradiction::detection;
 use cortex_validation::contradiction::propagation;
@@ -36,7 +36,11 @@ fn parse_contradiction_memories(fixture: &Value) -> Vec<BaseMemory> {
 
             let tags: Vec<String> = m["tags"]
                 .as_array()
-                .map(|arr| arr.iter().filter_map(|v| v.as_str().map(String::from)).collect())
+                .map(|arr| {
+                    arr.iter()
+                        .filter_map(|v| v.as_str().map(String::from))
+                        .collect()
+                })
                 .unwrap_or_default();
 
             let knowledge = m["content"]["data"]["knowledge"]
@@ -75,7 +79,7 @@ fn parse_contradiction_memories(fixture: &Value) -> Vec<BaseMemory> {
                 archived: false,
                 superseded_by: None,
                 supersedes: None,
-                content_hash: BaseMemory::compute_content_hash(&content),
+                content_hash: BaseMemory::compute_content_hash(&content).unwrap(),
             }
         })
         .collect()
@@ -101,7 +105,9 @@ fn golden_direct_conflict() {
     );
 
     let c = contradiction.unwrap();
-    let expected_type = expected["contradiction"]["contradiction_type"].as_str().unwrap();
+    let expected_type = expected["contradiction"]["contradiction_type"]
+        .as_str()
+        .unwrap();
     let type_str = format!("{:?}", c.contradiction_type).to_lowercase();
     assert!(
         type_str.contains(expected_type),
@@ -174,7 +180,10 @@ fn golden_propagation_chain() {
 
     // Detect contradiction between first two memories.
     let contradiction = detection::detect_all(&memories[0], &memories[1], None);
-    assert!(contradiction.is_some(), "Should detect contradiction for propagation");
+    assert!(
+        contradiction.is_some(),
+        "Should detect contradiction for propagation"
+    );
 
     let c = contradiction.unwrap();
 

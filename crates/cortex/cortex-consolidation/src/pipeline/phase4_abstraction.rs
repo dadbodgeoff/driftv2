@@ -4,8 +4,8 @@
 //! Novel sentences (similarity < 0.85 to anchor) are merged in.
 //! TextRank generates the summary. Metadata is unioned with cluster boost.
 
-use cortex_core::memory::{BaseMemory, Confidence, Importance, MemoryType, TypedContent};
 use cortex_core::memory::types::SemanticContent;
+use cortex_core::memory::{BaseMemory, Confidence, Importance, MemoryType, TypedContent};
 
 use crate::algorithms::similarity::{cosine_similarity, NOVELTY_THRESHOLD};
 use crate::algorithms::textrank;
@@ -123,16 +123,18 @@ pub fn abstract_cluster(
 }
 
 /// Build a new semantic BaseMemory from an abstraction result.
-pub fn build_semantic_memory(result: &AbstractionResult) -> BaseMemory {
+pub fn build_semantic_memory(
+    result: &AbstractionResult,
+) -> cortex_core::errors::CortexResult<BaseMemory> {
     let content = TypedContent::Semantic(SemanticContent {
         knowledge: result.knowledge.clone(),
         source_episodes: result.source_episodes.clone(),
         consolidation_confidence: result.confidence,
     });
     let now = chrono::Utc::now();
-    let content_hash = BaseMemory::compute_content_hash(&content);
+    let content_hash = BaseMemory::compute_content_hash(&content)?;
 
-    BaseMemory {
+    Ok(BaseMemory {
         id: uuid::Uuid::new_v4().to_string(),
         memory_type: MemoryType::Semantic,
         content,
@@ -153,7 +155,7 @@ pub fn build_semantic_memory(result: &AbstractionResult) -> BaseMemory {
         superseded_by: None,
         supersedes: None,
         content_hash,
-    }
+    })
 }
 
 #[cfg(test)]
@@ -188,7 +190,7 @@ mod tests {
             archived: false,
             superseded_by: None,
             supersedes: None,
-            content_hash: BaseMemory::compute_content_hash(&content),
+            content_hash: BaseMemory::compute_content_hash(&content).unwrap(),
         }
     }
 
@@ -213,7 +215,7 @@ mod tests {
         assert_eq!(result.source_episodes.len(), 2);
         assert!(result.confidence > 0.0);
 
-        let semantic = build_semantic_memory(&result);
+        let semantic = build_semantic_memory(&result).unwrap();
         assert_eq!(semantic.memory_type, MemoryType::Semantic);
     }
 }

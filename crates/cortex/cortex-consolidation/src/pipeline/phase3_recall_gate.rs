@@ -122,8 +122,8 @@ fn compute_centroid(embeddings: &[Vec<f32>]) -> Vec<f32> {
 mod tests {
     use super::*;
     use chrono::Utc;
-    use cortex_core::memory::*;
     use cortex_core::memory::types::EpisodicContent;
+    use cortex_core::memory::*;
 
     fn make_memory(summary: &str) -> BaseMemory {
         let content = TypedContent::Episodic(EpisodicContent {
@@ -151,7 +151,7 @@ mod tests {
             archived: false,
             superseded_by: None,
             supersedes: None,
-            content_hash: BaseMemory::compute_content_hash(&content),
+            content_hash: BaseMemory::compute_content_hash(&content).unwrap(),
         }
     }
 

@@ -32,7 +32,11 @@ pub fn score(source: &BaseMemory, target: &BaseMemory) -> f64 {
 
     // Jaccard with a boost for multiple shared patterns.
     let jaccard = shared as f64 / total as f64;
-    let multi_boost = if shared > 1 { 0.1 * (shared - 1) as f64 } else { 0.0 };
+    let multi_boost = if shared > 1 {
+        0.1 * (shared - 1) as f64
+    } else {
+        0.0
+    };
 
     (jaccard + multi_boost).min(1.0)
 }

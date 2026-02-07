@@ -64,11 +64,7 @@ fn compute_file_confidence(memory: &BaseMemory, signals: &FileSignals) -> f64 {
 
     // Boost if memory is directly linked to the active file
     if let Some(ref active) = signals.active_file {
-        if memory
-            .linked_files
-            .iter()
-            .any(|f| f.file_path == *active)
-        {
+        if memory.linked_files.iter().any(|f| f.file_path == *active) {
             score += 0.3;
         }
     }

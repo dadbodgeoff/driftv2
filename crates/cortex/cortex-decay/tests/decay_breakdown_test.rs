@@ -39,7 +39,7 @@ fn make_test_memory(
         archived: false,
         superseded_by: None,
         supersedes: None,
-        content_hash: BaseMemory::compute_content_hash(&content),
+        content_hash: BaseMemory::compute_content_hash(&content).unwrap(),
     }
 }
 
@@ -58,12 +58,8 @@ fn breakdown_product_equals_final_confidence() {
     let bd = engine.calculate_breakdown(&memory, &ctx);
 
     // The final confidence should equal the product of all factors, clamped to [0,1].
-    let manual_product = bd.base_confidence
-        * bd.temporal
-        * bd.citation
-        * bd.usage
-        * bd.importance
-        * bd.pattern;
+    let manual_product =
+        bd.base_confidence * bd.temporal * bd.citation * bd.usage * bd.importance * bd.pattern;
     let expected = manual_product.clamp(0.0, 1.0);
 
     assert!(
@@ -94,18 +90,42 @@ fn each_factor_in_expected_range() {
         };
         let bd = engine.calculate_breakdown(&memory, &ctx);
 
-        assert!(bd.temporal >= 0.0 && bd.temporal <= 1.0,
-            "Temporal should be [0,1], got {} for {:?}", bd.temporal, mt);
-        assert!(bd.citation >= 0.5 && bd.citation <= 1.0,
-            "Citation should be [0.5,1], got {} for {:?}", bd.citation, mt);
-        assert!(bd.usage >= 1.0 && bd.usage <= 1.5,
-            "Usage should be [1,1.5], got {} for {:?}", bd.usage, mt);
-        assert!(bd.importance >= 0.8 && bd.importance <= 2.0,
-            "Importance should be [0.8,2], got {} for {:?}", bd.importance, mt);
-        assert!(bd.pattern >= 1.0 && bd.pattern <= 1.3,
-            "Pattern should be [1,1.3], got {} for {:?}", bd.pattern, mt);
-        assert!(bd.final_confidence >= 0.0 && bd.final_confidence <= 1.0,
-            "Final should be [0,1], got {} for {:?}", bd.final_confidence, mt);
+        assert!(
+            bd.temporal >= 0.0 && bd.temporal <= 1.0,
+            "Temporal should be [0,1], got {} for {:?}",
+            bd.temporal,
+            mt
+        );
+        assert!(
+            bd.citation >= 0.5 && bd.citation <= 1.0,
+            "Citation should be [0.5,1], got {} for {:?}",
+            bd.citation,
+            mt
+        );
+        assert!(
+            bd.usage >= 1.0 && bd.usage <= 1.5,
+            "Usage should be [1,1.5], got {} for {:?}",
+            bd.usage,
+            mt
+        );
+        assert!(
+            bd.importance >= 0.8 && bd.importance <= 2.0,
+            "Importance should be [0.8,2], got {} for {:?}",
+            bd.importance,
+            mt
+        );
+        assert!(
+            bd.pattern >= 1.0 && bd.pattern <= 1.3,
+            "Pattern should be [1,1.3], got {} for {:?}",
+            bd.pattern,
+            mt
+        );
+        assert!(
+            bd.final_confidence >= 0.0 && bd.final_confidence <= 1.0,
+            "Final should be [0,1], got {} for {:?}",
+            bd.final_confidence,
+            mt
+        );
     }
 }
 
@@ -128,7 +148,9 @@ fn low_importance_episodic_fades_below_01_in_6_months() {
         has_active_patterns: false,
     };
 
-    let decayed = engine.calculate_with_context(&memory, &ctx_6_months).unwrap();
+    let decayed = engine
+        .calculate_with_context(&memory, &ctx_6_months)
+        .unwrap();
     assert!(
         decayed < 0.1,
         "Low-importance episodic memory after 6 months should be < 0.1, got {}",
@@ -170,7 +192,7 @@ fn low_importance_conversation_fades_below_01_in_6_months() {
         archived: false,
         superseded_by: None,
         supersedes: None,
-        content_hash: BaseMemory::compute_content_hash(&content),
+        content_hash: BaseMemory::compute_content_hash(&content).unwrap(),
     };
 
     let ctx_6_months = DecayContext {
@@ -179,7 +201,9 @@ fn low_importance_conversation_fades_below_01_in_6_months() {
         has_active_patterns: false,
     };
 
-    let decayed = engine.calculate_with_context(&memory, &ctx_6_months).unwrap();
+    let decayed = engine
+        .calculate_with_context(&memory, &ctx_6_months)
+        .unwrap();
     assert!(
         decayed < 0.1,
         "Low-importance conversation after 6 months should be < 0.1, got {}",
@@ -204,7 +228,9 @@ fn normal_importance_semantic_fades_below_01_in_6_months() {
         has_active_patterns: false,
     };
 
-    let decayed = engine.calculate_with_context(&memory, &ctx_6_months).unwrap();
+    let decayed = engine
+        .calculate_with_context(&memory, &ctx_6_months)
+        .unwrap();
     assert!(
         decayed < 0.1,
         "Normal-importance semantic memory (conf=0.7) after 6 months should be < 0.1, got {}",
@@ -227,7 +253,9 @@ fn critical_core_memory_does_not_fade() {
         has_active_patterns: false,
     };
 
-    let decayed = engine.calculate_with_context(&memory, &ctx_6_months).unwrap();
+    let decayed = engine
+        .calculate_with_context(&memory, &ctx_6_months)
+        .unwrap();
     // Core memory: temporal=1.0, importance=2.0, so result = 0.9 * 1.0 * 1.0 * usage * 2.0 * 1.0
     // Clamped to 1.0. Should definitely be > 0.9.
     assert!(

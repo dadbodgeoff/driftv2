@@ -23,10 +23,8 @@ pub fn split_sentences(text: &str) -> Vec<String> {
         // Look ahead: next char should be whitespace or end-of-string for a real boundary.
         let at_end = i + 1 >= len;
         let next_is_space = !at_end && chars[i + 1].is_whitespace();
-        let next_is_upper = !at_end
-            && i + 2 < len
-            && chars[i + 1].is_whitespace()
-            && chars[i + 2].is_uppercase();
+        let next_is_upper =
+            !at_end && i + 2 < len && chars[i + 1].is_whitespace() && chars[i + 2].is_uppercase();
 
         if at_end || next_is_space || next_is_upper {
             let trimmed = current.trim().to_string();

@@ -4,8 +4,8 @@
 use chrono::Utc;
 use cortex_compression::CompressionEngine;
 use cortex_core::config::RetrievalConfig;
-use cortex_core::memory::*;
 use cortex_core::memory::types::CoreContent;
+use cortex_core::memory::*;
 use cortex_core::models::RetrievalContext;
 use cortex_core::traits::{IMemoryStorage, IRetriever};
 use cortex_retrieval::engine::RetrievalEngine;
@@ -19,7 +19,12 @@ fn test_storage() -> StorageEngine {
     StorageEngine::open_in_memory().expect("failed to open in-memory storage")
 }
 
-fn make_memory(id: &str, summary: &str, mem_type: MemoryType, importance: Importance) -> BaseMemory {
+fn make_memory(
+    id: &str,
+    summary: &str,
+    mem_type: MemoryType,
+    importance: Importance,
+) -> BaseMemory {
     let content = TypedContent::Core(CoreContent {
         project_name: String::new(),
         description: summary.to_string(),
@@ -45,22 +50,62 @@ fn make_memory(id: &str, summary: &str, mem_type: MemoryType, importance: Import
         archived: false,
         superseded_by: None,
         supersedes: None,
-        content_hash: BaseMemory::compute_content_hash(&content),
+        content_hash: BaseMemory::compute_content_hash(&content).unwrap(),
     }
 }
 
 fn seed_diverse_memories(storage: &StorageEngine, count: usize) {
     let topics = [
-        ("database optimization", MemoryType::Tribal, Importance::High),
-        ("memory safety in Rust", MemoryType::Core, Importance::Critical),
-        ("async runtime patterns", MemoryType::PatternRationale, Importance::High),
-        ("error handling best practices", MemoryType::Tribal, Importance::Normal),
-        ("testing strategies", MemoryType::Procedural, Importance::Normal),
-        ("deployment pipeline", MemoryType::Procedural, Importance::High),
-        ("security authentication", MemoryType::Tribal, Importance::Critical),
-        ("API design principles", MemoryType::Decision, Importance::High),
-        ("logging and observability", MemoryType::Tribal, Importance::Normal),
-        ("performance profiling", MemoryType::Insight, Importance::Normal),
+        (
+            "database optimization",
+            MemoryType::Tribal,
+            Importance::High,
+        ),
+        (
+            "memory safety in Rust",
+            MemoryType::Core,
+            Importance::Critical,
+        ),
+        (
+            "async runtime patterns",
+            MemoryType::PatternRationale,
+            Importance::High,
+        ),
+        (
+            "error handling best practices",
+            MemoryType::Tribal,
+            Importance::Normal,
+        ),
+        (
+            "testing strategies",
+            MemoryType::Procedural,
+            Importance::Normal,
+        ),
+        (
+            "deployment pipeline",
+            MemoryType::Procedural,
+            Importance::High,
+        ),
+        (
+            "security authentication",
+            MemoryType::Tribal,
+            Importance::Critical,
+        ),
+        (
+            "API design principles",
+            MemoryType::Decision,
+            Importance::High,
+        ),
+        (
+            "logging and observability",
+            MemoryType::Tribal,
+            Importance::Normal,
+        ),
+        (
+            "performance profiling",
+            MemoryType::Insight,
+            Importance::Normal,
+        ),
     ];
 
     for i in 0..count {
@@ -71,7 +116,11 @@ fn seed_diverse_memories(storage: &StorageEngine, count: usize) {
             *mt,
             *imp,
         );
-        mem.tags = vec![topic.split_whitespace().next().unwrap_or("misc").to_string()];
+        mem.tags = vec![topic
+            .split_whitespace()
+            .next()
+            .unwrap_or("misc")
+            .to_string()];
         storage.create(&mem).unwrap();
     }
 }
@@ -108,7 +157,11 @@ fn stress_intent_classification_1000_queries() {
         let _ = format!("{:?}", intent);
     }
     let elapsed = start.elapsed();
-    assert!(elapsed.as_secs() < 5, "1000 intent classifications took {:?}", elapsed);
+    assert!(
+        elapsed.as_secs() < 5,
+        "1000 intent classifications took {:?}",
+        elapsed
+    );
 }
 
 // ── RRF fusion stress ────────────────────────────────────────────────────
@@ -119,18 +172,24 @@ fn stress_rrf_fusion_large_result_sets() {
     let mut memories: HashMap<String, BaseMemory> = HashMap::new();
     for i in 0..750 {
         let id = format!("mem-{i:04}");
-        memories.insert(id.clone(), make_memory(&id, &format!("Memory {i}"), MemoryType::Tribal, Importance::Normal));
+        memories.insert(
+            id.clone(),
+            make_memory(
+                &id,
+                &format!("Memory {i}"),
+                MemoryType::Tribal,
+                Importance::Normal,
+            ),
+        );
     }
 
-    let fts_results: Vec<(String, usize)> = (0..500)
-        .map(|i| (format!("mem-{i:04}"), i))
-        .collect();
+    let fts_results: Vec<(String, usize)> = (0..500).map(|i| (format!("mem-{i:04}"), i)).collect();
     let vec_results: Vec<(String, usize)> = (250..750)
         .map(|i| (format!("mem-{i:04}"), i - 250))
         .collect();
 
     let start = Instant::now();
-    let fused = rrf_fusion::fuse(&[fts_results, vec_results], &memories, 60);
+    let fused = rrf_fusion::fuse(Some(&fts_results), Some(&vec_results), None, &memories, 60);
     let elapsed = start.elapsed();
 
     assert!(!fused.is_empty(), "RRF should produce results");
@@ -141,13 +200,16 @@ fn stress_rrf_fusion_large_result_sets() {
         assert!(
             fused[i].rrf_score <= fused[i - 1].rrf_score + f64::EPSILON,
             "RRF results not sorted: {} > {} at index {}",
-            fused[i].rrf_score, fused[i - 1].rrf_score, i
+            fused[i].rrf_score,
+            fused[i - 1].rrf_score,
+            i
         );
     }
 
     // Memories appearing in both lists should rank higher.
     // IDs 250-499 appear in both lists.
-    let overlap_ids: Vec<&str> = fused.iter()
+    let overlap_ids: Vec<&str> = fused
+        .iter()
         .filter(|c| {
             let id_num: usize = c.memory.id.split('-').last().unwrap().parse().unwrap();
             id_num >= 250 && id_num < 500
@@ -183,7 +245,11 @@ fn stress_retrieval_500_memories() {
     let results = engine.retrieve(&context, 2000).unwrap();
     let elapsed = start.elapsed();
 
-    assert!(elapsed.as_secs() < 10, "Retrieval from 500 memories took {:?}", elapsed);
+    assert!(
+        elapsed.as_secs() < 10,
+        "Retrieval from 500 memories took {:?}",
+        elapsed
+    );
 
     // Budget should never be exceeded.
     let total_tokens: usize = results.iter().map(|r| r.token_count).sum();

@@ -1,6 +1,6 @@
+use cortex_core::memory::{Importance, MemoryType};
 /// Serde roundtrip tests for all 16 shared models.
 use cortex_core::models::*;
-use cortex_core::memory::{Importance, MemoryType};
 
 fn roundtrip<T: serde::Serialize + serde::de::DeserializeOwned>(val: &T) -> T {
     let json = serde_json::to_string(val).unwrap();

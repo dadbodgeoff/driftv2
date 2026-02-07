@@ -14,9 +14,9 @@ pub fn cortex_cloud_sync() -> napi::Result<serde_json::Value> {
         .cloud
         .as_ref()
         .ok_or_else(|| napi::Error::from_reason("Cloud sync not enabled"))?;
-    let mut engine = cloud.lock().map_err(|e| {
-        napi::Error::from_reason(format!("Cloud lock poisoned: {e}"))
-    })?;
+    let mut engine = cloud
+        .lock()
+        .map_err(|e| napi::Error::from_reason(format!("Cloud lock poisoned: {e}")))?;
     let result = engine.sync(&[]).map_err(error_types::to_napi_error)?;
     Ok(json!({
         "status": format!("{:?}", result.status),
@@ -35,9 +35,9 @@ pub fn cortex_cloud_get_status() -> napi::Result<serde_json::Value> {
         .cloud
         .as_ref()
         .ok_or_else(|| napi::Error::from_reason("Cloud sync not enabled"))?;
-    let engine = cloud.lock().map_err(|e| {
-        napi::Error::from_reason(format!("Cloud lock poisoned: {e}"))
-    })?;
+    let engine = cloud
+        .lock()
+        .map_err(|e| napi::Error::from_reason(format!("Cloud lock poisoned: {e}")))?;
     Ok(json!({
         "status": format!("{:?}", engine.status()),
         "is_online": engine.is_online(),
@@ -56,9 +56,9 @@ pub fn cortex_cloud_resolve_conflict(
         .cloud
         .as_ref()
         .ok_or_else(|| napi::Error::from_reason("Cloud sync not enabled"))?;
-    let mut engine = cloud.lock().map_err(|e| {
-        napi::Error::from_reason(format!("Cloud lock poisoned: {e}"))
-    })?;
+    let mut engine = cloud
+        .lock()
+        .map_err(|e| napi::Error::from_reason(format!("Cloud lock poisoned: {e}")))?;
     // Resolve via the conflict resolver.
     let _resolver = engine.conflict_resolver();
     Ok(json!({

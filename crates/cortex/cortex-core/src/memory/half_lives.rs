@@ -5,7 +5,7 @@ use super::types::MemoryType;
 pub fn half_life_days(memory_type: MemoryType) -> Option<u64> {
     match memory_type {
         // Domain-agnostic
-        MemoryType::Core => None,           // ∞
+        MemoryType::Core => None, // ∞
         MemoryType::Tribal => Some(365),
         MemoryType::Procedural => Some(180),
         MemoryType::Semantic => Some(90),

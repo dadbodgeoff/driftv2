@@ -3,12 +3,12 @@
 //! Focuses on: tfidf_fallback internals, enrichment edge cases, matryoshka edge cases,
 //! degradation chain paths, engine embed_memory/embed_query_for_search, cache coordination.
 
+use chrono::Utc;
 use cortex_core::config::EmbeddingConfig;
 use cortex_core::errors::CortexResult;
-use cortex_core::memory::*;
 use cortex_core::memory::links::{FileLink, PatternLink};
+use cortex_core::memory::*;
 use cortex_core::traits::IEmbeddingProvider;
-use chrono::Utc;
 
 // ─── Helper ──────────────────────────────────────────────────────────────────
 
@@ -219,7 +219,9 @@ fn degradation_chain_len_and_empty() {
     assert!(chain.is_empty());
     assert_eq!(chain.len(), 0);
 
-    chain.push(Box::new(cortex_embeddings::providers::TfIdfFallback::new(64)));
+    chain.push(Box::new(cortex_embeddings::providers::TfIdfFallback::new(
+        64,
+    )));
     assert!(!chain.is_empty());
     assert_eq!(chain.len(), 1);
 }
@@ -233,14 +235,18 @@ fn degradation_chain_active_provider_name_empty() {
 #[test]
 fn degradation_chain_active_provider_name_with_provider() {
     let mut chain = cortex_embeddings::degradation::DegradationChain::new();
-    chain.push(Box::new(cortex_embeddings::providers::TfIdfFallback::new(64)));
+    chain.push(Box::new(cortex_embeddings::providers::TfIdfFallback::new(
+        64,
+    )));
     assert_eq!(chain.active_provider_name(), "tfidf-fallback");
 }
 
 #[test]
 fn degradation_chain_push_cache_fallback() {
     let mut chain = cortex_embeddings::degradation::DegradationChain::new();
-    chain.push_cache_fallback(Box::new(cortex_embeddings::providers::TfIdfFallback::new(64)));
+    chain.push_cache_fallback(Box::new(cortex_embeddings::providers::TfIdfFallback::new(
+        64,
+    )));
     assert_eq!(chain.len(), 1);
     let (vec, name) = chain.embed("test").unwrap();
     assert_eq!(name, "tfidf-fallback");
@@ -258,7 +264,9 @@ fn degradation_chain_batch_all_fail() {
 #[test]
 fn degradation_drain_events_clears() {
     let mut chain = cortex_embeddings::degradation::DegradationChain::new();
-    chain.push(Box::new(cortex_embeddings::providers::TfIdfFallback::new(64)));
+    chain.push(Box::new(cortex_embeddings::providers::TfIdfFallback::new(
+        64,
+    )));
     chain.embed("test").unwrap();
     let events = chain.drain_events();
     assert!(events.is_empty());

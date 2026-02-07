@@ -40,7 +40,11 @@ fn make_test_memory(importance: Importance) -> BaseMemory {
             file_path: "src/auth/hasher.rs".to_string(),
             signature: Some("fn hash_password(pwd: &str) -> String".to_string()),
         }],
-        tags: vec!["security".to_string(), "auth".to_string(), "bcrypt".to_string()],
+        tags: vec![
+            "security".to_string(),
+            "auth".to_string(),
+            "bcrypt".to_string(),
+        ],
         archived: false,
         superseded_by: None,
         supersedes: None,
@@ -90,12 +94,24 @@ fn level3_preserves_all_content() {
     let l3 = engine.compress(&memory, 3).unwrap();
 
     // L3 should contain the full content, summary, tags, files, functions, etc.
-    assert!(l3.text.contains("bcrypt"), "L3 missing content keyword 'bcrypt'");
+    assert!(
+        l3.text.contains("bcrypt"),
+        "L3 missing content keyword 'bcrypt'"
+    );
     assert!(l3.text.contains(&memory.summary), "L3 missing summary");
     assert!(l3.text.contains("security"), "L3 missing tag 'security'");
-    assert!(l3.text.contains("src/auth/hasher.rs"), "L3 missing file link");
-    assert!(l3.text.contains("hash_password"), "L3 missing function link");
-    assert!(l3.text.contains("secure-hashing"), "L3 missing pattern link");
+    assert!(
+        l3.text.contains("src/auth/hasher.rs"),
+        "L3 missing file link"
+    );
+    assert!(
+        l3.text.contains("hash_password"),
+        "L3 missing function link"
+    );
+    assert!(
+        l3.text.contains("secure-hashing"),
+        "L3 missing pattern link"
+    );
     assert!(l3.text.contains("no-md5"), "L3 missing constraint link");
     assert!(l3.text.contains(&memory.id), "L3 missing memory ID");
 }
@@ -110,7 +126,11 @@ fn level0_minimal_representation() {
     let l0 = engine.compress(&memory, 0).unwrap();
 
     // L0 should be very short — just type + truncated ID
-    assert!(l0.token_count <= 10, "L0 should be ≤10 tokens, got {}", l0.token_count);
+    assert!(
+        l0.token_count <= 10,
+        "L0 should be ≤10 tokens, got {}",
+        l0.token_count
+    );
     assert!(l0.text.contains("tribal"), "L0 should contain type label");
 }
 

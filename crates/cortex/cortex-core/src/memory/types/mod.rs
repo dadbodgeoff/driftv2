@@ -7,9 +7,11 @@ pub use domain_agnostic::*;
 pub use universal::*;
 
 use serde::{Deserialize, Serialize};
+use ts_rs::TS;
 
 /// The 23 memory type variants across 3 categories.
-#[derive(Debug, Clone, Copy, PartialEq, Eq, Hash, Serialize, Deserialize)]
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Hash, Serialize, Deserialize, TS)]
+#[ts(export)]
 #[serde(rename_all = "snake_case")]
 pub enum MemoryType {
     // Domain-agnostic (9)

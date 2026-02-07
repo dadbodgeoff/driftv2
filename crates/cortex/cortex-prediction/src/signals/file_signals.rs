@@ -15,11 +15,7 @@ pub struct FileSignals {
 
 impl FileSignals {
     /// Collect file signals from a file path and its parsed metadata.
-    pub fn gather(
-        active_file: Option<&str>,
-        imports: Vec<String>,
-        symbols: Vec<String>,
-    ) -> Self {
+    pub fn gather(active_file: Option<&str>, imports: Vec<String>, symbols: Vec<String>) -> Self {
         let directory = active_file.and_then(|f| {
             std::path::Path::new(f)
                 .parent()

@@ -50,11 +50,8 @@ pub fn create_provider(config: &EmbeddingConfig) -> Box<dyn IEmbeddingProvider> 
             Box::new(TfIdfFallback::new(config.dimensions))
         }
         "ollama" => {
-            let provider = OllamaProvider::new(
-                "jina-embeddings-v2".to_string(),
-                config.dimensions,
-                None,
-            );
+            let provider =
+                OllamaProvider::new("jina-embeddings-v2".to_string(), config.dimensions, None);
             if provider.health_check() {
                 info!(provider = "ollama", "embedding provider connected");
                 Box::new(provider)
@@ -68,7 +65,10 @@ pub fn create_provider(config: &EmbeddingConfig) -> Box<dyn IEmbeddingProvider> 
             Box::new(TfIdfFallback::new(config.dimensions))
         }
         _ => {
-            info!(provider = "tfidf", "unknown provider, using TF-IDF fallback");
+            info!(
+                provider = "tfidf",
+                "unknown provider, using TF-IDF fallback"
+            );
             Box::new(TfIdfFallback::new(config.dimensions))
         }
     }

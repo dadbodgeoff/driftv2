@@ -24,10 +24,7 @@ pub fn create_backup(conn: &Connection, backup_path: &Path) -> CortexResult<()> 
 }
 
 /// Restore a database from a backup file.
-pub fn restore_from_backup(
-    conn: &mut Connection,
-    backup_path: &Path,
-) -> CortexResult<()> {
+pub fn restore_from_backup(conn: &mut Connection, backup_path: &Path) -> CortexResult<()> {
     let src = Connection::open(backup_path)
         .map_err(|e| to_storage_err(format!("open backup source: {e}")))?;
 

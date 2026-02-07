@@ -6,9 +6,9 @@
 //! maintenance (vacuum, checkpoint, integrity), engine trait impls.
 
 use chrono::{Duration, Utc};
+use cortex_core::memory::links::{ConstraintLink, FileLink, FunctionLink, PatternLink};
 use cortex_core::memory::*;
-use cortex_core::memory::links::{FileLink, FunctionLink, PatternLink, ConstraintLink};
-use cortex_core::traits::{ICausalStorage, IMemoryStorage, CausalEdge, CausalEvidence};
+use cortex_core::traits::{CausalEdge, CausalEvidence, ICausalStorage, IMemoryStorage};
 use cortex_storage::StorageEngine;
 
 // ─── Helper ──────────────────────────────────────────────────────────────────
@@ -88,7 +88,13 @@ fn engine_delete() {
 fn engine_create_bulk_and_get_bulk() {
     let eng = engine();
     let mems: Vec<BaseMemory> = (0..5)
-        .map(|i| make_memory(&format!("bulk{i}"), &format!("bulk mem {i}"), MemoryType::Semantic))
+        .map(|i| {
+            make_memory(
+                &format!("bulk{i}"),
+                &format!("bulk mem {i}"),
+                MemoryType::Semantic,
+            )
+        })
         .collect();
     let count = eng.create_bulk(&mems).unwrap();
     assert_eq!(count, 5);
@@ -101,9 +107,12 @@ fn engine_create_bulk_and_get_bulk() {
 #[test]
 fn engine_query_by_type() {
     let eng = engine();
-    eng.create(&make_memory("qt1", "semantic", MemoryType::Semantic)).unwrap();
-    eng.create(&make_memory("qt2", "episodic", MemoryType::Episodic)).unwrap();
-    eng.create(&make_memory("qt3", "semantic2", MemoryType::Semantic)).unwrap();
+    eng.create(&make_memory("qt1", "semantic", MemoryType::Semantic))
+        .unwrap();
+    eng.create(&make_memory("qt2", "episodic", MemoryType::Episodic))
+        .unwrap();
+    eng.create(&make_memory("qt3", "semantic2", MemoryType::Semantic))
+        .unwrap();
     let results = eng.query_by_type(MemoryType::Semantic).unwrap();
     assert_eq!(results.len(), 2);
 }
@@ -114,7 +123,8 @@ fn engine_query_by_importance() {
     let mut mem = make_memory("qi1", "critical", MemoryType::Semantic);
     mem.importance = Importance::Critical;
     eng.create(&mem).unwrap();
-    eng.create(&make_memory("qi2", "normal", MemoryType::Semantic)).unwrap();
+    eng.create(&make_memory("qi2", "normal", MemoryType::Semantic))
+        .unwrap();
     let results = eng.query_by_importance(Importance::Critical).unwrap();
     assert!(results.iter().all(|m| m.importance >= Importance::Critical));
 }
@@ -125,7 +135,8 @@ fn engine_query_by_confidence_range() {
     let mut low = make_memory("qc1", "low conf", MemoryType::Semantic);
     low.confidence = Confidence::new(0.3);
     eng.create(&low).unwrap();
-    eng.create(&make_memory("qc2", "high conf", MemoryType::Semantic)).unwrap();
+    eng.create(&make_memory("qc2", "high conf", MemoryType::Semantic))
+        .unwrap();
     let results = eng.query_by_confidence_range(0.7, 1.0).unwrap();
     assert!(results.iter().all(|m| m.confidence.value() >= 0.7));
 }
@@ -133,7 +144,8 @@ fn engine_query_by_confidence_range() {
 #[test]
 fn engine_query_by_date_range() {
     let eng = engine();
-    eng.create(&make_memory("qd1", "today", MemoryType::Semantic)).unwrap();
+    eng.create(&make_memory("qd1", "today", MemoryType::Semantic))
+        .unwrap();
     let from = Utc::now() - Duration::hours(1);
     let to = Utc::now() + Duration::hours(1);
     let results = eng.query_by_date_range(from, to).unwrap();
@@ -143,7 +155,8 @@ fn engine_query_by_date_range() {
 #[test]
 fn engine_query_by_tags() {
     let eng = engine();
-    eng.create(&make_memory("tg1", "tagged", MemoryType::Semantic)).unwrap();
+    eng.create(&make_memory("tg1", "tagged", MemoryType::Semantic))
+        .unwrap();
     let results = eng.query_by_tags(&["test".to_string()]).unwrap();
     assert!(!results.is_empty());
 }
@@ -151,7 +164,12 @@ fn engine_query_by_tags() {
 #[test]
 fn engine_search_fts5() {
     let eng = engine();
-    eng.create(&make_memory("fts1", "bcrypt password hashing", MemoryType::Semantic)).unwrap();
+    eng.create(&make_memory(
+        "fts1",
+        "bcrypt password hashing",
+        MemoryType::Semantic,
+    ))
+    .unwrap();
     let results = eng.search_fts5("bcrypt", 10).unwrap();
     assert!(!results.is_empty());
 }
@@ -161,8 +179,10 @@ fn engine_search_fts5() {
 #[test]
 fn engine_add_and_get_relationships() {
     let eng = engine();
-    eng.create(&make_memory("r1", "source", MemoryType::Semantic)).unwrap();
-    eng.create(&make_memory("r2", "target", MemoryType::Semantic)).unwrap();
+    eng.create(&make_memory("r1", "source", MemoryType::Semantic))
+        .unwrap();
+    eng.create(&make_memory("r2", "target", MemoryType::Semantic))
+        .unwrap();
     let edge = RelationshipEdge {
         source_id: "r1".to_string(),
         target_id: "r2".to_string(),
@@ -179,8 +199,10 @@ fn engine_add_and_get_relationships() {
 #[test]
 fn engine_remove_relationship() {
     let eng = engine();
-    eng.create(&make_memory("rr1", "src", MemoryType::Semantic)).unwrap();
-    eng.create(&make_memory("rr2", "tgt", MemoryType::Semantic)).unwrap();
+    eng.create(&make_memory("rr1", "src", MemoryType::Semantic))
+        .unwrap();
+    eng.create(&make_memory("rr2", "tgt", MemoryType::Semantic))
+        .unwrap();
     let edge = RelationshipEdge {
         source_id: "rr1".to_string(),
         target_id: "rr2".to_string(),
@@ -199,7 +221,8 @@ fn engine_remove_relationship() {
 #[test]
 fn engine_add_pattern_link() {
     let eng = engine();
-    eng.create(&make_memory("pl1", "pattern linked", MemoryType::Semantic)).unwrap();
+    eng.create(&make_memory("pl1", "pattern linked", MemoryType::Semantic))
+        .unwrap();
     let link = PatternLink {
         pattern_id: "pat1".to_string(),
         pattern_name: "singleton".to_string(),
@@ -210,7 +233,12 @@ fn engine_add_pattern_link() {
 #[test]
 fn engine_add_constraint_link() {
     let eng = engine();
-    eng.create(&make_memory("cl1", "constraint linked", MemoryType::Semantic)).unwrap();
+    eng.create(&make_memory(
+        "cl1",
+        "constraint linked",
+        MemoryType::Semantic,
+    ))
+    .unwrap();
     let link = ConstraintLink {
         constraint_id: "con1".to_string(),
         constraint_name: "no-raw-sql".to_string(),
@@ -221,7 +249,8 @@ fn engine_add_constraint_link() {
 #[test]
 fn engine_add_file_link() {
     let eng = engine();
-    eng.create(&make_memory("fl1", "file linked", MemoryType::Semantic)).unwrap();
+    eng.create(&make_memory("fl1", "file linked", MemoryType::Semantic))
+        .unwrap();
     let link = FileLink {
         file_path: "src/main.rs".to_string(),
         line_start: Some(1),
@@ -234,7 +263,8 @@ fn engine_add_file_link() {
 #[test]
 fn engine_add_function_link() {
     let eng = engine();
-    eng.create(&make_memory("fn1", "function linked", MemoryType::Semantic)).unwrap();
+    eng.create(&make_memory("fn1", "function linked", MemoryType::Semantic))
+        .unwrap();
     let link = FunctionLink {
         function_name: "main".to_string(),
         file_path: "src/main.rs".to_string(),
@@ -248,8 +278,10 @@ fn engine_add_function_link() {
 #[test]
 fn engine_count_by_type() {
     let eng = engine();
-    eng.create(&make_memory("ct1", "sem", MemoryType::Semantic)).unwrap();
-    eng.create(&make_memory("ct2", "epi", MemoryType::Episodic)).unwrap();
+    eng.create(&make_memory("ct1", "sem", MemoryType::Semantic))
+        .unwrap();
+    eng.create(&make_memory("ct2", "epi", MemoryType::Episodic))
+        .unwrap();
     let counts = eng.count_by_type().unwrap();
     assert!(!counts.is_empty());
 }
@@ -257,7 +289,8 @@ fn engine_count_by_type() {
 #[test]
 fn engine_average_confidence() {
     let eng = engine();
-    eng.create(&make_memory("ac1", "conf test", MemoryType::Semantic)).unwrap();
+    eng.create(&make_memory("ac1", "conf test", MemoryType::Semantic))
+        .unwrap();
     let avg = eng.average_confidence().unwrap();
     assert!(avg > 0.0);
 }
@@ -265,7 +298,8 @@ fn engine_average_confidence() {
 #[test]
 fn engine_stale_count() {
     let eng = engine();
-    eng.create(&make_memory("sc1", "fresh", MemoryType::Semantic)).unwrap();
+    eng.create(&make_memory("sc1", "fresh", MemoryType::Semantic))
+        .unwrap();
     let stale = eng.stale_count(30).unwrap();
     assert_eq!(stale, 0); // Just created, not stale.
 }
@@ -291,8 +325,10 @@ fn causal_edge(src: &str, tgt: &str, strength: f64) -> CausalEdge {
 #[test]
 fn engine_causal_add_and_get_edges() {
     let eng = engine();
-    eng.create(&make_memory("ce1", "cause", MemoryType::Semantic)).unwrap();
-    eng.create(&make_memory("ce2", "effect", MemoryType::Semantic)).unwrap();
+    eng.create(&make_memory("ce1", "cause", MemoryType::Semantic))
+        .unwrap();
+    eng.create(&make_memory("ce2", "effect", MemoryType::Semantic))
+        .unwrap();
     eng.add_edge(&causal_edge("ce1", "ce2", 0.8)).unwrap();
     let edges = eng.get_edges("ce1").unwrap();
     assert_eq!(edges.len(), 1);
@@ -301,8 +337,10 @@ fn engine_causal_add_and_get_edges() {
 #[test]
 fn engine_causal_remove_edge() {
     let eng = engine();
-    eng.create(&make_memory("cr1", "src", MemoryType::Semantic)).unwrap();
-    eng.create(&make_memory("cr2", "tgt", MemoryType::Semantic)).unwrap();
+    eng.create(&make_memory("cr1", "src", MemoryType::Semantic))
+        .unwrap();
+    eng.create(&make_memory("cr2", "tgt", MemoryType::Semantic))
+        .unwrap();
     eng.add_edge(&causal_edge("cr1", "cr2", 0.7)).unwrap();
     eng.remove_edge("cr1", "cr2").unwrap();
     let edges = eng.get_edges("cr1").unwrap();
@@ -312,8 +350,10 @@ fn engine_causal_remove_edge() {
 #[test]
 fn engine_causal_update_strength() {
     let eng = engine();
-    eng.create(&make_memory("us1", "src", MemoryType::Semantic)).unwrap();
-    eng.create(&make_memory("us2", "tgt", MemoryType::Semantic)).unwrap();
+    eng.create(&make_memory("us1", "src", MemoryType::Semantic))
+        .unwrap();
+    eng.create(&make_memory("us2", "tgt", MemoryType::Semantic))
+        .unwrap();
     eng.add_edge(&causal_edge("us1", "us2", 0.5)).unwrap();
     eng.update_strength("us1", "us2", 0.9).unwrap();
     let edges = eng.get_edges("us1").unwrap();
@@ -323,8 +363,10 @@ fn engine_causal_update_strength() {
 #[test]
 fn engine_causal_add_evidence() {
     let eng = engine();
-    eng.create(&make_memory("ev1", "src", MemoryType::Semantic)).unwrap();
-    eng.create(&make_memory("ev2", "tgt", MemoryType::Semantic)).unwrap();
+    eng.create(&make_memory("ev1", "src", MemoryType::Semantic))
+        .unwrap();
+    eng.create(&make_memory("ev2", "tgt", MemoryType::Semantic))
+        .unwrap();
     eng.add_edge(&causal_edge("ev1", "ev2", 0.6)).unwrap();
     let evidence = CausalEvidence {
         description: "observed correlation".to_string(),
@@ -337,8 +379,10 @@ fn engine_causal_add_evidence() {
 #[test]
 fn engine_causal_has_cycle() {
     let eng = engine();
-    eng.create(&make_memory("cy1", "a", MemoryType::Semantic)).unwrap();
-    eng.create(&make_memory("cy2", "b", MemoryType::Semantic)).unwrap();
+    eng.create(&make_memory("cy1", "a", MemoryType::Semantic))
+        .unwrap();
+    eng.create(&make_memory("cy2", "b", MemoryType::Semantic))
+        .unwrap();
     eng.add_edge(&causal_edge("cy1", "cy2", 0.5)).unwrap();
     // cy2 → cy1 would create a cycle.
     let has = eng.has_cycle("cy2", "cy1").unwrap();
@@ -351,8 +395,10 @@ fn engine_causal_edge_and_node_count() {
     assert_eq!(eng.edge_count().unwrap(), 0);
     assert_eq!(eng.node_count().unwrap(), 0);
 
-    eng.create(&make_memory("nc1", "a", MemoryType::Semantic)).unwrap();
-    eng.create(&make_memory("nc2", "b", MemoryType::Semantic)).unwrap();
+    eng.create(&make_memory("nc1", "a", MemoryType::Semantic))
+        .unwrap();
+    eng.create(&make_memory("nc2", "b", MemoryType::Semantic))
+        .unwrap();
     eng.add_edge(&causal_edge("nc1", "nc2", 0.5)).unwrap();
     assert_eq!(eng.edge_count().unwrap(), 1);
     assert_eq!(eng.node_count().unwrap(), 2);

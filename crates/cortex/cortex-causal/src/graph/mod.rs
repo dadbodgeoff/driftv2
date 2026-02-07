@@ -38,7 +38,12 @@ impl GraphManager {
     }
 
     /// Add a node to the graph. Returns true if newly added.
-    pub fn add_node(&self, memory_id: &str, memory_type: &str, summary: &str) -> CortexResult<bool> {
+    pub fn add_node(
+        &self,
+        memory_id: &str,
+        memory_type: &str,
+        summary: &str,
+    ) -> CortexResult<bool> {
         let mut graph = self.write()?;
         let existed = graph.get_node(memory_id).is_some();
         graph.ensure_node(memory_id, memory_type, summary);
@@ -91,7 +96,10 @@ impl GraphManager {
     }
 
     /// Get all edges for a node (both incoming and outgoing).
-    pub fn get_edges(&self, memory_id: &str) -> CortexResult<Vec<(String, String, CausalEdgeWeight)>> {
+    pub fn get_edges(
+        &self,
+        memory_id: &str,
+    ) -> CortexResult<Vec<(String, String, CausalEdgeWeight)>> {
         let graph = self.read()?;
         let mut edges = Vec::new();
 
@@ -152,12 +160,16 @@ impl GraphManager {
 
     /// Read lock helper.
     fn read(&self) -> CortexResult<std::sync::RwLockReadGuard<'_, IndexedGraph>> {
-        self.inner.read().map_err(|e| CortexError::ConcurrencyError(e.to_string()))
+        self.inner
+            .read()
+            .map_err(|e| CortexError::ConcurrencyError(e.to_string()))
     }
 
     /// Write lock helper.
     fn write(&self) -> CortexResult<std::sync::RwLockWriteGuard<'_, IndexedGraph>> {
-        self.inner.write().map_err(|e| CortexError::ConcurrencyError(e.to_string()))
+        self.inner
+            .write()
+            .map_err(|e| CortexError::ConcurrencyError(e.to_string()))
     }
 }
 

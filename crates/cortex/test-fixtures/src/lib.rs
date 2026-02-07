@@ -114,7 +114,10 @@ mod tests {
 
     #[test]
     fn fixtures_root_exists() {
-        assert!(fixtures_root().exists(), "test-fixtures directory not found");
+        assert!(
+            fixtures_root().exists(),
+            "test-fixtures directory not found"
+        );
     }
 
     #[test]
@@ -244,7 +247,11 @@ mod tests {
                 total += 1;
             }
         }
-        assert_eq!(total, 34, "Expected 34 golden dataset files, found {}", total);
+        assert_eq!(
+            total, 34,
+            "Expected 34 golden dataset files, found {}",
+            total
+        );
     }
 
     #[test]

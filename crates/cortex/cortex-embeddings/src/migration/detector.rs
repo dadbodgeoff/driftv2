@@ -3,8 +3,8 @@
 //! On startup, compares the configured model against the stored
 //! `embedding_model_info` to detect dimension changes or model upgrades.
 
-use cortex_core::models::EmbeddingModelInfo;
 use cortex_core::config::EmbeddingConfig;
+use cortex_core::models::EmbeddingModelInfo;
 use tracing::info;
 
 /// Result of model change detection.

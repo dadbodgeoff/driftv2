@@ -94,7 +94,11 @@ mod tests {
             user_feedback_score: 1.0,
         };
         let score = signals.composite_score();
-        assert!((score - 1.0).abs() < f64::EPSILON, "All max signals should give 1.0, got {}", score);
+        assert!(
+            (score - 1.0).abs() < f64::EPSILON,
+            "All max signals should give 1.0, got {}",
+            score
+        );
     }
 
     #[test]
@@ -107,7 +111,11 @@ mod tests {
             user_feedback_score: 0.0,
         };
         let score = signals.composite_score();
-        assert!((score - 0.0).abs() < f64::EPSILON, "All zero signals should give 0.0, got {}", score);
+        assert!(
+            (score - 0.0).abs() < f64::EPSILON,
+            "All zero signals should give 0.0, got {}",
+            score
+        );
     }
 
     #[test]
@@ -117,6 +125,10 @@ mod tests {
             + WEIGHT_LINKED_ENTITIES
             + WEIGHT_CONTRADICTION
             + WEIGHT_USER_FEEDBACK;
-        assert!((total - 1.0).abs() < f64::EPSILON, "Weights should sum to 1.0, got {}", total);
+        assert!(
+            (total - 1.0).abs() < f64::EPSILON,
+            "Weights should sum to 1.0, got {}",
+            total
+        );
     }
 }

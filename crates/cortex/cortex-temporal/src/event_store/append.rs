@@ -60,7 +60,16 @@ pub async fn append_batch(
             } else {
                 Some(serde_json::to_string(&e.caused_by).unwrap_or_default())
             };
-            (e.memory_id.clone(), recorded, et, delta, at, ai, cb, e.schema_version)
+            (
+                e.memory_id.clone(),
+                recorded,
+                et,
+                delta,
+                at,
+                ai,
+                cb,
+                e.schema_version,
+            )
         })
         .collect();
 
@@ -68,17 +77,8 @@ pub async fn append_batch(
         .with_conn(move |conn| {
             let mut ids = Vec::with_capacity(prepared.len());
             for (mid, rec, et, delta, at, ai, cb, sv) in &prepared {
-                let id = event_ops::insert_event(
-                    conn,
-                    mid,
-                    rec,
-                    et,
-                    delta,
-                    at,
-                    ai,
-                    cb.as_deref(),
-                    *sv,
-                )?;
+                let id =
+                    event_ops::insert_event(conn, mid, rec, et, delta, at, ai, cb.as_deref(), *sv)?;
                 ids.push(id);
             }
             Ok(ids)

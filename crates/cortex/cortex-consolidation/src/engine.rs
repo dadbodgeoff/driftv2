@@ -93,10 +93,8 @@ impl ConsolidationEngine {
         self.recent_assessments.push(assessment);
 
         // Auto-tuning check.
-        let adjustments = monitoring::auto_tuning::maybe_tune(
-            &mut self.thresholds,
-            &self.recent_assessments,
-        );
+        let adjustments =
+            monitoring::auto_tuning::maybe_tune(&mut self.thresholds, &self.recent_assessments);
         for adj in &adjustments {
             info!(
                 param = %adj.parameter,
@@ -143,8 +141,8 @@ impl IConsolidator for ConsolidationEngine {
 mod tests {
     use super::*;
     use chrono::{Duration, Utc};
-    use cortex_core::memory::*;
     use cortex_core::memory::types::EpisodicContent;
+    use cortex_core::memory::*;
     use cortex_core::traits::IEmbeddingProvider;
 
     /// Simple test embedding provider.
@@ -195,7 +193,7 @@ mod tests {
             archived: false,
             superseded_by: None,
             supersedes: None,
-            content_hash: BaseMemory::compute_content_hash(&content),
+            content_hash: BaseMemory::compute_content_hash(&content).unwrap(),
         }
     }
 

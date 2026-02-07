@@ -50,12 +50,14 @@ pub fn deduplicate(candidates: Vec<PredictionCandidate>) -> Vec<PredictionCandid
             .and_modify(|existing| {
                 // Keep highest confidence + boost
                 existing.confidence =
-                    (existing.confidence.max(candidate.confidence) + MULTI_STRATEGY_BOOST)
-                        .min(1.0);
+                    (existing.confidence.max(candidate.confidence) + MULTI_STRATEGY_BOOST).min(1.0);
                 // Merge signals
                 existing.signals.extend(candidate.signals.clone());
                 // Track multiple strategies
-                if !existing.source_strategy.contains(&candidate.source_strategy) {
+                if !existing
+                    .source_strategy
+                    .contains(&candidate.source_strategy)
+                {
                     existing.source_strategy =
                         format!("{}+{}", existing.source_strategy, candidate.source_strategy);
                 }
@@ -64,6 +66,10 @@ pub fn deduplicate(candidates: Vec<PredictionCandidate>) -> Vec<PredictionCandid
     }
 
     let mut result: Vec<PredictionCandidate> = merged.into_values().collect();
-    result.sort_by(|a, b| b.confidence.partial_cmp(&a.confidence).unwrap_or(std::cmp::Ordering::Equal));
+    result.sort_by(|a, b| {
+        b.confidence
+            .partial_cmp(&a.confidence)
+            .unwrap_or(std::cmp::Ordering::Equal)
+    });
     result
 }

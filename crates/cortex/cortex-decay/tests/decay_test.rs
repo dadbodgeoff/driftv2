@@ -49,13 +49,7 @@ fn monotonically_decreasing_over_time_without_access() {
 
     let mut prev_confidence = 1.0;
     for days in [0, 1, 7, 30, 90, 180, 365] {
-        let memory = make_test_memory(
-            Importance::Normal,
-            MemoryType::Tribal,
-            1.0,
-            0,
-            0,
-        );
+        let memory = make_test_memory(Importance::Normal, MemoryType::Tribal, 1.0, 0, 0);
         let ctx = DecayContext {
             now: now + Duration::days(days),
             stale_citation_ratio: 0.0,
@@ -109,13 +103,7 @@ fn confidence_bounded_zero_to_one() {
 #[test]
 fn importance_anchor_capped_at_2x() {
     let engine = DecayEngine::new();
-    let memory = make_test_memory(
-        Importance::Critical,
-        MemoryType::Tribal,
-        0.5,
-        0,
-        0,
-    );
+    let memory = make_test_memory(Importance::Critical, MemoryType::Tribal, 0.5, 0, 0);
     let ctx = DecayContext {
         now: Utc::now(),
         stale_citation_ratio: 0.0,
@@ -123,7 +111,11 @@ fn importance_anchor_capped_at_2x() {
     };
     let result = engine.calculate_with_context(&memory, &ctx).unwrap();
     // base=0.5, importance=2.0, but result clamped to 1.0
-    assert!(result <= 1.0, "Result should be clamped to 1.0, got {}", result);
+    assert!(
+        result <= 1.0,
+        "Result should be clamped to 1.0, got {}",
+        result
+    );
 }
 
 // ── T4-DEC-04: Usage boost capped at 1.5× ───────────────────────────────
@@ -180,13 +172,7 @@ fn core_memory_has_infinite_half_life() {
 #[test]
 fn archival_triggers_below_threshold() {
     let engine = DecayEngine::new();
-    let memory = make_test_memory(
-        Importance::Low,
-        MemoryType::Episodic,
-        0.1,
-        0,
-        365,
-    );
+    let memory = make_test_memory(Importance::Low, MemoryType::Episodic, 0.1, 0, 365);
 
     let decayed = engine.calculate(&memory).unwrap();
     let decision = engine.evaluate_archival(&memory, decayed);
@@ -203,13 +189,7 @@ fn archival_triggers_below_threshold() {
 #[test]
 fn archival_does_not_trigger_above_threshold() {
     let engine = DecayEngine::new();
-    let memory = make_test_memory(
-        Importance::Critical,
-        MemoryType::Core,
-        1.0,
-        100,
-        0,
-    );
+    let memory = make_test_memory(Importance::Critical, MemoryType::Core, 1.0, 100, 0);
 
     let decayed = engine.calculate(&memory).unwrap();
     let decision = engine.evaluate_archival(&memory, decayed);
@@ -223,13 +203,7 @@ fn archival_does_not_trigger_above_threshold() {
 #[test]
 fn already_archived_memory_not_re_archived() {
     let engine = DecayEngine::new();
-    let mut memory = make_test_memory(
-        Importance::Low,
-        MemoryType::Episodic,
-        0.01,
-        0,
-        365,
-    );
+    let mut memory = make_test_memory(Importance::Low, MemoryType::Episodic, 0.01, 0, 365);
     memory.archived = true;
 
     let decision = engine.evaluate_archival(&memory, 0.01);
@@ -253,12 +227,27 @@ fn decay_breakdown_factors_are_reasonable() {
 
     let breakdown = engine.calculate_breakdown(&memory, &ctx);
 
-    assert!((0.0..=1.0).contains(&breakdown.temporal), "Temporal out of range");
-    assert!((0.5..=1.0).contains(&breakdown.citation), "Citation out of range");
+    assert!(
+        (0.0..=1.0).contains(&breakdown.temporal),
+        "Temporal out of range"
+    );
+    assert!(
+        (0.5..=1.0).contains(&breakdown.citation),
+        "Citation out of range"
+    );
     assert!((1.0..=1.5).contains(&breakdown.usage), "Usage out of range");
-    assert!((0.8..=2.0).contains(&breakdown.importance), "Importance out of range");
-    assert!((1.0..=1.3).contains(&breakdown.pattern), "Pattern out of range");
-    assert!((0.0..=1.0).contains(&breakdown.final_confidence), "Final out of range");
+    assert!(
+        (0.8..=2.0).contains(&breakdown.importance),
+        "Importance out of range"
+    );
+    assert!(
+        (1.0..=1.3).contains(&breakdown.pattern),
+        "Pattern out of range"
+    );
+    assert!(
+        (0.0..=1.0).contains(&breakdown.final_confidence),
+        "Final out of range"
+    );
 }
 
 #[test]
