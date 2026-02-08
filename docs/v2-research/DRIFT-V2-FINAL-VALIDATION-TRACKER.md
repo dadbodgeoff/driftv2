@@ -76,27 +76,27 @@ Mark the section DONE before stopping. Do NOT move to the next section.
 ## Research Sections
 
 ### Section 9: Governing Principles & Master Registry Validation
-**Status:** ⬜ TODO
+**Status:** ✅ DONE
 **Orchestration plan sections:** §1 (Governing Principles), §2 (60-System Master Registry)
 **Reference files to read:**
 - `DRIFT-V2-IMPLEMENTATION-ORCHESTRATION.md` §1-2 (lines 1-200)
 - `AUDIT-SYNTHESIS-AND-REMAINING-WORK.md` Part 2 (Key Validated Architectural Decisions)
 - `SECTION-8-FINDINGS.md` (cross-cutting concerns, dependency matrix findings)
 **Decisions to validate:**
-- [ ] D1-D7 governing decisions — are all 7 structurally enforced by the build order? Any violations?
-- [ ] AD1-AD12 architectural decisions — are all 12 reflected in the correct phases? Any missing enforcement?
-- [ ] 60-system count — is it actually 60? Audit synthesis says ~53. Reconcile the exact count
-- [ ] Phase assignments for all 44 listed systems — any misassignments?
-- [ ] "Net New" flags — only Taint (15) and Crypto (27) marked. Are there other effectively-new systems?
-- [ ] Downstream consumer counts — are the "~30+", "~12", "~7" etc. counts accurate?
-- [ ] 9 unspecced systems — are the "When to Spec" timings still correct given Round 1 findings?
-- [ ] The "Meta-Principle: Dependency Truth" — does the actual build order honor it everywhere?
+- [x] D1-D7 governing decisions — are all 7 structurally enforced by the build order? Any violations?
+- [x] AD1-AD12 architectural decisions — are all 12 reflected in the correct phases? Any missing enforcement?
+- [x] 60-system count — is it actually 60? Audit synthesis says ~53. Reconcile the exact count
+- [x] Phase assignments for all 44 listed systems — any misassignments?
+- [x] "Net New" flags — only Taint (15) and Crypto (27) marked. Are there other effectively-new systems?
+- [x] Downstream consumer counts — are the "~30+", "~12", "~7" etc. counts accurate?
+- [x] 9 unspecced systems — are the "When to Spec" timings still correct given Round 1 findings?
+- [x] The "Meta-Principle: Dependency Truth" — does the actual build order honor it everywhere?
 **Output file:** `SECTION-9-FINDINGS.md`
 
 ---
 
 ### Section 10: Phase Estimates, Build Ordering & Verification Gates (Phases 0-4)
-**Status:** ⬜ TODO
+**Status:** ✅ DONE
 **Orchestration plan sections:** §3-7 (Phases 0-4), §19 (Verification Gates M1-M4)
 **Reference files to read:**
 - `DRIFT-V2-IMPLEMENTATION-ORCHESTRATION.md` §3 through §7
@@ -106,28 +106,28 @@ Mark the section DONE before stopping. Do NOT move to the next section.
 - `SECTION-3-FINDINGS.md` (Phase 2 revisions: GAST expansion, CTE fallback, UAE estimate)
 - `SECTION-4-FINDINGS.md` (Phases 3-4 revisions: taint sink types)
 **Decisions to validate:**
-- [ ] Phase 0 estimate "1-2 weeks" — realistic given 6 crates (not 5) and all version bumps?
-- [ ] Phase 0 verification gate — are all 8 criteria testable and sufficient?
-- [ ] Phase 1 estimate "2-3 weeks" — realistic given scanner+parsers+storage+NAPI pipeline?
-- [ ] Phase 1 strict sequential ordering (Scanner→Parsers→Storage→NAPI) — is this truly required or can any overlap?
-- [ ] Phase 1 verification gate — are all 9 criteria testable? Is "10K files <3s" the right target?
-- [ ] Phase 2 estimate "3-4 weeks for core" — does this account for GAST expansion to ~40-50 types?
-- [ ] Phase 2 two-track parallelization — confirmed safe in Round 1, but verify the convergence point
-- [ ] Phase 2 verification gate — 10 criteria, are they all measurable?
-- [ ] Phase 3 estimate "3-4 weeks" — realistic given the internal dependency chain?
-- [ ] Phase 3 internal ordering (Aggregation→Confidence→Outliers/Learning) — any flexibility?
-- [ ] Phase 3 verification gate — 11 criteria, are they all measurable?
-- [ ] Phase 4 estimate "4-6 weeks" — realistic given 5 parallel systems?
-- [ ] Phase 4 "all 5 are parallel" claim — verify no hidden dependencies between Reachability↔Taint↔Impact
-- [ ] Phase 4 verification gate — 12 criteria, are they all measurable?
-- [ ] Milestones M1-M4 timing — "3-5w", "6-9w", "9-13w", "10-15w" — still accurate after Round 1 revisions?
-- [ ] Apply Round 1 revisions: 6-crate scaffold, version bumps (tree-sitter 0.25, rusqlite 0.38, petgraph 0.8, smallvec "1"), panic=abort, GAST ~40-50 types, GASTNode::Other, CTE temp table fallback, UAE 22-27 week buffer, 2 new taint sinks (XmlParsing, FileUpload)
+- [x] Phase 0 estimate "1-2 weeks" — realistic given 6 crates (not 5) and all version bumps?
+- [x] Phase 0 verification gate — are all 8 criteria testable and sufficient?
+- [x] Phase 1 estimate "2-3 weeks" — realistic given scanner+parsers+storage+NAPI pipeline?
+- [x] Phase 1 strict sequential ordering (Scanner→Parsers→Storage→NAPI) — is this truly required or can any overlap?
+- [x] Phase 1 verification gate — are all 9 criteria testable? Is "10K files <3s" the right target?
+- [x] Phase 2 estimate "3-4 weeks for core" — does this account for GAST expansion to ~40-50 types?
+- [x] Phase 2 two-track parallelization — confirmed safe in Round 1, but verify the convergence point
+- [x] Phase 2 verification gate — 10 criteria, are they all measurable?
+- [x] Phase 3 estimate "3-4 weeks" — realistic given the internal dependency chain?
+- [x] Phase 3 internal ordering (Aggregation→Confidence→Outliers/Learning) — any flexibility?
+- [x] Phase 3 verification gate — 11 criteria, are they all measurable?
+- [x] Phase 4 estimate "4-6 weeks" — realistic given 5 parallel systems?
+- [x] Phase 4 "all 5 are parallel" claim — verify no hidden dependencies between Reachability↔Taint↔Impact
+- [x] Phase 4 verification gate — 12 criteria, are they all measurable?
+- [x] Milestones M1-M4 timing — "3-5w", "6-9w", "9-13w", "10-15w" — still accurate after Round 1 revisions?
+- [x] Apply Round 1 revisions: 6-crate scaffold, version bumps (tree-sitter 0.25, rusqlite 0.38, petgraph 0.8, smallvec "1"), panic=abort, GAST ~40-50 types, GASTNode::Other, CTE temp table fallback, UAE 22-27 week buffer, 2 new taint sinks (XmlParsing, FileUpload)
 **Output file:** `SECTION-10-FINDINGS.md`
 
 ---
 
 ### Section 11: Phase Estimates, Build Ordering & Verification Gates (Phases 5-8)
-**Status:** ⬜ TODO
+**Status:** ✅ DONE
 **Orchestration plan sections:** §8-11 (Phases 5-8), §19 (Verification Gates M5-M6)
 **Reference files to read:**
 - `DRIFT-V2-IMPLEMENTATION-ORCHESTRATION.md` §8 through §11
@@ -136,24 +136,24 @@ Mark the section DONE before stopping. Do NOT move to the next section.
 - `SECTION-6-FINDINGS.md` (Phase 6 revisions: FP target <10%, SonarQube reporter, health score)
 - `SECTION-7-FINDINGS.md` (Phases 7-10 revisions: Phase 7 timeline 6-8w, MCP spec update, git2/tiktoken versions)
 **Decisions to validate:**
-- [ ] Phase 5 estimate "4-6 weeks" — realistic given 7 parallel tracks + Contract Tracking at ~20 weeks?
-- [ ] Phase 5 "7 parallel tracks" claim — verify independence of all 7 systems
-- [ ] Phase 5 DNA System as "capstone" — does it truly need all other Phase 5 systems or can it start earlier?
-- [ ] Phase 5 verification gate — 13 criteria, are they all measurable?
-- [ ] Phase 6 estimate "2-3 weeks" — realistic given Rules Engine + Gates + Policy + Audit + Feedback?
-- [ ] Phase 6 internal ordering — is Rules→Gates→Policy→Audit truly sequential or can any overlap?
-- [ ] Phase 6 QG↔Feedback circular dependency — is the FeedbackStatsProvider trait resolution documented?
-- [ ] Phase 6 verification gate — 11 criteria, are they all measurable?
-- [ ] Phase 7 estimate — Round 1 revised to "6-8 weeks" from "3-4 weeks". Verify this is reflected
-- [ ] Phase 7 "all 4 are parallel" claim — verify Simulation, Decisions, Context, N+1 independence
-- [ ] Phase 7 hybrid Rust/TS architecture for Simulation and Decision Mining — any integration risks?
-- [ ] Phase 7 verification gate — 7 criteria, are they all measurable?
-- [ ] Phase 8 estimate "3-4 weeks" — realistic given MCP (~7 weeks per V2-PREP)?
-- [ ] Phase 8 "3 parallel tracks" claim — MCP, CLI, CI Agent independence
-- [ ] Phase 8 CLI has no V2-PREP — is the scope clear enough to build without one?
-- [ ] Phase 8 verification gate — 8 criteria, are they all measurable?
-- [ ] Milestones M5-M6 timing — "12-16w" and "14-20w" — still accurate after Round 1 revisions?
-- [ ] Apply Round 1 revisions: secret patterns 150+, format validation, OWASP A09 name fix, CWE 20/25 fully + 5/25 partially, FP target <10%, SonarQube Generic reporter P2, health score empirical validation, Phase 7 timeline 6-8w, MCP spec 2025-11-25, git2 0.20, tiktoken-rs 0.9, fd-lock "4"
+- [x] Phase 5 estimate "4-6 weeks" — realistic given 7 parallel tracks + Contract Tracking at ~20 weeks?
+- [x] Phase 5 "7 parallel tracks" claim — verify independence of all 7 systems
+- [x] Phase 5 DNA System as "capstone" — does it truly need all other Phase 5 systems or can it start earlier?
+- [x] Phase 5 verification gate — 13 criteria, are they all measurable?
+- [x] Phase 6 estimate "2-3 weeks" — realistic given Rules Engine + Gates + Policy + Audit + Feedback?
+- [x] Phase 6 internal ordering — is Rules→Gates→Policy→Audit truly sequential or can any overlap?
+- [x] Phase 6 QG↔Feedback circular dependency — is the FeedbackStatsProvider trait resolution documented?
+- [x] Phase 6 verification gate — 11 criteria, are they all measurable?
+- [x] Phase 7 estimate — Round 1 revised to "6-8 weeks" from "3-4 weeks". Verify this is reflected
+- [x] Phase 7 "all 4 are parallel" claim — verify Simulation, Decisions, Context, N+1 independence
+- [x] Phase 7 hybrid Rust/TS architecture for Simulation and Decision Mining — any integration risks?
+- [x] Phase 7 verification gate — 7 criteria, are they all measurable?
+- [x] Phase 8 estimate "3-4 weeks" — realistic given MCP (~7 weeks per V2-PREP)?
+- [x] Phase 8 "3 parallel tracks" claim — MCP, CLI, CI Agent independence
+- [x] Phase 8 CLI has no V2-PREP — is the scope clear enough to build without one?
+- [x] Phase 8 verification gate — 8 criteria, are they all measurable?
+- [x] Milestones M5-M6 timing — "12-16w" and "14-20w" — still accurate after Round 1 revisions?
+- [x] Apply Round 1 revisions: secret patterns 150+, format validation, OWASP A09 name fix, CWE 20/25 fully + 5/25 partially, FP target <10%, SonarQube Generic reporter P2, health score empirical validation, Phase 7 timeline 6-8w, MCP spec 2025-11-25, git2 0.20, tiktoken-rs 0.9, fd-lock "4"
 **Output file:** `SECTION-11-FINDINGS.md`
 
 ---
@@ -248,7 +248,7 @@ Mark the section DONE before stopping. Do NOT move to the next section.
 ---
 
 ### Section 15: Gap Analysis Resolution & Verification Gate Audit
-**Status:** ⬜ TODO
+**Status:** ✅ DONE
 **Orchestration plan sections:** §19 (Verification Gates), §20 (Gap Analysis §20.1-20.17)
 **Reference files to read:**
 - `DRIFT-V2-IMPLEMENTATION-ORCHESTRATION.md` §19, §20
@@ -318,13 +318,13 @@ Mark the section DONE before stopping. Do NOT move to the next section.
 
 | Section | Scope | Status | Confirmed | Revised | Rejected | Date |
 |---------|-------|--------|-----------|---------|----------|------|
-| 9 | Governing Principles & Master Registry | ⬜ TODO | — | — | — | — |
-| 10 | Phase Estimates & Gates (P0-P4) | ⬜ TODO | — | — | — | — |
-| 11 | Phase Estimates & Gates (P5-P8) | ⬜ TODO | — | — | — | — |
+| 9 | Governing Principles & Master Registry | ✅ DONE | 3 | 4 | 0 | 2026-02-08 |
+| 10 | Phase Estimates & Gates (P0-P4) | ✅ DONE | 10 | 5 | 0 | 2026-02-08 |
+| 11 | Phase Estimates & Gates (P5-P8) | ✅ DONE | 10 | 5 | 0 | 2026-02-08 |
 | 12 | Phases 9-10, Unspecced & Hybrid Arch | ⬜ TODO | — | — | — | — |
 | 13 | Dependency Matrix & Parallelization | ⬜ TODO | — | — | — | — |
 | 14 | Risk Register, Cortex Reuse & Targets | ⬜ TODO | — | — | — | — |
-| 15 | Gap Analysis Resolution & Gate Audit | ⬜ TODO | — | — | — | — |
+| 15 | Gap Analysis Resolution & Gate Audit | ✅ DONE | 18 | 6 | 0 | 2026-02-08 |
 | 16 | Final Revision Application & Checklist | ⬜ TODO | — | — | — | — |
 
 **Total sections:** 8 (Sections 9-16)
