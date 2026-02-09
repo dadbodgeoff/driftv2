@@ -1,0 +1,65 @@
+//! PRAGMA configuration applied to every SQLite connection.
+//!
+//! WAL mode, NORMAL sync, 64MB page cache, 256MB mmap, 5s busy_timeout,
+//! foreign_keys ON, incremental auto_vacuum, temp_store MEMORY.
+
+use drift_core::errors::StorageError;
+use rusqlite::Connection;
+
+/// Apply all performance and safety pragmas to a connection.
+pub fn apply_pragmas(conn: &Connection) -> Result<(), StorageError> {
+    conn.execute_batch(
+        "
+        PRAGMA journal_mode = WAL;
+        PRAGMA synchronous = NORMAL;
+        PRAGMA foreign_keys = ON;
+        PRAGMA cache_size = -64000;
+        PRAGMA mmap_size = 268435456;
+        PRAGMA busy_timeout = 5000;
+        PRAGMA temp_store = MEMORY;
+        PRAGMA auto_vacuum = INCREMENTAL;
+        ",
+    )
+    .map_err(|e| StorageError::SqliteError {
+        message: format!("failed to apply pragmas: {e}"),
+    })
+}
+
+/// Apply read-only pragmas to a read connection.
+pub fn apply_read_pragmas(conn: &Connection) -> Result<(), StorageError> {
+    conn.execute_batch(
+        "
+        PRAGMA query_only = ON;
+        PRAGMA cache_size = -64000;
+        PRAGMA mmap_size = 268435456;
+        PRAGMA busy_timeout = 5000;
+        PRAGMA temp_store = MEMORY;
+        ",
+    )
+    .map_err(|e| StorageError::SqliteError {
+        message: format!("failed to apply read pragmas: {e}"),
+    })
+}
+
+/// Verify that WAL mode is active.
+pub fn verify_wal_mode(conn: &Connection) -> Result<bool, StorageError> {
+    let mode: String = conn
+        .pragma_query_value(None, "journal_mode", |row| row.get(0))
+        .map_err(|e| StorageError::SqliteError {
+            message: e.to_string(),
+        })?;
+    Ok(mode.eq_ignore_ascii_case("wal"))
+}
+
+/// Run optimize pragmas on connection close.
+pub fn optimize_on_close(conn: &Connection) -> Result<(), StorageError> {
+    conn.execute_batch(
+        "
+        PRAGMA analysis_limit = 400;
+        PRAGMA optimize;
+        ",
+    )
+    .map_err(|e| StorageError::SqliteError {
+        message: format!("failed to optimize: {e}"),
+    })
+}

@@ -1,0 +1,24 @@
+//! # drift-core
+//!
+//! Foundation crate for the Drift analysis engine.
+//! Defines all types, traits, errors, config, events, tracing, and constants.
+//! Every other crate in the workspace depends on this.
+
+#![allow(dead_code, unused)]
+
+pub mod config;
+pub mod constants;
+pub mod errors;
+pub mod events;
+pub mod tracing;
+pub mod traits;
+pub mod types;
+
+// Re-export the most commonly used types at the crate root.
+pub use config::DriftConfig;
+pub use errors::error_code::DriftErrorCode;
+pub use events::dispatcher::EventDispatcher;
+pub use events::handler::DriftEventHandler;
+pub use types::collections::{FxHashMap, FxHashSet};
+pub use types::identifiers::{ClassId, DetectorId, FileId, FunctionId, ModuleId, PatternId};
+pub use types::interning::{FunctionInterner, PathInterner};

@@ -1,0 +1,26 @@
+[package]
+name = "drift-napi"
+version.workspace = true
+edition.workspace = true
+rust-version.workspace = true
+license.workspace = true
+description = "NAPI-RS v3 bindings for the Drift analysis engine"
+
+[lib]
+crate-type = ["cdylib", "rlib"]
+
+[dependencies]
+drift-core = { workspace = true }
+drift-analysis = { workspace = true }
+drift-storage = { workspace = true }
+drift-context = { workspace = true }
+napi = { workspace = true }
+napi-derive = { workspace = true }
+serde = { workspace = true }
+serde_json = { workspace = true }
+
+[build-dependencies]
+napi-build = { workspace = true }
+
+[dev-dependencies]
+tempfile = "3"

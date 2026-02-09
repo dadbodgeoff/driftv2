@@ -1,6 +1,6 @@
 # Drift V2 — Implementation Orchestration Plan
 
-> The definitive build sequence for all 60 systems in Drift V2.
+> The definitive build sequence for all ~55 systems in Drift V2.
 > Every system accounted for. Every dependency honored. Every risk mitigated.
 > Every decision from PLANNING-DRIFT.md (D1-D7) and DRIFT-V2-FULL-SYSTEM-AUDIT.md
 > (AD1-AD12) structurally enforced by build order.
@@ -10,7 +10,7 @@
 >
 > Source truth: 35 V2-PREP documents, DRIFT-V2-STACK-HIERARCHY.md,
 > PLANNING-DRIFT.md, DRIFT-V2-FULL-SYSTEM-AUDIT.md, and the existing
-> 19-crate Cortex codebase for proven patterns.
+> 21-crate Cortex codebase (plus test-fixtures) for proven patterns.
 >
 > Generated: 2026-02-08
 
@@ -19,7 +19,7 @@
 ## Table of Contents
 
 1. Governing Principles (Why This Order)
-2. The 60-System Master Registry
+2. The ~55-System Master Registry
 3. Phase 0 — Crate Scaffold & Infrastructure Primitives
 4. Phase 1 — Entry Pipeline (Scanner → Parsers → Storage → NAPI)
 5. Phase 2 — Structural Skeleton (Analysis Engine, Call Graph, Detectors)
@@ -121,7 +121,7 @@ we exploit it. Where it doesn't, we respect it.
 
 ---
 
-## 2. The 60-System Master Registry
+## 2. The ~55-System Master Registry
 
 Every system in Drift V2, its V2-PREP status, its phase assignment, and its dependency count.
 
@@ -138,18 +138,18 @@ Every system in Drift V2, its V2-PREP status, its phase assignment, and its depe
 | 01 | Tree-Sitter Parsers | 01-PARSERS | 1 | ~30+ | No |
 | 02 | SQLite Storage (drift.db) | 02-STORAGE | 1 | ~30+ | No |
 | 03 | NAPI Bridge (drift-napi) | 03-NAPI-BRIDGE | 1 | ~8 | No |
-| 05 | Call Graph Builder | 05-CALL-GRAPH | 2 | ~12 | No |
+| 05 | Call Graph Builder | 05-CALL-GRAPH | 2 | ~20 | No |
 | 06 | Unified Analysis Engine | 06-UNIFIED-ANALYSIS-ENGINE | 2 | ~10 | No |
 | 06 | Detector System | 06-DETECTOR-SYSTEM (ref) | 2 | ~10 | No |
 | 07 | Boundary Detection | 07-BOUNDARY-DETECTION | 2 | ~7 | No |
 | 08 | Unified Language Provider | 08-UNIFIED-LANGUAGE-PROVIDER | 2 | ~6 | No |
 | 09 | Quality Gates | 09-QUALITY-GATES | 6 | ~6 | No |
-| 10 | Bayesian Confidence Scoring | 10-BAYESIAN-CONFIDENCE-SCORING | 3 | ~7 | No |
+| 10 | Bayesian Confidence Scoring | 10-BAYESIAN-CONFIDENCE-SCORING | 3 | ~9-10 | No |
 | 11 | Outlier Detection | 11-OUTLIER-DETECTION | 3 | ~6 | No |
 | 12 | Pattern Aggregation | 12-PATTERN-AGGREGATION | 3 | ~6 | No |
 | 13 | Learning System | 13-LEARNING-SYSTEM | 3 | ~5 | No |
 | 14 | Reachability Analysis | 14-REACHABILITY-ANALYSIS | 4 | ~6 | No |
-| 15 | Taint Analysis | 15-TAINT-ANALYSIS | 4 | ~5 | ⚡ Yes |
+| 15 | Taint Analysis | 15-TAINT-ANALYSIS | 4 | ~6-7 | ⚡ Yes |
 | 16 | Error Handling Analysis | 16-ERROR-HANDLING-ANALYSIS | 4 | ~5 | No |
 | 17 | Impact Analysis | 17-IMPACT-ANALYSIS | 4 | ~5 | No |
 | 18 | Test Topology | 18-TEST-TOPOLOGY | 4 | ~5 | No |
@@ -163,7 +163,7 @@ Every system in Drift V2, its V2-PREP status, its phase assignment, and its depe
 | 26 | OWASP/CWE Mapping | 26-OWASP-CWE-MAPPING | 5 | ~5 | No |
 | 27 | Cryptographic Failure Detection | 27-CRYPTOGRAPHIC-FAILURE-DETECTION | 5 | ~4 | ⚡ Yes |
 | — | Enterprise Secret Detection | 22-CONSTANTS-ENVIRONMENT (§24) | 5 | ~3 | No |
-| 28 | Simulation Engine | 28-SIMULATION-ENGINE | 7 | 0 | No |
+| 28 | Simulation Engine | 28-SIMULATION-ENGINE | 7 | 0 | ⚡ Yes |
 | 29 | Decision Mining | 29-DECISION-MINING | 7 | 0 | No |
 | 30 | Context Generation | 30-CONTEXT-GENERATION | 7 | 0 | No |
 | 31 | Violation Feedback Loop | 31-VIOLATION-FEEDBACK-LOOP | 6 | ~4 | No |
@@ -206,7 +206,7 @@ wrong means touching every file later.
 
 ### 3.1 Cargo Workspace Scaffold
 
-Create the 5-crate workspace structure per 04-INFRASTRUCTURE-V2-PREP §7:
+Create the 6-crate workspace structure per 04-INFRASTRUCTURE-V2-PREP §7:
 
 ```
 crates/drift/
@@ -214,37 +214,68 @@ crates/drift/
 ├── drift-core/             (types, traits, errors, config, events, data structures)
 ├── drift-analysis/         (parsers, detectors, call graph, boundaries, all analysis)
 ├── drift-storage/          (SQLite persistence, migrations, batch writer, CQRS)
+├── drift-context/          (context generation: tiktoken-rs, quick-xml, serde_yaml, glob, base64)
 ├── drift-napi/             (NAPI-RS v3 bindings, singleton runtime)
 └── drift-bench/            (benchmarks, isolated from production)
 ```
 
 Workspace-level `Cargo.toml` pins all shared dependencies:
-- `tree-sitter` = "0.24"
-- `rusqlite` = { version = "0.32", features = ["bundled", "backup", "blob"] }
-- `napi` = { version = "3", features = ["async", "serde-json"] }
-- `thiserror` = "2"
-- `tracing` = "0.1"
-- `tracing-subscriber` = { version = "0.3", features = ["env-filter"] }
-- `rustc-hash` = "2"
-- `smallvec` = "1.13"
-- `lasso` = { version = "0.7", features = ["multi-threaded", "serialize"] }
-- `rayon` = "1.10"
-- `xxhash-rust` = { version = "0.8", features = ["xxh3"] }
-- `petgraph` = "0.6"
-- `moka` = { version = "0.12", features = ["sync"] }
-- `ignore` = "0.4"
-- `crossbeam-channel` = "0.5"
-- `serde` = { version = "1", features = ["derive"] }
-- `serde_json` = "1"
 
-Feature flags: `default = ["full"]`, `cortex` (bridge support), `mcp`, `wasm`,
+```toml
+[workspace]
+members = [
+    "drift-core",
+    "drift-analysis",
+    "drift-storage",
+    "drift-context",      # 6th crate (OD-1 resolution)
+    "drift-napi",
+    "drift-bench",
+]
+
+[workspace.dependencies]
+tree-sitter = "0.25"          # Was "0.24". 0.26.x exists but 0.25 safer for grammar compat
+rusqlite = { version = "0.38", features = ["bundled", "backup", "blob"] }  # Was "0.32"
+napi = { version = "3", features = ["async", "serde-json"] }
+thiserror = "2"
+tracing = "0.1"
+tracing-subscriber = { version = "0.3", features = ["env-filter"] }
+rustc-hash = "2"
+smallvec = "1"                # Was "1.13". "1" resolves to latest 1.x
+lasso = { version = "0.7", features = ["multi-threaded", "serialize"] }
+rayon = "1.10"
+xxhash-rust = { version = "0.8", features = ["xxh3"] }
+petgraph = "0.8"              # Was "0.6". stable_graph is default feature
+moka = { version = "0.12", features = ["sync"] }
+ignore = "0.4"
+crossbeam-channel = "0.5"     # Resolves to ≥0.5.15 (RUSTSEC-2025-0024 patched)
+serde = { version = "1", features = ["derive"] }
+serde_json = "1"
+statrs = "0.18"               # Was "0.17" (implicit). 0.18.0 released Dec 2024
+git2 = "0.20"                 # Was "0.19". Bundles libgit2 1.9
+tiktoken-rs = "0.9"           # Was "0.6". Adds o200k_harmony, GPT-5 support
+fd-lock = "4"                 # Was unspecified. Pin for workspace management
+
+# drift-context dependencies (6th crate)
+quick-xml = "0.37"
+serde_yaml = "0.9"
+glob = "0.3"
+base64 = "0.22"
+
+[profile.release]
+lto = true
+codegen-units = 1
+opt-level = 3
+strip = "symbols"
+panic = "abort"               # Added per S1. Matches Cortex workspace
+```
+
+Feature flags: `default = ["full"]` for drift-analysis crate. `cortex` and `mcp` flags are optional, not default. Additional flags: `wasm`,
 `benchmark`, `otel` (OpenTelemetry), per-language flags (`lang-python`, `lang-java`,
 `lang-rust`, etc.), `full` (all languages + all features).
 
-Release profile: `lto = true`, `codegen-units = 1`, `opt-level = 3`, `strip = "symbols"`.
-
 **Why separate crates**: Schema changes in drift-storage don't recompile parsers.
-Benchmark dependencies in drift-bench don't pollute production. NAPI bindings in
+Benchmark dependencies in drift-bench don't pollute production. Context generation
+dependencies (tiktoken-rs, quick-xml) are isolated in drift-context. NAPI bindings in
 drift-napi are the bridge layer — they depend on everything above.
 
 ### 3.2 Configuration System (DriftConfig)
@@ -349,6 +380,8 @@ Phase 0 is complete when:
 - [ ] `ThreadedRodeo` interns and resolves paths correctly
 - [ ] All workspace dependencies are pinned at exact versions
 - [ ] `cargo clippy --workspace` passes with zero warnings
+- [ ] `panic = "abort"` set in release profile
+- [ ] drift-context crate compiles and exports public types
 
 **What you can't do yet**: Scan files, parse ASTs, persist data, call from TypeScript.
 That's Phase 1.
@@ -365,7 +398,7 @@ results to drift.db, and call it all from TypeScript.
 
 **Why this order**: Scanner discovers files → Parsers parse them → Storage persists
 results → NAPI exposes it to TypeScript. Each system's output is the next system's
-input. No parallelism possible here — it's a strict pipeline.
+input. Integration testing is sequential (Scanner→Parsers→Storage→NAPI), but development of Storage and NAPI infrastructure can overlap with Scanner and Parsers.
 
 ### 4.1 Scanner (System 00)
 
@@ -384,7 +417,12 @@ Output: `ScanDiff` (added/modified/removed/unchanged) + `ScanStats` (timing, thr
 
 Cancellation via `AtomicBool`. Progress via `DriftEventHandler::on_scan_progress`.
 
-Performance targets: 10K files <300ms, 100K files <1.5s, incremental (1 file) <100ms.
+Performance targets: 10K scan: <300ms Linux, <500ms macOS (APFS getdirentries64 bottleneck). 100K scan: <3s cold, <1.5s incremental (1% changed). Incremental (1 file) <100ms.
+
+| Platform | 10K files | 100K cold | 100K incremental |
+|----------|-----------|-----------|-----------------|
+| Linux    | <300ms    | <3s       | <1.5s           |
+| macOS    | <500ms    | <3s       | <1.5s           |
 
 **Lives in**: `drift-analysis/src/scanner/`
 
@@ -432,7 +470,7 @@ Per 02-STORAGE-V2-PREP. Where everything persists.
 Write-serialized + read-pooled: `Mutex<Connection>` writer, round-robin `ReadPool`
 with `AtomicUsize` index, read connections with `SQLITE_OPEN_READ_ONLY`.
 
-Medallion architecture: Bronze (staging) → Silver (normalized, source of truth) → Gold
+Medallion architecture: staging → normalized (source of truth) → materialized
 (materialized views: `materialized_status`, `materialized_security`, `health_trends`).
 
 Batch writer via `crossbeam-channel` bounded(1024) with dedicated writer thread,
@@ -505,7 +543,7 @@ normalize ASTs across 9 languages.
 
 **Estimated effort**: 3-4 weeks for core pipeline, but the full UAE (Unified Analysis
 Engine + Detector System + GAST + ULP + per-language analyzers) spans 7 internal phases
-totaling ~22 weeks per 06-UNIFIED-ANALYSIS-ENGINE-V2-PREP §18. The 3-4 week estimate
+totaling ~22-27 weeks per 06-UNIFIED-ANALYSIS-ENGINE-V2-PREP §18. The 3-4 week estimate
 covers the Phase 2 deliverables (core pipeline + visitor engine + initial detectors);
 the remaining UAE phases (GAST normalization, core analyzers, ULP, advanced features,
 per-language analyzers) continue in parallel with Phases 3-5. Two parallel tracks
@@ -513,7 +551,7 @@ possible (see §15).
 
 > ⚠️ **Build Estimate Warning**: The full UAE is the single largest system in Drift v2.
 > 350+ detectors must be ported from v1 TypeScript to Rust. GAST normalization requires
-> ~30 node types and 10 per-language normalizers. Plan for incremental delivery — ship
+> ~40-50 node types and 10 per-language normalizers. Plan for incremental delivery — ship
 > core pipeline + 50-80 detectors in Phase 2, continue porting through Phases 3-5.
 
 **Why now**: These are Level 1 systems. They consume ParseResult (Phase 1) and produce
@@ -540,10 +578,13 @@ Per 06-UNIFIED-ANALYSIS-ENGINE-V2-PREP. The core pattern detection pipeline.
 3. Regex on extracted strings (URL patterns, SQL patterns, secret patterns)
 4. Resolution index building (6 strategies for cross-file symbol resolution)
 
-GAST normalization layer (~30 node types, 10 per-language normalizers) for cross-language
+GAST normalization layer (~40-50 node types, 10 per-language normalizers) for cross-language
 analysis. This is what lets a "naming convention" detector work identically on TypeScript
 and Python. Per 06-UAE-V2-PREP §Phase 3 (Weeks 5-8): normalizers for TS/JS, Python,
 Java, C#, PHP, Go, Rust, C++, and a base normalizer.
+
+`GASTNode::Other { kind: String, children: Vec<GASTNode> }` catch-all variant ensures
+normalizers can pass through unrecognized constructs without data loss.
 
 Declarative TOML pattern definitions (user-extensible without recompiling). Each
 `CompiledQuery` carries `cwe_ids: SmallVec<[u32; 2]>` and `owasp: Option<Spur>`.
@@ -597,6 +638,12 @@ Memory estimates by codebase size (per 05-CALL-GRAPH-V2-PREP §3):
 - 500K+ files (~2.5M functions): Fallback to SQLite recursive CTE (O(1) memory, ~10x slower)
 
 `in_memory_threshold` config (default 500K functions) triggers the SQLite CTE fallback.
+
+> **CTE fallback performance note**: Use temp table for visited set instead of string-based
+> cycle detection (`path NOT LIKE '%' || id || '%'`) — ~5x faster for dense graphs.
+> CTE max_depth default = 5 (bounds combinatorial explosion for dense graphs).
+> CTE fallback is ~10x slower than in-memory BFS for sparse graphs, up to 50-100x for
+> highly connected graphs with many cycles. No global visited set in SQLite recursive CTEs.
 
 Resolution rate target: 60-85% overall (varies by language: TS/JS 70-85%, Python 60-75%,
 Java 75-85%, Go 70-80%, C/C++ 50-65%). Track per-language for observability.
@@ -659,6 +706,7 @@ Phase 2 is complete when:
 - [ ] Analysis engine processes a real codebase through all 4 phases
 - [ ] At least 5 detector categories produce valid `PatternMatch` results
 - [ ] GAST normalization produces identical node types for equivalent TS/Python code
+- [ ] `coverage_report()` per language (mandatory) — target ≥85% node coverage for P0 languages (TS, JS, Python)
 - [ ] Call graph builds with all 6 resolution strategies
 - [ ] Incremental call graph update correctly handles file changes
 - [ ] Boundary detection identifies ORM patterns across at least 5 frameworks
@@ -791,7 +839,7 @@ Phase 3 is complete when:
 - [ ] Bayesian confidence produces Beta posteriors with correct tier classification
 - [ ] Momentum tracking detects rising/falling/stable trends
 - [ ] Outlier detection auto-selects correct method based on sample size
-- [ ] Z-Score, Grubbs', and IQR methods produce statistically valid results
+- [ ] Z-Score, Grubbs', and IQR methods produce correct outlier classifications on a reference dataset with known outliers (≥90% precision, ≥80% recall)
 - [ ] Learning system discovers conventions with minOccurrences=3, dominance=0.60
 - [ ] Convention categories (Universal/Emerging/Legacy/Contested) classify correctly
 - [ ] All results persist to drift.db (patterns table with α, β, score columns)
@@ -849,12 +897,13 @@ Source/sink/sanitizer model. TOML-driven registry (extensible without code chang
 Phase 1: Intraprocedural (within-function dataflow tracking).
 Phase 2: Interprocedural via function summaries (cross-function taint propagation).
 
-13 sink types with CWE mappings (per 15-TAINT-ANALYSIS-V2-PREP §5 SinkType enum):
+17 sink types with CWE mappings (per 15-TAINT-ANALYSIS-V2-PREP §5 SinkType enum, plus XmlParsing and FileUpload):
 SqlQuery (CWE-89), OsCommand (CWE-78), CodeExecution (CWE-94), FileWrite (CWE-22),
 FileRead (CWE-22), HtmlOutput (CWE-79), HttpRedirect (CWE-601), HttpRequest (CWE-918),
 Deserialization (CWE-502), LdapQuery (CWE-90), XpathQuery (CWE-643),
 TemplateRender (CWE-1336), LogOutput (CWE-117), HeaderInjection (CWE-113),
-RegexConstruction (CWE-1333), plus Custom(u32) for user-defined sinks.
+RegexConstruction (CWE-1333), XmlParsing (CWE-611), FileUpload (CWE-434),
+plus Custom(u32) for user-defined sinks.
 
 Taint label propagation with sanitizer tracking. Framework-specific taint specifications.
 SARIF code flow generation for taint paths.
@@ -925,6 +974,7 @@ Phase 4 is complete when:
 - [ ] Test topology maps test→source coverage via call graph
 - [ ] All results persist to drift.db in their respective tables
 - [ ] NAPI exposes analysis functions for all 5 systems
+- [ ] All 5 systems complete on 10K-file codebase in <15s total
 
 
 ---
@@ -936,7 +986,7 @@ architecture health, contract verification, and the capstone DNA metric. These a
 highly parallelizable — most depend on the call graph and detector system but not
 on each other.
 
-**Estimated effort**: 4-6 weeks. Maximum parallelism (up to 7 independent tracks).
+**Estimated effort**: 4-6 weeks for Phase 5 gate (all systems except Contract Tracking at MVP). Contract Tracking continues through Phases 6-8 (~20 weeks total). Constraint System and DNA System start 0-2 weeks after other P5 systems (waiting for P4). Maximum parallelism (up to 5 immediate tracks + 3 delayed tracks).
 
 **Why now**: These consume call graph (Phase 2) and pattern data (Phase 3). They
 produce the structural intelligence that enforcement (Phase 6) and advanced systems
@@ -945,22 +995,20 @@ parallelization opportunity.
 
 ### 8.1 Parallelization Within Phase 5
 
-These systems can be built in any order or simultaneously:
-
-**Independent tracks** (zero cross-dependencies):
+5 immediate tracks (zero cross-dependencies, can start as soon as Phase 2 completes):
 - Coupling Analysis (reads call graph + imports)
 - Contract Tracking (reads parsers + ULP)
 - Constants & Environment (reads parsers + analysis engine)
 - Wrapper Detection (reads call graph + parsers)
 - Cryptographic Failure Detection (reads parsers + analysis engine) — NET NEW
-- OWASP/CWE Mapping (metadata enrichment layer, reads all security detectors)
 
-**Soft dependencies** (can use stubs):
+3 delayed tracks (start 0-2 weeks after other P5 systems, waiting for Phase 4):
 - Constraint System (benefits from nearly everything, but can start with parser-based
   constraints and add call-graph-based constraints incrementally)
 - DNA System (capstone — consumes coupling, constraints, test topology, error handling,
   patterns, confidence, boundaries. Build the gene extractor framework first, add
   extractors as their data sources become available)
+- OWASP/CWE Mapping (metadata enrichment layer, reads all security detectors — benefits from Phase 4 taint/reachability data)
 
 ### 8.2 Coupling Analysis (System 19)
 
@@ -1030,7 +1078,7 @@ Per 22-CONSTANTS-ENVIRONMENT-V2-PREP. Secret detection + magic numbers + env var
 13-phase unified pipeline (per §3 architecture):
 1. Constant extraction from AST (9+ languages)
 2. Magic number detection via AST (replaces v1 regex — scope-aware, context-aware)
-3. Secret detection engine (100+ patterns, 7 severity tiers: Critical/High/Medium/Low/Info/FP/Suppressed)
+3. Secret detection engine (150+ patterns for launch, 7 severity tiers: Critical/High/Medium/Low/Info/FP/Suppressed, with format validation as 3rd confidence signal — AWS AKIA*, GitHub ghp_*)
 4. Inconsistency detection (fuzzy name matching, camelCase ↔ snake_case normalization)
 5. Dead constant detection via call graph integration
 6. Environment variable extraction (9+ languages, 15+ access methods)
@@ -1044,7 +1092,7 @@ Per 22-CONSTANTS-ENVIRONMENT-V2-PREP. Secret detection + magic numbers + env var
 
 Shannon entropy scoring for high-entropy string detection (hybrid pattern + entropy
 reduces FP vs pattern-only). V1 had 21 patterns across 3 severity tiers; v2 expands
-to 100+ patterns across 7 severity tiers with entropy-based scoring.
+to 150+ patterns across 7 severity tiers with entropy-based scoring and format validation as 3rd confidence signal.
 
 CWE-798 (hardcoded credentials), CWE-321 (hardcoded crypto key),
 CWE-547 (hardcoded security-relevant constant) mappings.
@@ -1125,7 +1173,7 @@ the coverage calculator reports it as a gap — it does NOT attempt to detect it
 (no runtime loading, no file parsing for base registry; user extensions via TOML).
 
 Every security detector → CWE IDs. OWASP 2025 Top 10 coverage: 10/10 categories.
-CWE Top 25 2025 coverage target: 25/25.
+CWE Top 25 2025 coverage target: 20/25 fully detectable + 5/25 partially (memory safety CWEs — Rust mitigates).
 
 `SecurityFinding` unified type: raw findings from all upstream subsystems (detector
 violations, taint flows, secrets, error gaps, boundary violations) enriched with
@@ -1191,8 +1239,7 @@ Phase 5 is complete when:
 **Goal**: Build the five Level 3 systems that transform analysis into actionable
 pass/fail decisions. This is where Drift goes from "informational" to "actionable."
 
-**Estimated effort**: 2-3 weeks. Mostly sequential (gates depend on rules, policy
-depends on gates, audit depends on gates).
+**Estimated effort**: 2-3 weeks. Partial overlap: Level 0 (Rules Engine + Feedback Loop core), Level 1 (Quality Gates + SARIF), Level 2 (Policy Engine ∥ Audit System), Level 3 (integration).
 
 **Why now**: Enforcement consumes everything from Phases 2-5. It produces the decisions
 that presentation (Phase 8) displays. Without enforcement, Drift is a scanner that
@@ -1223,6 +1270,8 @@ add type annotation, add test, add documentation.
 Maps detected patterns + outliers to actionable violations with file/line/column
 locations, severity levels (error/warning/info/hint), and auto-fix suggestions.
 
+> **Spec coverage note**: Implemented within each gate's evaluate() method. See 09-QG-V2-PREP §5, §18, §24.
+
 **Lives in**: `drift-analysis/src/enforcement/rules/`
 
 ### 9.3 Quality Gates (System 09)
@@ -1239,7 +1288,7 @@ Per 09-QUALITY-GATES-V2-PREP. The CI/CD enforcement layer.
 
 DAG-based gate orchestrator (gates can depend on other gates).
 7 reporters: SARIF 2.1.0, GitHub Code Quality, GitLab Code Quality, JUnit XML,
-HTML, JSON, console.
+HTML, JSON, console. SonarQube Generic Issue Format (P2, post-launch).
 
 Progressive enforcement: warn → error over time, configurable ramp-up.
 New-code-first enforcement (SonarQube "Clean as You Code" pattern).
@@ -1255,13 +1304,15 @@ and the single most important output format for enterprise adoption.
 4 aggregation modes: all-must-pass, any-must-pass, weighted, threshold.
 Progressive enforcement ramp-up for new projects.
 
+> **Spec coverage note**: Fully specified in 09-QG-V2-PREP §7. No separate spec needed.
+
 **Lives in**: `drift-analysis/src/enforcement/policy/`
 
 ### 9.5 Audit System (System 25)
 
 Per 25-AUDIT-SYSTEM-V2-PREP. The "your codebase is drifting" signal.
 
-5-factor health scoring with exact weights (per §Phase 6):
+5-factor health scoring with configurable weights (defaults per §Phase 6, plan empirical validation via telemetry post-launch):
 `health_score = (avgConfidence × 0.30 + approvalRatio × 0.20 + complianceRate × 0.20
 + crossValidationRate × 0.15 + duplicateFreeRate × 0.15) × 100`
 
@@ -1321,7 +1372,7 @@ Phase 6 is complete when:
 **Goal**: Build the four Level 4 systems. These are high-value features built on top
 of the full stack. Impressive but they're leaves — nothing else depends on them.
 
-**Estimated effort**: 3-4 weeks. Fully parallelizable (all four are independent).
+**Estimated effort**: 6-8 weeks with 4 parallel developers (bounded by Decision Mining at ~8 weeks). Per-system: Simulation ~6w, Decision Mining ~8w, Context Gen ~7w, N+1 ~2w. Fully parallelizable (all four are independent).
 
 **Why now**: They consume the complete analysis stack (Phases 2-6) but nothing depends
 on them. They can be built in any order, by different contributors, or deferred entirely
@@ -1386,16 +1437,32 @@ contract tracking.
 
 **Lives in**: `drift-analysis/src/language_provider/n_plus_one.rs`
 
-### 10.5 Phase 7 Verification Gate
+### 10.5 Phase 7 Hybrid Architecture Risks
+
+Simulation Engine and Decision Mining use hybrid Rust/TypeScript architectures. Key
+integration risks:
+- **NAPI v3 boundary**: All cross-language calls go through napi-rs v3. Prefer `async fn`
+  over `AsyncTask` in v3 for cleaner ergonomics.
+- **Testing strategy**: Rust unit tests for computation, TypeScript integration tests for
+  orchestration, cross-boundary tests for serialization correctness.
+- **Serialization overhead**: Measure serde_json serialization time for large result sets
+  (simulation approaches, decision histories). Budget <5ms per NAPI call.
+- **Lifecycle**: TypeScript orchestration layer must handle Rust panics gracefully
+  (`panic = "abort"` means process termination — catch errors before they panic).
+
+### 10.6 Phase 7 Verification Gate
 
 Phase 7 is complete when:
 - [ ] Simulation engine generates approaches for at least 5 task categories
 - [ ] Monte Carlo produces P10/P50/P90 confidence intervals
-- [ ] Decision mining extracts decisions from git history via git2
+- [ ] Decision mining extracts decisions in at least 5 of 12 categories
 - [ ] ADR detection finds Architecture Decision Records in markdown
-- [ ] Context generation produces token-budgeted output for 3 depth levels
+- [ ] Context generation produces token-budgeted output for 3 depth levels, token count within 5% of configured budget
 - [ ] Intent-weighted scoring produces different context for different intents
 - [ ] N+1 detection identifies loop-query patterns in at least 3 ORM frameworks
+- [ ] Context gen <100ms full pipeline
+- [ ] NAPI exposes Phase 7 functions
+- [ ] All results persist to drift.db
 
 ---
 
@@ -1404,7 +1471,7 @@ Phase 7 is complete when:
 **Goal**: Build the Level 5A presentation systems that make Drift usable. These are
 how humans and AI agents consume Drift's analysis.
 
-**Estimated effort**: 3-4 weeks. Parallelizable (MCP, CLI, CI Agent are independent).
+**Estimated effort**: 4-5 weeks for Phase 8 gate (MCP core + CLI + CI Agent). Full MCP completion: ~7 weeks per V2-PREP. Parallelizable (MCP, CLI, CI Agent are independent).
 
 **Why now**: Everything from Phases 0-7 produces data in drift.db. Presentation systems
 read that data and expose it through different interfaces. They're pure consumers.
@@ -1412,9 +1479,10 @@ read that data and expose it through different interfaces. They're pure consumer
 ### 11.1 MCP Server (System 32)
 
 Per 32-MCP-SERVER-V2-PREP. How AI agents consume Drift.
+MCP spec 2025-11-25 (adds CIMD, XAA, mandatory PKCE).
 
-Split architecture: drift-analysis (~20-25 tools, standalone) vs drift-memory
-(~15-20 tools, bridge-dependent, Phase 9).
+Split architecture: drift-analysis (~52 analysis tools: 3 MCP entry points + 49 via dispatch) vs drift-memory
+(~33 memory tools: 3 entry points + 30 via dispatch, bridge-dependent, Phase 9). Progressive disclosure reduces token overhead ~81%.
 
 Progressive disclosure with 3 entry points:
 1. `drift_status` — overview, reads `materialized_status`, <1ms
@@ -1455,8 +1523,8 @@ Configurable fail conditions via policy engine.
 
 ### 11.4 Quality Gate Reporters
 
-7 output formats: SARIF 2.1.0, GitHub Code Quality, GitLab Code Quality, JUnit XML,
-HTML, JSON, console. SARIF includes CWE + OWASP taxonomies.
+8 output formats: SARIF 2.1.0, GitHub Code Quality, GitLab Code Quality, JUnit XML,
+HTML, JSON, console, SonarQube Generic Issue Format (P2, post-launch). SARIF includes CWE + OWASP taxonomies.
 
 **Note**: The SARIF reporter should be built in Phase 6 alongside quality gates (it's
 the key to GitHub Code Scanning integration). The remaining 6 reporters can be built
@@ -1474,7 +1542,7 @@ Phase 8 is complete when:
 - [ ] CI agent runs 9 analysis passes on a PR diff
 - [ ] SARIF upload to GitHub Code Scanning succeeds
 - [ ] PR comment generation produces readable summaries
-- [ ] All 7 reporter formats produce valid output
+- [ ] All 8 reporter formats produce valid output
 
 ---
 
@@ -1483,7 +1551,7 @@ Phase 8 is complete when:
 **Goal**: Build the optional integration layer that connects Drift to Cortex. This is
 architecturally a leaf (D4) but the killer product feature (D7).
 
-**Estimated effort**: 2-3 weeks.
+**Estimated effort**: 3-5 weeks (1 dev), 2-3 weeks (2 devs). V2-PREP shows 8 internal phases totaling ~21-26 working days.
 
 **Why last (for Drift)**: Per D1, Drift is complete without this. Per D4, nothing in
 Drift depends on the bridge. The bridge depends on the complete Drift stack producing
@@ -1596,7 +1664,7 @@ weak_penalty=0.15, invalidated_floor=0.1, contradiction_drop=0.3.
 
 3-tier license gating for bridge features:
 - Community: event mapping (5 event types), basic grounding (manual only)
-- Professional: full event mapping (all 21 types), scheduled grounding, MCP tools
+- Team: full event mapping (all 21 types), scheduled grounding, MCP tools
 - Enterprise: full grounding loop, contradiction generation, cross-DB analytics
 
 ### 12.3 Database Integration
@@ -1625,7 +1693,11 @@ Phase 9 is complete when:
 **Goal**: Build the remaining cross-cutting and presentation systems needed for a
 shippable product. These are Level 6 infrastructure and lower-priority Level 5 systems.
 
-**Estimated effort**: 4-6 weeks. Highly parallelizable.
+**Estimated effort**: 4-6 weeks (5+ devs), 8-10 weeks (3 devs), 22-28 weeks (1 dev). Highly parallelizable.
+
+P0 (ship-blocking): Workspace Management, Licensing, Docker.
+P1 (high-value): VSCode Extension, LSP Server, AI Providers.
+P2 (nice-to-have): Dashboard, Galaxy, Telemetry, CIBench.
 
 ### 13.1 Workspace Management (System 33)
 
@@ -1642,7 +1714,7 @@ is polish, not critical path.
 
 ### 13.2 Licensing & Feature Gating
 
-3 tiers: Community (free, core analysis), Professional (advanced + CI),
+3 tiers: Community (free, core analysis), Team (advanced + CI),
 Enterprise (full stack + OWASP compliance + telemetry + blake3 + OpenTelemetry).
 16 gated features. JWT validation. Graceful degradation.
 
@@ -1675,6 +1747,22 @@ Stays in TypeScript.
 
 4-level benchmark framework: micro (criterion), component (integration), system
 (end-to-end), regression (CI). Isolated in `drift-bench` crate.
+
+### 13.8 Phase 10 Verification Gate
+
+Phase 10 is complete when:
+- [ ] `drift setup` wizard creates drift.toml and drift.db correctly
+- [ ] `drift doctor` detects and reports common configuration issues
+- [ ] Hot backup via SQLite Backup API completes for 100MB database in <5s
+- [ ] `fd-lock` prevents concurrent drift.db access from multiple processes
+- [ ] License validation correctly gates features per tier (Community/Team/Enterprise)
+- [ ] Graceful degradation when license is missing or expired
+- [ ] Docker multi-arch images (amd64 + arm64) build and run correctly
+- [ ] HTTP/SSE MCP transport works in containerized deployment
+- [ ] VSCode extension displays inline violations and quick fix suggestions
+- [ ] LSP server provides diagnostics and code actions to non-VSCode editors
+- [ ] CIBench 4-level benchmarks run in CI without regression
+- [ ] All Phase 10 systems persist configuration to drift.db
 
 
 ---
@@ -1726,7 +1814,7 @@ Violation Feedback Loop         | ·  | ·  | ·  | ·  |    |    | ·  |    |  
 Simulation Engine               | ·  | ·  | ·  | ·  | ·  | ·  |    | ·  |    |
 Decision Mining                 | ·  | ·  | ·  |    |    |    |    | ·  |    |
 Context Generation              | ·  | ·  | ·  | ·  | ·  | ·  |    | ·  |    |
-N+1 Query Detection             | ·  | ·  | ·  |    | ·  |    |    | ·  |    |
+N+1 Query Detection             | ·  | ·  | ·  |    |    |    |    | ·  |    |
 MCP Server                      | ·  | ·  |    |    |    |    |    |    | ·  |
 CLI                             | ·  | ·  |    |    |    |    |    |    | ·  |
 CI Agent & GitHub Action        | ·  | ·  |    |    |    |    | ·  |    | ·  |
@@ -1745,6 +1833,9 @@ CIBench                         | ·  | ·  | ·  |    |    |    |    |    |    
 ```
 
 Legend: `·` = depends on this phase. Empty = no dependency.
+
+> **Note on N+1 Query Detection**: Basic N+1 works with P2 ORM matchers. Advanced ORM
+> coverage improves with P5 ULP matchers (soft/optional dependency, not required for core functionality).
 
 ---
 
@@ -1767,7 +1858,7 @@ One developer, 2-3 weeks. Two developers can overlap (one on scanner+parsers, on
 These converge at Phase 3.
 
 > ⚠️ **Realistic Build Estimates from V2-PREP Documents**:
-> - UAE full pipeline: 22 weeks across 7 internal phases (core pipeline Weeks 1-3,
+> - UAE full pipeline: 22-27 weeks across 7 internal phases (core pipeline Weeks 1-3,
 >   visitor engine Weeks 3-5, GAST Weeks 5-8, core analyzers Weeks 8-12, ULP Weeks 12-15,
 >   advanced Weeks 15-18, per-language analyzers Weeks 18-22). Only the core pipeline +
 >   visitor engine (Weeks 1-5) are needed for Phase 2 deliverables.
@@ -1789,14 +1880,17 @@ and Learning System can be parallel. Internal dependency chain limits parallelis
 Reachability, Taint, Error Handling, Impact, Test Topology — all independent.
 This is the widest parallelization opportunity. 5 developers can work simultaneously.
 
-### Phase 5: 7 parallel tracks (maximum parallelism)
-Coupling, Constraints, Contracts, Constants, Wrappers, Crypto, OWASP/CWE — mostly
-independent. DNA System starts with parser-only extractors, adds others incrementally.
+### Phase 5: 5 immediate + 3 delayed tracks (maximum parallelism)
+Coupling, Contracts, Constants, Wrappers, Crypto — 5 immediate tracks (no Phase 4 dependency).
+Constraints, DNA, OWASP/CWE — 3 delayed tracks starting after Phase 4.
+DNA System starts with parser-only extractors, adds others incrementally.
 This is the second-widest parallelization opportunity.
 
-### Phase 6: Mostly sequential (1-2 tracks)
-Rules Engine → Quality Gates → Policy Engine → Audit System.
-Violation Feedback Loop can be parallel with Policy/Audit.
+### Phase 6: Partial overlap (2-3 tracks)
+Level 0: Rules Engine + Feedback Loop core (parallel).
+Level 1: Quality Gates + SARIF (depends on Rules Engine).
+Level 2: Policy Engine ∥ Audit System (parallel, depend on Gates).
+Level 3: Integration testing.
 
 ### Phase 7: 4 parallel tracks
 Simulation, Decision Mining, Context Generation, N+1 — all independent leaves.
@@ -1807,15 +1901,15 @@ MCP Server, CLI, CI Agent — all independent presentation consumers.
 ### Phase 9: Sequential (1 track)
 Bridge crate is a single system. One developer.
 
-### Phase 10: 8+ parallel tracks
-All remaining systems are independent. Maximum parallelism.
+### Phase 10: 6 immediate + 3 delayed tracks
+6 immediate tracks (Workspace, Licensing, Telemetry, Dashboard, Galaxy, CIBench) + 3 delayed tracks (Docker, VSCode, LSP require Phase 8). VSCode↔LSP share interface dependency.
 
 ### Critical Path (Longest Sequential Chain)
 
 ```
 Phase 0 (1-2w) → Phase 1 (2-3w) → Phase 2 Track A (2w) → Phase 3 (3-4w) →
 Phase 6 (2-3w) → Phase 8 (2w)
-= 12-16 weeks minimum for a shippable product
+= 12-16 weeks optimistic, 16-21 weeks realistic (1.3x overconfidence correction) minimum for a shippable product
 ```
 
 With parallelism, Phases 4 and 5 run alongside Phase 3 and 6, adding zero time
@@ -1823,21 +1917,21 @@ to the critical path if you have enough developers.
 
 ### Team Size Recommendations
 
-| Team Size | Timeline | Strategy |
-|-----------|----------|----------|
-| 1 developer | 6-8 months | Sequential. Phases 0-1-2-3-6-8 first (critical path). Then 4-5-7 for depth. |
-| 2 developers | 4-5 months | Dev A: critical path (0-1-2A-3-6). Dev B: 2B-4-5. Converge at Phase 8. |
-| 3-4 developers | 3-4 months | Full parallelism in Phases 4 and 5. Critical path still 12-16 weeks. |
-| 5+ developers | 2.5-3 months | Maximum parallelism. Phases 4+5 complete in 4-6 weeks with 5 tracks. |
+| Team Size | Optimistic Timeline | Realistic (1.3x) | Strategy |
+|-----------|----------|----------|----------|
+| 1 developer | 6-8 months | 8-10 months | Sequential. Phases 0-1-2-3-6-8 first (critical path). Then 4-5-7 for depth. |
+| 2 developers | 4-5 months | 5-6.5 months | Dev A: critical path (0-1-2A-3-6). Dev B: 2B-4-5. Converge at Phase 8. |
+| 3-4 developers | 3-4 months | 4-5 months | Full parallelism in Phases 4 and 5. Critical path still 12-16 weeks. |
+| 5+ developers | 2.5-3 months | 3-4 months | Maximum parallelism. Phases 4+5 complete in 4-6 weeks with 5 tracks. |
 
 ---
 
 ## 16. Risk Register & Mitigation
 
-### R1: tree-sitter v0.24 Grammar Compatibility
-**Risk**: Some language grammars may not be compatible with tree-sitter v0.24.
+### R1: tree-sitter v0.25 Grammar Compatibility
+**Risk**: Some language grammars may not be compatible with tree-sitter v0.25.
 **Impact**: Blocks Phase 1 for affected languages.
-**Mitigation**: Test all 10 grammars against v0.24 in Phase 0. Pin grammar versions
+**Mitigation**: Test all 10 grammars against v0.25 in Phase 0. Pin grammar versions
 in `build.rs`. If a grammar is incompatible, ship without that language and add it
 when the grammar updates.
 
@@ -1875,11 +1969,13 @@ detectors, add the long tail incrementally. v1 already has many detector
 implementations that inform the v2 Rust ports.
 
 ### R6: Cross-Language GAST Normalization
-**Risk**: Normalizing 10 languages into ~30 GAST node types may have edge cases
+**Risk**: Normalizing 10 languages into ~40-50 GAST node types may have edge cases
 that produce incorrect cross-language analysis.
+**Severity**: Medium-High.
 **Impact**: False positives in cross-language detectors.
 **Mitigation**: Start with 3-4 well-understood languages (TS/JS, Python, Java).
-Add languages incrementally with per-language test suites. Semgrep's ast_generic
+Add languages incrementally with per-language test suites. Mandatory `coverage_report()`
+per language — target ≥85% node coverage for P0 languages. Semgrep's ast_generic
 and YASA's UAST provide reference implementations.
 
 ### R7: Build Time
@@ -1889,11 +1985,11 @@ and YASA's UAST provide reference implementations.
 compilation cache. Feature flags to compile only needed languages during development.
 Release profile separate from dev profile.
 
-### R8: UAE/GAST 22-Week Timeline
+### R8: UAE/GAST 22-27 Week Timeline
 **Risk**: The Unified Analysis Engine is the single largest system in Drift v2. The
-full pipeline (core + visitor + GAST + analyzers + ULP + per-language) spans 22 weeks
+full pipeline (core + visitor + GAST + analyzers + ULP + per-language) spans 22-27 weeks
 per 06-UAE-V2-PREP §18. 350+ detectors must be ported from TypeScript to Rust. GAST
-normalization requires ~30 node types and 10 per-language normalizers.
+normalization requires ~40-50 node types and 10 per-language normalizers.
 **Impact**: Phase 2 deliverables ship on time but the full detector suite takes months.
 **Mitigation**: Ship core pipeline + 50-80 high-value detectors in Phase 2 (Weeks 1-5).
 Continue porting remaining detectors through Phases 3-5 in parallel. The trait-based
@@ -1922,12 +2018,43 @@ minimizes re-scanning. Document the platform difference in performance expectati
 ### R11: Cargo Dependency Version Inconsistencies
 **Risk**: Bridge V2-PREP doc (34-CORTEX-DRIFT-BRIDGE-V2-PREP §4.2) specifies
 `thiserror = "1"` and `rusqlite = "0.31"`, while the workspace Cargo.toml in Phase 0
-specifies `thiserror = "2"` and `rusqlite = "0.32"`.
+specifies `thiserror = "2"`, `rusqlite = "0.38"`, `petgraph = "0.8"`, and `tree-sitter = "0.25"`.
+**Severity**: Low (workspace dependency inheritance resolves conflicts).
 **Impact**: Version mismatch between bridge crate and main workspace causes compilation
 errors or trait incompatibilities.
-**Mitigation**: The workspace Cargo.toml versions (thiserror 2, rusqlite 0.32) are
-authoritative — they represent the latest stable versions. The bridge crate must use
-the same versions. Update bridge Cargo.toml to match workspace pins at build time.
+**Mitigation**: The workspace Cargo.toml versions are authoritative. The bridge crate
+must use the same versions. Workspace dependency inheritance ensures all crates use
+consistent versions. Update bridge Cargo.toml to match workspace pins at build time.
+
+### R17: SQLite Schema Complexity
+**Risk**: drift.db grows to 55-65 tables with 180+ total objects (tables, indexes,
+views, triggers).
+**Impact**: Schema migration and validation overhead increases with each phase.
+**Mitigation**: `rusqlite_migration` uses `user_version` (fast integer check). Cache
+schema version in memory, skip full validation on match. Only run full migration check
+on version mismatch.
+
+### R18: Estimation Overconfidence
+**Risk**: ~30% average overrun observed across V2-PREP build estimates.
+**Impact**: Delivery timelines slip without buffer.
+**Mitigation**: Apply 1.3x multiplier for planning. Critical path 12-16w → 16-21w.
+1-dev timeline 6-8mo → 8-10mo. Build phase-level buffers into team commitments.
+
+### R19: NAPI v2→v3 Divergence
+**Risk**: Cortex uses napi v2; Drift targets v3 (3.8.x). `ThreadsafeFunction`,
+`AsyncTask`, `Function`/`FunctionRef` APIs differ between versions.
+**Impact**: Cortex patterns cannot be copied verbatim — adaptation required.
+**Mitigation**: Create v2→v3 cheat sheet before Phase 1. Key differences:
+ThreadsafeFunction (ownership-based in v3), AsyncTask (prefer `async fn` in v3),
+Function/FunctionRef (new types in v3), error handling differences.
+
+### R20: Parallel Dev Coordination
+**Risk**: Phases 4-5 offer 5+7 parallel tracks. Communication overhead scales
+quadratically with team size.
+**Impact**: Integration conflicts, duplicated work, inconsistent patterns.
+**Mitigation**: Freeze drift-core types before parallel tracks begin. Assign
+integration lead for cross-system interfaces. Cap active parallel developers at
+3-4 to balance throughput vs coordination cost.
 
 ---
 
@@ -1956,28 +2083,41 @@ approaches and the NAPI surface area they consume is stable.
 
 ## 18. Cortex Pattern Reuse Guide
 
-The existing Cortex codebase (19 crates in `crates/cortex/`) provides proven patterns
+The existing Cortex codebase (21 crates plus test-fixtures in `crates/cortex/`) provides proven patterns
 for several Drift systems. Reuse these patterns — the architecture is deliberately
 parallel per D1.
 
 | Drift System | Cortex Reference | What to Reuse |
 |-------------|-----------------|---------------|
 | **Singleton Runtime** | `cortex-napi/src/runtime.rs` | `OnceLock` pattern for `DriftRuntime`. Same lifecycle (init/shutdown). |
-| **NAPI Bindings** | `cortex-napi/src/bindings/` (12 modules) | Module organization, `#[napi]` patterns, error conversion, `AsyncTask` usage. |
-| **SQLite Storage** | `cortex-storage/src/pool/` | Write-serialized + read-pooled pattern. `Mutex<Connection>` writer, round-robin `ReadPool`. |
+| **NAPI Bindings** | `cortex-napi/src/bindings/` (14 modules: causal, cloud, consolidation, generation, health, learning, lifecycle, memory, multiagent, prediction, privacy, retrieval, session, temporal) | Module organization, `#[napi]` patterns, error conversion, `AsyncTask` usage. |
+| **SQLite Storage** | `cortex-storage/src/pool/` | Write-serialized + read-pooled pattern. `tokio::sync::Mutex<Connection>` writer in Cortex (async runtime), round-robin `ReadPool`. Drift should use `std::sync::Mutex` since Drift has no async runtime. |
 | **Batch Writer** | `cortex-storage/src/queries/` | `crossbeam-channel` bounded queue, dedicated writer thread, `prepare_cached()`. |
 | **Health Monitoring** | `cortex-observability/src/health/` | `HealthChecker`, `HealthReporter`, `HealthSnapshot` patterns. Drift's audit system mirrors this. |
 | **Degradation Tracking** | `cortex-observability/src/degradation/` | `DegradationTracker`, alert levels, recovery status. Drift's audit degradation mirrors this. |
 | **Tarjan's SCC** | `cortex-causal/src/graph/dag_enforcement.rs` | `petgraph::algo::tarjan_scc` usage. Drift's coupling analysis uses the same algorithm. |
-| **Similarity Scoring** | `cortex-consolidation/src/algorithms/similarity.rs` | Cosine similarity, Jaccard similarity. Drift's pattern aggregation uses Jaccard. |
+| **Similarity Scoring** | `cortex-consolidation/src/algorithms/similarity.rs` | Cosine similarity only. Drift must implement Jaccard from scratch or use a crate. |
 | **Deduplication** | `cortex-retrieval/src/ranking/deduplication.rs` | Session-aware dedup patterns. Drift's pattern dedup mirrors this. |
 | **Error Types** | `cortex-core/src/errors/` | `thiserror` enum patterns, error conversion traits. |
 | **Audit Logging** | `cortex-storage/src/migrations/v006_audit_tables.rs` | Audit table schema, temporal event emission. |
 | **NAPI Error Codes** | `cortex-napi/src/conversions/` | Error code conversion patterns, structured error messages. |
+| **NAPI Conversions** | `cortex-napi/src/conversions/` (7 per-domain conversion files) | Per-domain type conversion patterns for NAPI boundary. |
 
 **Rule**: Copy patterns, not code. Drift and Cortex are independent (D1). Don't create
 a shared utility crate — that violates standalone independence. Instead, implement the
 same patterns in drift-core with Drift-specific types.
+
+### NAPI v2→v3 Adaptation Guide
+
+Cortex uses napi v2; Drift targets v3 (3.8.x). Key differences to account for when
+adapting Cortex patterns:
+- **ThreadsafeFunction**: Ownership-based lifecycle in v3 (no manual ref counting).
+- **AsyncTask**: Prefer `async fn` with `#[napi]` in v3 over explicit `AsyncTask` impl.
+- **Function/FunctionRef**: New types in v3 replacing v2's `JsFunction` patterns.
+- **Error handling**: v3 uses `napi::Error` directly; v2 used `napi::Result` with
+  different conversion traits.
+
+Create a v2→v3 cheat sheet before Phase 1 to accelerate NAPI development.
 
 ---
 
@@ -1987,18 +2127,25 @@ Each V2-PREP document specifies detailed performance targets. Key targets by pha
 
 | Phase | System | Target | Source |
 |-------|--------|--------|--------|
-| 1 | Scanner | 10K files <300ms, 100K files <1.5s, incremental <100ms | 00-SCANNER §17 |
-| 1 | Parsers | Single-pass shared results, Moka LRU cache | 01-PARSERS |
+| 1 | Scanner | 10K files <300ms (Linux), <500ms (macOS), 100K files <3s cold / <1.5s incremental, incremental <100ms | 00-SCANNER §17 |
+| 1 | Parsers | Parse 10K files <5s. Single-pass shared results, Moka LRU cache | 01-PARSERS |
 | 1 | Storage | Batch write 500 rows/tx, keyset pagination, WAL mode | 02-STORAGE |
 | 1 | NAPI | AsyncTask for >10ms ops, <1ms for sync queries | 03-NAPI |
-| 2 | UAE | 10K file codebase analyzed <10s end-to-end | 06-UAE |
-| 2 | Call Graph | Build <5s for 10K files, BFS <5ms, SQLite CTE <50ms | 05-CALL-GRAPH |
+| 2 | UAE | 10K file codebase analyzed <10s / <15s fallback end-to-end | 06-UAE |
+| 2 | Call Graph | Build <5s for 10K files, BFS <5ms, SQLite CTE <50ms / <100ms fallback | 05-CALL-GRAPH |
 | 3 | Confidence | 10K patterns scored <500ms | 10-BAYESIAN |
-| 4 | Taint | Intraprocedural <1ms/function, interprocedural <100ms/function | 15-TAINT |
+| 4 | Taint | Intraprocedural <1ms/function, interprocedural <100ms/function / <200ms fallback | 15-TAINT |
+| 4 | Error Handling | <5ms per file topology construction | 16-ERROR |
+| 5 | Coupling | <1s for 5K-module Tarjan SCC + Martin metrics | 19-COUPLING |
 | 5 | Crypto | 261 pattern checks per file, short-circuit on import check | 27-CRYPTO |
+| 5 | Wrappers | <2ms per file for 150+ pattern RegexSet | 23-WRAPPER |
 | 5 | Contracts | Endpoint matching <1ms per pair, schema comparison <5ms | 21-CONTRACTS |
-| 8 | MCP | drift_status <1ms, drift_context <100ms | 32-MCP |
+| 6 | Violation Feedback | FP rate <10% overall, with category-specific sub-targets | 31-FEEDBACK |
+| 7 | Context Gen | <50ms standard, <100ms full pipeline | 30-CONTEXT |
+| 7 | N+1 Detection | <10ms per query site | 08-ULP |
+| 8 | MCP | drift_status <1ms, drift_context <100ms / <200ms fallback | 32-MCP |
 | 9 | Bridge | Event mapping <5ms, grounding single <50ms, loop 500 <10s | 34-BRIDGE |
+| 10 | Workspace | init <500ms, backup <5s for 100MB db | 33-WORKSPACE |
 
 ## 18.2 Per-Phase Storage Schema Progression
 
@@ -2010,9 +2157,9 @@ drift.db tables ship incrementally as each phase delivers:
 | 2 | call_edges, data_access, detections, boundaries, patterns | ~15-20 |
 | 3 | pattern_confidence (α, β, score columns), outliers, conventions | ~22-25 |
 | 4 | reachability_cache, taint_flows, error_gaps, impact_scores, test_coverage | ~30-35 |
-| 5 | coupling_metrics, constraints, contracts, constants, secrets, wrappers, dna_genes, crypto_findings, owasp_findings | ~40-45 |
-| 6 | violations, gate_results, audit_snapshots, health_trends, feedback | ~48-52 |
-| 7 | simulations, decisions, context_cache | ~55 |
+| 5 | coupling_metrics, constraints, contracts, constants, secrets, wrappers, dna_genes, crypto_findings, owasp_findings | ~48-56 |
+| 6 | violations, gate_results, audit_snapshots, health_trends, feedback | ~55-62 |
+| 7 | simulations, decisions, context_cache | ~58-65 |
 | 9 | bridge_grounding_results, bridge_grounding_snapshots, bridge_event_log, bridge_metrics (in bridge.db) | +4 bridge |
 
 Full schema: 40+ STRICT tables across 15 domains in drift.db, plus 4 bridge tables.
@@ -2028,9 +2175,9 @@ Full schema: 40+ STRICT tables across 15 domains in drift.db, plus 4 bridge tabl
 | 6 | 3-4 | 19-26 | drift_check, drift_audit, drift_violations, drift_gates |
 | 7 | 3-4 | 22-30 | drift_simulate, drift_decisions, drift_context |
 | 8 | 5-8 | 27-38 | MCP tool handlers, CI agent functions |
-| 9 | 15 | 42-53 | bridge_* functions (see §12.2.5) |
+| 9 | 15 | ~55 | bridge_* functions (see §12.2.5) |
 
-Full NAPI surface: ~40-55 functions across ~15 modules.
+Full NAPI surface: ~55 top-level exports across ~14 modules. Note: total per-system functions are ~70-85 when including internal dispatch functions.
 
 ---
 
@@ -2041,41 +2188,52 @@ meta-verification — how to know the entire build is on track.
 
 ### Milestone 1: "It Scans" (End of Phase 1)
 You can scan a real codebase, parse every file, persist results, and call it from
-TypeScript. This is a working (if minimal) product. ~3-5 weeks from start.
+TypeScript. This is a working (if minimal) product. ~4-6.5 weeks from start (with 1.3x).
 
 ### Milestone 2: "It Detects" (End of Phase 2)
 You can detect patterns across 16 categories, build a call graph, and identify data
-boundaries. Drift is now a useful analysis tool. ~6-9 weeks from start.
+boundaries. Drift is now a useful analysis tool. ~8-12 weeks from start (with 1.3x).
 
 ### Milestone 3: "It Learns" (End of Phase 3)
-Patterns are scored, ranked, and learned. Drift is now self-configuring — it discovers
-conventions without manual configuration. ~9-13 weeks from start.
+Run on 3 test repos. Verify: (a) conventions discovered without config, (b) confidence
+scores non-trivial, (c) ≥1 convention reaches 'Universal' per repo, (d) ≥1 genuine
+outlier flagged per repo. ~12-17 weeks from start (with 1.3x).
 
 ### Milestone 4: "It Secures" (End of Phase 4)
 Taint analysis, reachability, impact analysis, and test topology are working. Drift
-is now enterprise-grade security tooling. ~10-15 weeks from start (parallel with Phase 3).
+is now enterprise-grade security tooling. ~13-19.5 weeks from start (with 1.3x, parallel with Phase 3).
+
+### Phase 5→6 Precondition Gate
+
+Before starting Phase 6, verify:
+- [ ] Coupling metrics computed for ≥3 modules
+- [ ] ≥1 constraint passing verification
+- [ ] ≥1 API contract tracked
+- [ ] DNA profile generated for ≥1 gene
 
 ### Milestone 5: "It Enforces" (End of Phase 6)
 Quality gates produce pass/fail decisions. SARIF reports upload to GitHub Code Scanning.
-Drift is now a CI/CD enforcement tool. ~12-16 weeks from start.
+Drift is now a CI/CD enforcement tool. ~16-22 weeks from start (with 1.3x).
 
 ### Milestone 6: "It Ships" (End of Phase 8)
-MCP server, CLI, and CI agent are working. Drift is a shippable product. ~14-20 weeks
-from start.
+MCP server, CLI, and CI agent are working. Drift is a shippable product. ~18-24 weeks
+from start (with 1.3x).
 
 ### Milestone 7: "It Grounds" (End of Phase 9)
-The Cortex-Drift bridge enables empirically validated AI memory. The killer integration
-feature is live. ~16-22 weeks from start.
+Create Cortex memory via bridge. Verify: (a) confidence updated from scan data,
+(b) ≥1 grounding result per groundable type (13/23), (c) threshold tiers classify
+correctly (≥0.7/≥0.4/≥0.2/<0.2). ~17-25 weeks from start (Phase 9 underestimate).
 
 ### Milestone 8: "It's Complete" (End of Phase 10)
-All 60 systems are built. IDE integration, Docker deployment, telemetry, licensing,
-and benchmarking are in place. Drift V2 is enterprise-ready. ~20-28 weeks from start.
+All ~55 systems are built. IDE integration, Docker deployment, telemetry, licensing,
+and benchmarking are in place. Drift V2 is enterprise-ready. ~18-26 weeks from start
+(5+ devs), ~22-30 weeks (3 devs).
 
 ---
 
 ## Summary
 
-60 systems. 10 phases. 35 V2-PREP specs (all implementation-ready). 9 unspecced systems
+~55 systems. 10 phases. 35 V2-PREP specs (all implementation-ready). 9 unspecced systems
 (all presentation/cross-cutting, none blocking analysis). 2 net-new systems (Taint Analysis,
 Cryptographic Failure Detection). 7 governing decisions (D1-D7) and 12 architectural
 decisions (AD1-AD12) structurally enforced by build order.
@@ -2083,29 +2241,29 @@ decisions (AD1-AD12) structurally enforced by build order.
 Key amendments from V2-PREP cross-reference:
 - 21 event types (not 16+) per bridge doc's complete mapping table
 - 14 crypto detection categories (not 10) with 261 patterns across 12 languages
-- 13 taint sink types (not 9) mapping to 13+ CWEs
+- 17 taint sink types (not 9) mapping to 15+ CWEs (added XmlParsing CWE-611, FileUpload CWE-434)
 - 7 contract paradigms (not 4): REST, GraphQL, gRPC, AsyncAPI, tRPC, WebSocket, event-driven
 - 16 wrapper categories (not 8 patterns) with 7-signal confidence model
-- UAE full pipeline is 22 weeks across 7 internal phases (core deliverable in Weeks 1-5)
+- UAE full pipeline is 22-27 weeks across 7 internal phases (core deliverable in Weeks 1-5)
 - Contract tracking is ~12,000 LOC / ~20 weeks across 20 internal phases
 - 13 of 23 Cortex memory types are groundable against Drift scan data
 - 15 bridge NAPI functions, 4 bridge-specific SQLite tables
-- 5 new risks added: R8-R11 (UAE timeline, contract scope, macOS APFS, Cargo versions)
+- 5 new risks added: R8-R11 (UAE timeline, contract scope, macOS APFS, Cargo versions), R17-R20 (schema complexity, estimation overconfidence, NAPI v2→v3, parallel dev coordination)
 
 Key amendments from third audit (V2-PREP exhaustive cross-reference, §20):
-- drift-context may need to be a 6th crate (30-CONTEXT-GENERATION specifies separate crate)
+- drift-context added as 6th crate (30-CONTEXT-GENERATION specifies separate crate)
 - MCP tool counts: ~52 analysis + ~33 memory internal tools (not ~20-25 + ~15-20)
-- NAPI total: ~55 functions across 14 modules (§18.3 slightly low at 42-53)
+- NAPI total: ~55 functions across 14 modules (§18.3 updated to reflect this)
 - 5 new risks added: R12-R16 (tiktoken platform, feedback retention, MCP UX, simulation hybrid, workspace NAPI surface)
 - Rules Engine + Policy Engine need spec coverage clarification (covered in 09-QG but listed as separate systems)
-- License tier naming: V2-PREP docs use "Team" not "Professional" — needs standardization
+- License tier naming: Standardized to Community / Team / Enterprise throughout
 - Quality Gates ↔ Violation Feedback circular dependency resolved via FeedbackStatsProvider trait
 - Per-system build estimates from V2-PREP docs suggest Phase 7 and Phase 10 may be tighter than estimated
 - File numbering conflict: 16-IMPACT-ANALYSIS-V2-PREP.md should be 17-IMPACT-ANALYSIS-V2-PREP.md
 - 17 gaps identified, 5 high/medium severity requiring action before implementation starts
 
 The critical path to a shippable product is 15 systems across Phases 0-1-2-3-6-8
-(~14-20 weeks for one developer, ~10-14 weeks with two). Everything else adds depth
+(~18-26 weeks for one developer with 1.3x, ~13-18 weeks with two). Everything else adds depth
 and breadth but doesn't block shipping.
 
 The maximum parallelism is in Phases 4 (5 tracks) and 5 (7 tracks), where independent
@@ -2128,22 +2286,13 @@ Build it in order. Ship it in phases. Enterprise-grade from day one.
 > Method: Systematic read of all 35 V2-PREP documents cross-referenced against
 > this orchestration plan. Gaps categorized by severity.
 
-### 20.1 Crate Structure Discrepancy (STRUCTURAL GAP)
+### 20.1 Crate Structure Discrepancy (RESOLVED)
 
-The orchestration plan §3.1 specifies a **5-crate** workspace:
-`drift-core`, `drift-analysis`, `drift-storage`, `drift-napi`, `drift-bench`.
+The orchestration plan §3.1 now specifies a **6-crate** workspace:
+`drift-core`, `drift-analysis`, `drift-storage`, `drift-context`, `drift-napi`, `drift-bench`.
 
-However, **30-CONTEXT-GENERATION-V2-PREP §2** specifies a **separate `drift-context` crate**
-with its own `Cargo.toml`, dependencies (`tiktoken-rs`, `quick-xml`, `serde_yaml`, `glob`),
-and test fixtures. This is a 6th crate not accounted for in the workspace scaffold.
-
-**Decision needed**: Either fold context generation into `drift-analysis` (simpler, but
-adds heavy dependencies like `tiktoken-rs` to the analysis crate) or add `drift-context`
-as a 6th crate in the workspace scaffold (cleaner separation, matches the prep doc).
-
-**Recommendation**: Add `drift-context` to Phase 0 scaffold. Update §3.1 to show 6 crates.
-Context generation has unique dependencies (tiktoken-rs, quick-xml, serde_yaml) that
-don't belong in drift-analysis.
+`drift-context` isolates context generation dependencies (tiktoken-rs, quick-xml,
+serde_yaml, glob, base64) that don't belong in drift-analysis.
 
 ### 20.2 File Numbering Conflict (DOCUMENTATION GAP)
 
@@ -2184,8 +2333,7 @@ V2-PREP documents:
 | Bridge (34) | 15 | 34-BRIDGE §21 |
 
 **Total from V2-PREP docs: ~55 functions** (per 03-NAPI-BRIDGE-V2-PREP §10 master registry).
-The §18.3 table's "42-53" cumulative at Phase 9 is slightly low — the actual total is
-closer to 55 when all systems are included.
+The §18.3 table now reflects ~55 top-level exports.
 
 ### 20.4 Missing Per-System Build Estimates (DATA GAP)
 
@@ -2229,8 +2377,8 @@ counts from V2-PREP documents that should be verified against the progression:
 | MCP Server (32) | 3 tables | 32-MCP §feedback (feedback_examples, feedback_scores, curation_audit) |
 
 **Revised cumulative**: Phase 5 alone adds ~30+ tables from coupling (6) + contracts (9)
-+ DNA (6) + crypto (3) + constants/secrets + wrappers + OWASP. The §18.2 estimate of
-"~40-45" cumulative at Phase 5 may be slightly low — closer to 45-50.
++ DNA (6) + crypto (3) + constants/secrets + wrappers + OWASP. The §18.2 estimate has
+been updated to ~48-56 cumulative at Phase 5.
 
 ### 20.6 Rules Engine & Policy Engine — Unspecced (COVERAGE GAP)
 
@@ -2260,7 +2408,7 @@ not currently listed:
 | 4 | Impact Analysis (17) | 8 NAPI functions (all new) | 17-IMPACT §19 |
 | 5 | Coupling (19) | Tarjan SCC + Martin metrics | 19-COUPLING §30 |
 | 5 | Wrapper Detection (23) | RegexSet single-pass matching | 23-WRAPPER |
-| 6 | Violation Feedback (31) | FP rate <5% target (stricter than Tricorder's <10%) | 31-FEEDBACK §6 |
+| 6 | Violation Feedback (31) | FP rate <10% overall, with category-specific sub-targets | 31-FEEDBACK §6 |
 | 7 | Context Generation (30) | <50ms standard, <100ms full pipeline (25x v1) | 30-CONTEXT §perf |
 | 10 | Workspace (33) | 16 NAPI functions, 5-week build | 33-WORKSPACE §19 |
 
@@ -2281,34 +2429,24 @@ circular dependency and how it's resolved (trait-based interface decoupling).
 
 ### 20.9 MCP Server Tool Count Reconciliation (DATA GAP)
 
-The orchestration plan §11.1 says "~20-25 tools" for drift-analysis and "~15-20 tools"
-for drift-memory. The actual counts from 32-MCP-SERVER-V2-PREP §3 are:
+The orchestration plan §11.1 says "~52 analysis tools (3 MCP entry points + 49 via dispatch)" for drift-analysis and "~33 memory tools (3 entry points + 30 via dispatch)"
+for drift-memory. Progressive disclosure reduces token overhead ~81%.
 
-- drift-analysis: **~52 internal tools** (3 registered MCP tools + 49 via drift_tool)
-- drift-memory: **~33 internal tools** (3 registered MCP tools + 30 via drift_memory_manage)
-- Bridge tools: 3 conditional
+The progressive disclosure architecture means only 3+3 tools are registered as MCP tools,
+but the internal tool catalog is much larger.
 
-The "~20-25" and "~15-20" numbers refer to the v1 tool count, not v2. The progressive
-disclosure architecture means only 3+3 tools are registered as MCP tools, but the
-internal tool catalog is much larger.
+### 20.10 Context Generation Crate Dependencies (RESOLVED)
 
-### 20.10 Context Generation Crate Dependencies (DEPENDENCY GAP)
-
-30-CONTEXT-GENERATION-V2-PREP §2 lists dependencies not in the workspace Cargo.toml
-(§3.1): `tiktoken-rs`, `quick-xml`, `serde_yaml`, `glob`, `base64`, `regex`.
-
-If `drift-context` becomes a separate crate, these need to be added to the workspace
-dependency pins. If context generation is folded into `drift-analysis`, these
-dependencies bloat the analysis crate.
+30-CONTEXT-GENERATION-V2-PREP §2 dependencies are now pinned in the workspace Cargo.toml:
+`tiktoken-rs = "0.9"`, `quick-xml = "0.37"`, `serde_yaml = "0.9"`, `glob = "0.3"`,
+`base64 = "0.22"`. These are isolated in the `drift-context` crate.
 
 ### 20.11 License Gating Tiers Inconsistency (MINOR GAP)
 
-The orchestration plan §13.2 mentions 3 tiers: Community, Professional, Enterprise.
-However, 31-VIOLATION-FEEDBACK-LOOP-V2-PREP §24 uses: Community, Team, Enterprise.
-And 04-INFRASTRUCTURE-V2-PREP §license uses: Community, Team, Enterprise.
+The orchestration plan §13.2 mentions 3 tiers: Community, Team, Enterprise.
+This matches 31-VIOLATION-FEEDBACK-LOOP-V2-PREP §24 and 04-INFRASTRUCTURE-V2-PREP §license.
 
-**Decision needed**: Standardize on either "Professional" or "Team" for the middle tier.
-The V2-PREP docs predominantly use "Team."
+**Resolved**: Standardized on "Team" for the middle tier throughout the document.
 
 ### 20.12 Workspace Management Build Estimate vs Phase 10 (TIMELINE GAP)
 
@@ -2366,12 +2504,12 @@ references an older phase assignment.
 
 ### 20.16 Unaccounted Systems in Master Registry (COVERAGE GAP)
 
-The Master Registry (§2) lists 35 specced + 9 unspecced = 44 systems, claiming 60 total.
+The Master Registry (§2) lists 35 specced + 9 unspecced = 44 systems, claiming ~55 total.
 The remaining 16 are the Phase 0 infrastructure primitives (5) + Rules Engine + Policy
 Engine + SARIF Reporter + other reporters (6) + N+1 Query Detection + Enterprise Secret
 Detection + String Interning Integration = ~13-16 sub-systems.
 
-The count of "60 systems" should be verified — some of these are sub-components of
+The count of "~55 systems" should be verified — some of these are sub-components of
 specced systems rather than independent systems. The distinction between "system" and
 "sub-component" is not consistently applied.
 
@@ -2379,19 +2517,19 @@ specced systems rather than independent systems. The distinction between "system
 
 | # | Gap | Severity | Action |
 |---|-----|----------|--------|
-| 20.1 | drift-context crate not in scaffold | High | Add 6th crate to §3.1 or decide to fold into drift-analysis |
+| 20.1 | drift-context crate added to scaffold | Resolved | 6th crate added to §3.1 |
 | 20.2 | Duplicate 16-IMPACT file | Low | Rename or remove duplicate file |
-| 20.3 | NAPI counts incomplete | Medium | Update §18.3 with per-system counts |
+| 20.3 | NAPI counts updated | Resolved | §18.3 updated with per-system counts |
 | 20.4 | Per-system build estimates missing | Medium | Add to phase sections or new §18.4 |
-| 20.5 | Storage table counts low | Low | Revise §18.2 cumulative estimates |
+| 20.5 | Storage table counts updated | Resolved | §18.2 cumulative estimates revised |
 | 20.6 | Rules/Policy Engine unspecced | Medium | Add to §17 or note coverage in QG spec |
 | 20.7 | Performance targets incomplete | Low | Expand §18.1 table |
 | 20.8 | QG↔Feedback circular dep | Medium | Add note to §9.1 |
-| 20.9 | MCP tool counts wrong | Medium | Update §11.1 with actual v2 counts |
-| 20.10 | Context gen dependencies | Medium | Add to workspace Cargo.toml or note |
-| 20.11 | License tier naming | Low | Standardize on "Team" |
+| 20.9 | MCP tool counts updated | Resolved | §11.1 updated with actual v2 counts |
+| 20.10 | Context gen dependencies pinned | Resolved | Added to workspace Cargo.toml |
+| 20.11 | License tier naming standardized | Resolved | Standardized on "Team" |
 | 20.12 | Workspace build estimate | Low | Note in §13.1 |
 | 20.13 | Missing risks R12-R16 | Medium | Add to §16 |
 | 20.14 | Missing event types | Low | Verify against 21-event list |
 | 20.15 | CI Agent phase ref | Low | Note in §11.3 |
-| 20.16 | 60-system count verification | Low | Audit and clarify |
+| 20.16 | ~55-system count verification | Low | Audit and clarify |
