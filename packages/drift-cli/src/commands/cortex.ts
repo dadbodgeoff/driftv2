@@ -1,5 +1,5 @@
 /**
- * drift cortex — umbrella command for Cortex memory system.
+ * drift cortex — umbrella command for Cortex memory system (44 subcommands).
  *
  * Delegates to CortexClient for all memory, causal, learning, temporal,
  * multi-agent, and system operations.
@@ -569,6 +569,269 @@ export function registerCortexCommand(program: Command): void {
           opts.max ? parseFloat(opts.max) : undefined,
         );
         process.stdout.write(JSON.stringify(result, null, 2) + '\n');
+      } catch (err) {
+        process.stderr.write(`Error: ${err instanceof Error ? err.message : err}\n`);
+        process.exitCode = 1;
+      }
+    });
+
+  // ─── Temporal: time-range (CH-17) ─────────────────────────────────
+  cortex
+    .command('time-range')
+    .description('Query memories valid during a time range')
+    .requiredOption('--from <time>', 'Start time (ISO 8601)')
+    .requiredOption('--to <time>', 'End time (ISO 8601)')
+    .option('--mode <mode>', 'Overlap mode: overlaps, contains, contained_by', 'overlaps')
+    .option('--db <path>', 'Cortex database path')
+    .action(async (opts: { from: string; to: string; mode: string; db?: string }) => {
+      try {
+        const client = await getCortex(opts.db);
+        const result = await client.queryRange(opts.from, opts.to, opts.mode);
+        process.stdout.write(JSON.stringify(result, null, 2) + '\n');
+      } catch (err) {
+        process.stderr.write(`Error: ${err instanceof Error ? err.message : err}\n`);
+        process.exitCode = 1;
+      }
+    });
+
+  // ─── Temporal: temporal-causal (CH-18) ────────────────────────────
+  cortex
+    .command('temporal-causal')
+    .description('Temporal-aware causal traversal from a memory')
+    .requiredOption('--memory-id <id>', 'Memory ID to traverse from')
+    .requiredOption('--as-of <time>', 'Point-in-time for the traversal (ISO 8601)')
+    .option('--direction <dir>', 'Traversal direction: forward, backward, both', 'both')
+    .option('--depth <n>', 'Max traversal depth', '5')
+    .option('--db <path>', 'Cortex database path')
+    .action(async (opts: { memoryId: string; asOf: string; direction: string; depth: string; db?: string }) => {
+      try {
+        const client = await getCortex(opts.db);
+        const result = await client.queryTemporalCausal(
+          opts.memoryId, opts.asOf, opts.direction, parseInt(opts.depth, 10),
+        );
+        process.stdout.write(JSON.stringify(result, null, 2) + '\n');
+      } catch (err) {
+        process.stderr.write(`Error: ${err instanceof Error ? err.message : err}\n`);
+        process.exitCode = 1;
+      }
+    });
+
+  // ─── Temporal: view-create (CH-19) ────────────────────────────────
+  cortex
+    .command('view-create')
+    .description('Create a materialized knowledge snapshot')
+    .requiredOption('--label <label>', 'View label')
+    .requiredOption('--timestamp <time>', 'Snapshot timestamp (ISO 8601)')
+    .option('--db <path>', 'Cortex database path')
+    .action(async (opts: { label: string; timestamp: string; db?: string }) => {
+      try {
+        const client = await getCortex(opts.db);
+        const result = await client.createMaterializedView(opts.label, opts.timestamp);
+        process.stdout.write(JSON.stringify(result, null, 2) + '\n');
+      } catch (err) {
+        process.stderr.write(`Error: ${err instanceof Error ? err.message : err}\n`);
+        process.exitCode = 1;
+      }
+    });
+
+  // ─── Temporal: view-get (CH-20) ───────────────────────────────────
+  cortex
+    .command('view-get')
+    .description('Get a materialized view by label')
+    .requiredOption('--label <label>', 'View label')
+    .option('--db <path>', 'Cortex database path')
+    .action(async (opts: { label: string; db?: string }) => {
+      try {
+        const client = await getCortex(opts.db);
+        const result = await client.getMaterializedView(opts.label);
+        process.stdout.write(JSON.stringify(result, null, 2) + '\n');
+      } catch (err) {
+        process.stderr.write(`Error: ${err instanceof Error ? err.message : err}\n`);
+        process.exitCode = 1;
+      }
+    });
+
+  // ─── Temporal: view-list (CH-21) ──────────────────────────────────
+  cortex
+    .command('view-list')
+    .description('List all materialized views')
+    .option('--db <path>', 'Cortex database path')
+    .action(async (opts: { db?: string }) => {
+      try {
+        const client = await getCortex(opts.db);
+        const result = await client.listMaterializedViews();
+        process.stdout.write(JSON.stringify(result, null, 2) + '\n');
+      } catch (err) {
+        process.stderr.write(`Error: ${err instanceof Error ? err.message : err}\n`);
+        process.exitCode = 1;
+      }
+    });
+
+  // ─── Temporal: knowledge-health (CH-22) ───────────────────────────
+  cortex
+    .command('knowledge-health')
+    .description('Knowledge drift metrics and alerts')
+    .option('--window <hours>', 'Drift window in hours')
+    .option('--db <path>', 'Cortex database path')
+    .action(async (opts: { window?: string; db?: string }) => {
+      try {
+        const client = await getCortex(opts.db);
+        const [metrics, alerts] = await Promise.all([
+          client.getDriftMetrics(opts.window ? parseInt(opts.window, 10) : undefined),
+          client.getDriftAlerts(),
+        ]);
+        process.stdout.write(JSON.stringify({ metrics, alerts }, null, 2) + '\n');
+      } catch (err) {
+        process.stderr.write(`Error: ${err instanceof Error ? err.message : err}\n`);
+        process.exitCode = 1;
+      }
+    });
+
+  // ─── Multi-Agent: agent-register (CH-23) ──────────────────────────
+  cortex
+    .command('agent-register')
+    .description('Register a new AI agent')
+    .requiredOption('--name <name>', 'Agent name')
+    .option('--capabilities <caps>', 'Comma-separated capabilities')
+    .option('--db <path>', 'Cortex database path')
+    .action(async (opts: { name: string; capabilities?: string; db?: string }) => {
+      try {
+        const client = await getCortex(opts.db);
+        const caps = opts.capabilities?.split(',') ?? [];
+        const result = await client.registerAgent(opts.name, caps);
+        process.stdout.write(JSON.stringify(result, null, 2) + '\n');
+      } catch (err) {
+        process.stderr.write(`Error: ${err instanceof Error ? err.message : err}\n`);
+        process.exitCode = 1;
+      }
+    });
+
+  // ─── Multi-Agent: agent-deregister (CH-24) ────────────────────────
+  cortex
+    .command('agent-deregister')
+    .description('Deregister an agent')
+    .requiredOption('--agent-id <id>', 'Agent ID to deregister')
+    .option('--db <path>', 'Cortex database path')
+    .action(async (opts: { agentId: string; db?: string }) => {
+      try {
+        const client = await getCortex(opts.db);
+        await client.deregisterAgent(opts.agentId);
+        process.stdout.write(JSON.stringify({ agent_id: opts.agentId, status: 'deregistered' }) + '\n');
+      } catch (err) {
+        process.stderr.write(`Error: ${err instanceof Error ? err.message : err}\n`);
+        process.exitCode = 1;
+      }
+    });
+
+  // ─── Multi-Agent: agent-get (CH-25) ───────────────────────────────
+  cortex
+    .command('agent-get')
+    .description('Get agent details')
+    .requiredOption('--agent-id <id>', 'Agent ID')
+    .option('--db <path>', 'Cortex database path')
+    .action(async (opts: { agentId: string; db?: string }) => {
+      try {
+        const client = await getCortex(opts.db);
+        const result = await client.getAgent(opts.agentId);
+        process.stdout.write(JSON.stringify(result, null, 2) + '\n');
+      } catch (err) {
+        process.stderr.write(`Error: ${err instanceof Error ? err.message : err}\n`);
+        process.exitCode = 1;
+      }
+    });
+
+  // ─── Multi-Agent: agent-share (CH-26) ─────────────────────────────
+  cortex
+    .command('agent-share')
+    .description('Share a memory to a namespace')
+    .requiredOption('--memory-id <id>', 'Memory ID to share')
+    .requiredOption('--namespace <ns>', 'Target namespace')
+    .requiredOption('--agent-id <id>', 'Sharing agent ID')
+    .option('--db <path>', 'Cortex database path')
+    .action(async (opts: { memoryId: string; namespace: string; agentId: string; db?: string }) => {
+      try {
+        const client = await getCortex(opts.db);
+        const result = await client.shareMemory(opts.memoryId, opts.namespace, opts.agentId);
+        process.stdout.write(JSON.stringify(result, null, 2) + '\n');
+      } catch (err) {
+        process.stderr.write(`Error: ${err instanceof Error ? err.message : err}\n`);
+        process.exitCode = 1;
+      }
+    });
+
+  // ─── Multi-Agent: agent-retract (CH-27) ───────────────────────────
+  cortex
+    .command('agent-retract')
+    .description('Retract a shared memory from a namespace')
+    .requiredOption('--memory-id <id>', 'Memory ID to retract')
+    .requiredOption('--namespace <ns>', 'Namespace to retract from')
+    .requiredOption('--agent-id <id>', 'Agent ID performing retraction')
+    .option('--db <path>', 'Cortex database path')
+    .action(async (opts: { memoryId: string; namespace: string; agentId: string; db?: string }) => {
+      try {
+        const client = await getCortex(opts.db);
+        await client.retractMemory(opts.memoryId, opts.namespace, opts.agentId);
+        process.stdout.write(JSON.stringify({ memory_id: opts.memoryId, status: 'retracted' }) + '\n');
+      } catch (err) {
+        process.stderr.write(`Error: ${err instanceof Error ? err.message : err}\n`);
+        process.exitCode = 1;
+      }
+    });
+
+  // ─── Multi-Agent: agent-sync (CH-28) ──────────────────────────────
+  cortex
+    .command('agent-sync')
+    .description('Sync memories between two agents')
+    .requiredOption('--source <id>', 'Source agent ID')
+    .requiredOption('--target <id>', 'Target agent ID')
+    .option('--db <path>', 'Cortex database path')
+    .action(async (opts: { source: string; target: string; db?: string }) => {
+      try {
+        const client = await getCortex(opts.db);
+        const result = await client.syncAgents(opts.source, opts.target);
+        process.stdout.write(JSON.stringify(result, null, 2) + '\n');
+      } catch (err) {
+        process.stderr.write(`Error: ${err instanceof Error ? err.message : err}\n`);
+        process.exitCode = 1;
+      }
+    });
+
+  // ─── Multi-Agent: agent-trust (CH-29) ─────────────────────────────
+  cortex
+    .command('agent-trust')
+    .description('Get trust scores for an agent')
+    .requiredOption('--agent-id <id>', 'Agent ID')
+    .option('--target <id>', 'Target agent ID for pairwise trust')
+    .option('--db <path>', 'Cortex database path')
+    .action(async (opts: { agentId: string; target?: string; db?: string }) => {
+      try {
+        const client = await getCortex(opts.db);
+        const result = await client.getTrust(opts.agentId, opts.target);
+        process.stdout.write(JSON.stringify(result, null, 2) + '\n');
+      } catch (err) {
+        process.stderr.write(`Error: ${err instanceof Error ? err.message : err}\n`);
+        process.exitCode = 1;
+      }
+    });
+
+  // ─── Multi-Agent: agent-project (CH-30) ───────────────────────────
+  cortex
+    .command('agent-project')
+    .description('Create a memory projection between namespaces')
+    .requiredOption('--source-ns <ns>', 'Source namespace')
+    .requiredOption('--target-ns <ns>', 'Target namespace')
+    .option('--filter <json>', 'Projection filter as JSON')
+    .option('--db <path>', 'Cortex database path')
+    .action(async (opts: { sourceNs: string; targetNs: string; filter?: string; db?: string }) => {
+      try {
+        const client = await getCortex(opts.db);
+        const config = {
+          source_namespace: opts.sourceNs,
+          target_namespace: opts.targetNs,
+          filter: opts.filter ? JSON.parse(opts.filter) : undefined,
+        };
+        const result = await client.createProjection(config as never);
+        process.stdout.write(JSON.stringify({ projection_id: result }, null, 2) + '\n');
       } catch (err) {
         process.stderr.write(`Error: ${err instanceof Error ? err.message : err}\n`);
         process.exitCode = 1;

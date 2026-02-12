@@ -5,6 +5,12 @@
  * It exports synchronous functions that call into the Rust CortexRuntime.
  */
 
+import { createRequire } from 'node:module';
+import { createStubNativeModule } from './stub.js';
+
+// ESM-compatible require for loading native .node addons
+const esmRequire = createRequire(import.meta.url);
+
 let nativeModule: NativeBindings | null = null;
 let nativeIsStub = false;
 
@@ -163,8 +169,7 @@ export function loadNativeModule(): NativeBindings {
   try {
     // The napi-rs build produces a platform-specific .node file
     // published as drift-cortex-napi with optional dependencies per platform.
-    // eslint-disable-next-line @typescript-eslint/no-require-imports
-    nativeModule = require("drift-cortex-napi") as NativeBindings;
+    nativeModule = esmRequire("drift-cortex-napi") as NativeBindings;
     nativeIsStub = false;
     return nativeModule;
   } catch {
@@ -174,7 +179,6 @@ export function loadNativeModule(): NativeBindings {
       '[cortex] \u26a0 Native binary unavailable \u2014 using stub fallback. ' +
       'All Cortex operations will return empty/no-op results. Build drift-cortex-napi to enable real functionality.',
     );
-    const { createStubNativeModule } = require("./stub.js") as { createStubNativeModule: () => NativeBindings };
     nativeModule = createStubNativeModule();
     nativeIsStub = true;
     return nativeModule;

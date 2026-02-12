@@ -21,11 +21,11 @@ describe('CI E2E Pipeline', () => {
     setNapi(createStubNapi());
   });
 
-  // T9-CI-01: Full pipeline runs 11 passes and produces valid result
-  it('T9-CI-01: full analysis produces 11 passes with valid structure', async () => {
+  // T9-CI-01: Full pipeline runs 13 passes and produces valid result
+  it('T9-CI-01: full analysis produces 13 passes with valid structure', async () => {
     const result = await runAnalysis({ path: '.' });
 
-    expect(result.passes).toHaveLength(11);
+    expect(result.passes).toHaveLength(13);
     expect(result.status).toBe('passed');
     expect(result.score).toBeGreaterThanOrEqual(0);
     expect(result.score).toBeLessThanOrEqual(100);

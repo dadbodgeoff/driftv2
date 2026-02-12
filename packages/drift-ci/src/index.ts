@@ -17,7 +17,7 @@ import { resolveProjectRoot } from '@drift/napi-contracts';
 import * as fs from 'node:fs';
 
 // Re-export public API
-export { runAnalysis, type AnalysisResult, type PassResult, type CiAgentConfig } from './agent.js';
+export { runAnalysis, type AnalysisResult, type PassResult, type CiAgentConfig, type CortexSummary } from './agent.js';
 export { generatePrComment, type PrComment } from './pr_comment.js';
 export { uploadSarif, writeSarifFile, type SarifUploadConfig, type SarifUploadResult } from './sarif_upload.js';
 export { setNapi } from './napi.js';
@@ -64,6 +64,9 @@ function parseArgs(args: string[]): {
         break;
       case '--no-bridge':
         config.bridgeEnabled = false;
+        break;
+      case '--no-cortex':
+        config.cortexEnabled = false;
         break;
     }
   }

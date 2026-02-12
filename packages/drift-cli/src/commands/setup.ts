@@ -8,6 +8,7 @@ import type { Command } from 'commander';
 import { loadNapi } from '../napi.js';
 import * as fs from 'node:fs';
 import * as path from 'node:path';
+import { CortexClient } from '@drift/cortex';
 
 /** Default drift.toml content. */
 const DEFAULT_DRIFT_TOML = `# Drift configuration
@@ -75,6 +76,23 @@ export function registerSetupCommand(program: Command): void {
         const analyzeResults = await napi.driftAnalyze();
         const totalMatches = analyzeResults.reduce((sum, r) => sum + r.matches.length, 0);
         process.stdout.write(`Analysis complete: ${analyzeResults.length} files, ${totalMatches} patterns detected\n`);
+
+        // CH-01/02/03: Initialize Cortex memory system
+        const cortexDir = path.join(projectRoot, '.cortex');
+        if (!fs.existsSync(cortexDir)) {
+          fs.mkdirSync(cortexDir, { recursive: true });
+        }
+        process.stdout.write('\nInitializing Cortex memory system...\n');
+        try {
+          const cortexDbPath = path.join(cortexDir, 'cortex.db');
+          const cortexClient = await CortexClient.initialize({ dbPath: cortexDbPath });
+          const health = await cortexClient.healthReport();
+          process.stdout.write(`Cortex initialized: ${cortexDbPath}\n`);
+          process.stdout.write(`  Status: ${health.overall_status ?? 'ready'}\n`);
+          process.stdout.write(`  Subsystems: ${health.subsystems?.length ?? 0} active\n`);
+        } catch (cortexErr) {
+          process.stdout.write(`Cortex init skipped: ${cortexErr instanceof Error ? cortexErr.message : cortexErr}\n`);
+        }
 
         process.stdout.write('\nDrift is ready! Try `drift check` or `drift status` to see results.\n');
         process.exitCode = 0;

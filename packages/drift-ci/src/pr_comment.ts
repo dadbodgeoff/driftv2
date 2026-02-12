@@ -102,6 +102,13 @@ function buildMarkdown(
   }
   md += `**Duration:** ${result.durationMs}ms\n\n`;
 
+  // Cortex memory system section
+  if (result.cortexSummary) {
+    const cs = result.cortexSummary;
+    md += `### ${cs.badge} Cortex Memory Health\n\n`;
+    md += `Status: ${cs.overallStatus}, ${cs.subsystemCount} subsystems, ${cs.degradationCount} degradations, ${cs.validationCandidates} validation candidates\n\n`;
+  }
+
   // Bridge memory grounding section
   if (result.bridgeSummary) {
     const bs = result.bridgeSummary;

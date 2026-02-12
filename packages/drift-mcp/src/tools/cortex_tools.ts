@@ -1,13 +1,31 @@
 /**
  * Cortex tool registration for the drift MCP server.
  *
- * Bridges the 61 Cortex MCP tools from @drift/cortex into the drift_tool
+ * Bridges the 63 Cortex MCP tools from @drift/cortex into the drift_tool
  * catalog as "cortex" category entries. Each handler lazily gets the
  * CortexClient via getCortex() and delegates to the tool's handler.
  */
 
 import { getCortex } from '../cortex.js';
 import type { InternalTool } from '../types.js';
+
+/**
+ * CH-31/CH-32: Best-effort bridge notification after cortex memory mutations.
+ * When cortex memories change via MCP, notify the bridge so grounding snapshots
+ * stay current. Falls back silently if bridge is unavailable.
+ */
+async function notifyBridgeOfCortexMutation(): Promise<void> {
+  try {
+    const { loadNapi } = await import('../napi.js');
+    const napi = loadNapi();
+    const status = napi.driftBridgeStatus();
+    if (status.available) {
+      napi.driftBridgeGroundAfterAnalyze();
+    }
+  } catch {
+    // Non-fatal — bridge may not be initialized
+  }
+}
 
 /**
  * Register all Cortex tools into the drift_tool catalog.
@@ -24,7 +42,9 @@ export function registerCortexTools(catalog: Map<string, InternalTool>): void {
       const { registerTools } = await import('@drift/cortex');
       const client = getCortex();
       const registry = registerTools(client);
-      return callCortexTool(registry, 'drift_memory_add', p);
+      const result = await callCortexTool(registry, 'drift_memory_add', p);
+      await notifyBridgeOfCortexMutation();
+      return result;
     },
   });
 
@@ -59,7 +79,9 @@ export function registerCortexTools(catalog: Map<string, InternalTool>): void {
       const { registerTools } = await import('@drift/cortex');
       const client = getCortex();
       const registry = registerTools(client);
-      return callCortexTool(registry, 'drift_memory_update', p);
+      const result = await callCortexTool(registry, 'drift_memory_update', p);
+      await notifyBridgeOfCortexMutation();
+      return result;
     },
   });
 
@@ -71,6 +93,7 @@ export function registerCortexTools(catalog: Map<string, InternalTool>): void {
     handler: async (p) => {
       const client = getCortex();
       await client.memoryDelete(p.memory_id as string);
+      await notifyBridgeOfCortexMutation();
       return { memory_id: p.memory_id, status: 'deleted' };
     },
   });
@@ -233,11 +256,13 @@ export function registerCortexTools(catalog: Map<string, InternalTool>): void {
     estimatedTokens: '~200',
     handler: async (p) => {
       const client = getCortex();
-      return client.learn(
+      const result = await client.learn(
         p.correction as string,
         p.context as string,
         p.source as string ?? 'mcp',
       );
+      await notifyBridgeOfCortexMutation();
+      return result;
     },
   });
 
@@ -880,6 +905,33 @@ export function registerCortexTools(catalog: Map<string, InternalTool>): void {
       );
     },
   });
+
+  // ─── Missing tools (CH-13/CH-14) ──────────────────────────────
+  register(catalog, {
+    name: 'cortex_analyze_correction',
+    description: 'Analyze a correction for learning insights without applying it.',
+    category: 'cortex',
+    estimatedTokens: '~200',
+    handler: async (p) => {
+      const client = getCortex();
+      return client.analyzeCorrection(
+        p.correction as string,
+        p.context as string ?? '',
+        p.source as string ?? 'mcp',
+      );
+    },
+  });
+
+  register(catalog, {
+    name: 'cortex_configure',
+    description: 'Get or update Cortex runtime configuration.',
+    category: 'cortex',
+    estimatedTokens: '~100',
+    handler: async () => {
+      const client = getCortex();
+      return client.configure();
+    },
+  });
 }
 
 /** Read-only Cortex tools safe to cache. */
@@ -897,6 +949,8 @@ export const CORTEX_CACHEABLE_TOOLS = new Set([
   'cortex_session_get', 'cortex_session_analytics', 'cortex_time_range',
   'cortex_temporal_causal', 'cortex_view_get', 'cortex_view_list',
   'cortex_agent_get', 'cortex_agent_list',
+  // CH-15: new read-only tools
+  'cortex_analyze_correction', 'cortex_configure',
 ]);
 
 /** Mutation Cortex tools — cache should be invalidated after these. */

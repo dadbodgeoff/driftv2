@@ -1,5 +1,5 @@
 /**
- * drift_tool — dynamic dispatch for ~103 internal tools (30 drift + 12 bridge + 61 cortex).
+ * drift_tool — dynamic dispatch for ~105 internal tools (30 drift + 12 bridge + 63 cortex).
  *
  * Progressive disclosure: AI agent sees 3-4 tools initially, discovers
  * more via drift_tool. This reduces token overhead ~81% compared to

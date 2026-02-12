@@ -60,7 +60,7 @@ describe('CI Agent NAPI Alignment', () => {
   it('TH-CI-03: timeout produces error pass result', async () => {
     const result = await runAnalysis({ path: '.', timeoutMs: 60_000 });
     // With fast stubs, all passes complete
-    expect(result.passes).toHaveLength(11);
+    expect(result.passes).toHaveLength(13);
     for (const pass of result.passes) {
       expect(['passed', 'failed', 'error']).toContain(pass.status);
     }
@@ -73,7 +73,7 @@ describe('CI Agent NAPI Alignment', () => {
     setNapi(napi as unknown as DriftNapi);
 
     const result = await runAnalysis({ path: '.' });
-    expect(result.passes).toHaveLength(11);
+    expect(result.passes).toHaveLength(13);
 
     const securityPass = result.passes.find(p => p.name === 'security');
     expect(securityPass?.status).toBe('error');
@@ -103,13 +103,14 @@ describe('CI Agent NAPI Alignment', () => {
     expect(mod.resetNapi).toBeDefined();
   });
 
-  // TH-CI-07: All 11 passes complete with correct names
-  it('TH-CI-07: all 11 passes produce valid results', async () => {
+  // TH-CI-07: All 13 passes complete with correct names
+  it('TH-CI-07: all 13 passes produce valid results', async () => {
     const result = await runAnalysis({ path: '.' });
-    expect(result.passes).toHaveLength(11);
+    expect(result.passes).toHaveLength(13);
     expect(result.passes.map(p => p.name)).toEqual([
       'scan', 'patterns', 'call_graph', 'boundaries',
       'security', 'tests', 'errors', 'contracts', 'constraints', 'enforcement', 'bridge',
+      'cortex_health', 'cortex_validation',
     ]);
     for (const pass of result.passes) {
       expect(pass.durationMs).toBeGreaterThanOrEqual(0);

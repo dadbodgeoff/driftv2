@@ -22,11 +22,11 @@ describe('CI Agent', () => {
     setNapi(createMockNapi());
   });
 
-  // T8-CI-01: Test CI agent runs 11 analysis passes
-  it('T8-CI-01: runs 11 analysis passes in parallel', async () => {
+  // T8-CI-01: Test CI agent runs 13 analysis passes
+  it('T8-CI-01: runs 13 analysis passes in parallel', async () => {
     const result = await runAnalysis({ path: '.' });
 
-    expect(result.passes).toHaveLength(11);
+    expect(result.passes).toHaveLength(13);
     expect(result.passes.map((p) => p.name)).toEqual([
       'scan',
       'patterns',
@@ -39,6 +39,8 @@ describe('CI Agent', () => {
       'constraints',
       'enforcement',
       'bridge',
+      'cortex_health',
+      'cortex_validation',
     ]);
 
     // All passes should complete
@@ -129,7 +131,7 @@ describe('CI Agent', () => {
 
     expect(result.incremental).toBe(true);
     expect(result.filesAnalyzed).toBe(2);
-    expect(result.passes).toHaveLength(11);
+    expect(result.passes).toHaveLength(13);
   });
 
   // T8-CI-06: Test timeout handling
@@ -151,7 +153,7 @@ describe('CI Agent', () => {
     });
 
     // Should complete (mock is fast enough)
-    expect(result.passes).toHaveLength(11);
+    expect(result.passes).toHaveLength(13);
   });
 
   // Test score calculation

@@ -30,7 +30,8 @@
     "node": ">=18"
   },
   "dependencies": {
-    "@drift/napi-contracts": "*"
+    "@drift/napi-contracts": "*",
+    "@drift/cortex": "*"
   },
   "devDependencies": {
     "@types/node": "^20.0.0",

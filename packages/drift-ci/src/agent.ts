@@ -1,7 +1,7 @@
 /**
- * CI Agent — orchestrates 11 parallel analysis passes.
+ * CI Agent — orchestrates 13 parallel analysis passes.
  *
- * Passes: scan, patterns, call_graph, boundaries, security, tests, errors, contracts, constraints, enforcement, bridge.
+ * Passes: scan, patterns, call_graph, boundaries, security, tests, errors, contracts, constraints, enforcement, bridge, cortex_health, cortex_validation.
  * Supports PR-level incremental analysis (only changed files + transitive dependents).
  */
 
@@ -17,7 +17,17 @@ export interface PassResult {
   error?: string;
 }
 
-/** Aggregated result from all 11 passes. */
+/** Cortex memory system summary included in CI results. */
+export interface CortexSummary {
+  available: boolean;
+  overallStatus: string;
+  subsystemCount: number;
+  degradationCount: number;
+  validationCandidates: number;
+  badge: '✅' | '⚠️' | '❌';
+}
+
+/** Aggregated result from all 13 passes. */
 export interface AnalysisResult {
   status: 'passed' | 'failed';
   totalViolations: number;
@@ -28,6 +38,7 @@ export interface AnalysisResult {
   filesAnalyzed: number;
   incremental: boolean;
   bridgeSummary?: BridgeSummary;
+  cortexSummary?: CortexSummary;
 }
 
 /** Bridge grounding summary included in CI results. */
@@ -52,6 +63,7 @@ export interface CiAgentConfig {
   timeoutMs: number;
   changedFiles?: string[];
   bridgeEnabled: boolean;
+  cortexEnabled: boolean;
 }
 
 export const DEFAULT_CI_CONFIG: CiAgentConfig = {
@@ -62,6 +74,7 @@ export const DEFAULT_CI_CONFIG: CiAgentConfig = {
   threshold: 0,
   timeoutMs: 300_000, // 5 minutes
   bridgeEnabled: process.env.DRIFT_BRIDGE_ENABLED !== 'false',
+  cortexEnabled: process.env.DRIFT_CORTEX_ENABLED !== 'false',
 };
 
 /** Analysis pass definition. */
@@ -99,8 +112,8 @@ async function runPassSafe(
   }
 }
 
-/** The 11 analysis passes. */
-function buildPasses(bridgeEnabled: boolean): AnalysisPass[] {
+/** The 13 analysis passes. */
+function buildPasses(bridgeEnabled: boolean, cortexEnabled: boolean): AnalysisPass[] {
   const passes: AnalysisPass[] = [
     {
       name: 'scan',
@@ -306,6 +319,74 @@ function buildPasses(bridgeEnabled: boolean): AnalysisPass[] {
     });
   }
 
+  if (cortexEnabled) {
+    passes.push({
+      name: 'cortex_health',
+      run: async (_files, _config) => {
+        const start = Date.now();
+        try {
+          const { CortexClient } = await import('@drift/cortex');
+          const client = await CortexClient.initialize({ dbPath: '.cortex/cortex.db' });
+          const [health, degradations] = await Promise.all([
+            client.healthReport(),
+            client.degradations(),
+          ]);
+          return {
+            name: 'cortex_health',
+            status: degradations.length === 0 ? 'passed' : 'failed',
+            violations: degradations.length,
+            durationMs: Date.now() - start,
+            data: {
+              overallStatus: health.overall_status,
+              subsystemCount: health.subsystems?.length ?? 0,
+              degradationCount: degradations.length,
+              degradations: degradations.slice(0, 5),
+            },
+          };
+        } catch {
+          return {
+            name: 'cortex_health',
+            status: 'passed',
+            violations: 0,
+            durationMs: Date.now() - start,
+            data: { skipped: true, reason: 'Cortex not initialized' },
+          };
+        }
+      },
+    });
+
+    passes.push({
+      name: 'cortex_validation',
+      run: async (_files, _config) => {
+        const start = Date.now();
+        try {
+          const { CortexClient } = await import('@drift/cortex');
+          const client = await CortexClient.initialize({ dbPath: '.cortex/cortex.db' });
+          const result = await client.validationRun();
+          const candidates = Array.isArray(result) ? result.length : 0;
+          return {
+            name: 'cortex_validation',
+            status: 'passed',
+            violations: candidates,
+            durationMs: Date.now() - start,
+            data: {
+              candidateCount: candidates,
+              result,
+            },
+          };
+        } catch {
+          return {
+            name: 'cortex_validation',
+            status: 'passed',
+            violations: 0,
+            durationMs: Date.now() - start,
+            data: { skipped: true, reason: 'Cortex not initialized' },
+          };
+        }
+      },
+    });
+  }
+
   return passes;
 }
 
@@ -316,7 +397,7 @@ export async function runAnalysis(
   config: Partial<CiAgentConfig> = {},
 ): Promise<AnalysisResult> {
   const mergedConfig = { ...DEFAULT_CI_CONFIG, ...config };
-  const passes = buildPasses(mergedConfig.bridgeEnabled);
+  const passes = buildPasses(mergedConfig.bridgeEnabled, mergedConfig.cortexEnabled);
   const files = mergedConfig.changedFiles ?? [];
 
   // Handle empty PR diff
@@ -360,6 +441,24 @@ export async function runAnalysis(
 
   const durationMs = Date.now() - start;
 
+  // Extract cortex summary if cortex passes ran
+  const cortexHealthPass = results.find((r) => r.name === 'cortex_health');
+  let cortexSummary: CortexSummary | undefined;
+  if (cortexHealthPass?.data && typeof cortexHealthPass.data === 'object' && !('skipped' in (cortexHealthPass.data as Record<string, unknown>))) {
+    const d = cortexHealthPass.data as Record<string, unknown>;
+    const validationPass = results.find((r) => r.name === 'cortex_validation');
+    const validationData = validationPass?.data as Record<string, unknown> | undefined;
+    const degradCount = (d.degradationCount as number) ?? 0;
+    cortexSummary = {
+      available: true,
+      overallStatus: (d.overallStatus as string) ?? 'unknown',
+      subsystemCount: (d.subsystemCount as number) ?? 0,
+      degradationCount: degradCount,
+      validationCandidates: (validationData?.candidateCount as number) ?? 0,
+      badge: degradCount === 0 ? '\u2705' : degradCount <= 2 ? '\u26a0\ufe0f' : '\u274c',
+    };
+  }
+
   // Extract bridge summary if bridge pass ran
   const bridgePass = results.find((r) => r.name === 'bridge');
   let bridgeSummary: BridgeSummary | undefined;
@@ -388,6 +487,7 @@ export async function runAnalysis(
     filesAnalyzed: files.length || -1, // -1 means full scan
     incremental: mergedConfig.incremental,
     bridgeSummary,
+    cortexSummary,
   };
 }
 

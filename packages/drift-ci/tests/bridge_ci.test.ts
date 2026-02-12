@@ -95,7 +95,7 @@ describe('Phase E — CI Agent Bridge Pass', () => {
     const result = await runAnalysis({ path: '.', bridgeEnabled: false });
     const bridgePass = result.passes.find(p => p.name === 'bridge');
     expect(bridgePass).toBeUndefined();
-    expect(result.passes).toHaveLength(10);
+    expect(result.passes).toHaveLength(12);
   });
 
   // BT-CI-05: DRIFT_BRIDGE_ENABLED=false env var skips bridge
@@ -103,7 +103,7 @@ describe('Phase E — CI Agent Bridge Pass', () => {
     const result = await runAnalysis({ path: '.' });
     const bridgePass = result.passes.find(p => p.name === 'bridge');
     expect(bridgePass).toBeDefined();
-    expect(result.passes).toHaveLength(11);
+    expect(result.passes).toHaveLength(13);
   });
 });
 
@@ -129,7 +129,7 @@ describe('Phase E — E2E Pipeline Tests', () => {
     }));
 
     const result = await runAnalysis({ path: '.' });
-    expect(result.passes).toHaveLength(11);
+    expect(result.passes).toHaveLength(13);
     expect(result.bridgeSummary).toBeDefined();
     expect(result.bridgeSummary!.totalChecked).toBe(3);
     expect(result.bridgeSummary!.validated).toBe(2);
@@ -285,8 +285,8 @@ describe('Phase E — Adversarial Tests', () => {
       runAnalysis({ path: '.' }),
       runAnalysis({ path: '.' }),
     ]);
-    expect(r1.passes).toHaveLength(11);
-    expect(r2.passes).toHaveLength(11);
+    expect(r1.passes).toHaveLength(13);
+    expect(r2.passes).toHaveLength(13);
   });
 
   // BT-E2E-12: Unicode in entity IDs handled correctly
