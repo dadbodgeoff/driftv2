@@ -24,6 +24,7 @@ export function registerDismissCommand(program: Command): void {
         if (!opts.quiet) {
           process.stdout.write(formatOutput(result, opts.format));
         }
+        process.exitCode = result.success ? 0 : 1;
       } catch (err) {
         process.stderr.write(`Error: ${err instanceof Error ? err.message : err}\n`);
         process.exitCode = 2;

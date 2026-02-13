@@ -5,6 +5,7 @@
 import type { Command } from 'commander';
 import { loadNapi } from '../napi.js';
 import { formatOutput, type OutputFormat } from '../output/index.js';
+import { parseNapiJson } from '../output/parse-napi-json.js';
 
 const VALID_INTENTS = [
   'fix_bug', 'add_feature', 'understand_code', 'security_audit', 'generate_spec',
@@ -12,38 +13,95 @@ const VALID_INTENTS = [
 
 const VALID_DEPTHS = ['overview', 'standard', 'deep'] as const;
 
+/**
+ * Keyword → intent mapping.
+ *
+ * The Rust ContextIntent enum currently supports 5 intents. This map covers
+ * common natural-language synonyms so users can type phrases like
+ * "review my code", "refactor this", "debug the issue", etc. and get routed
+ * to the closest supported intent. When the Rust side adds new intents,
+ * add them to VALID_INTENTS above and update this map.
+ */
 const INTENT_KEYWORDS: Record<string, typeof VALID_INTENTS[number]> = {
+  // fix_bug
   'fix': 'fix_bug',
   'bug': 'fix_bug',
   'debug': 'fix_bug',
   'repair': 'fix_bug',
   'patch': 'fix_bug',
+  'error': 'fix_bug',
+  'issue': 'fix_bug',
+  'broken': 'fix_bug',
+  'crash': 'fix_bug',
+  'trace': 'fix_bug',
+  'diagnose': 'fix_bug',
+  // add_feature
   'add': 'add_feature',
   'feature': 'add_feature',
   'new': 'add_feature',
   'create': 'add_feature',
   'implement': 'add_feature',
   'build': 'add_feature',
+  // understand_code — also covers review, refactor, explain, performance
   'understand': 'understand_code',
   'read': 'understand_code',
   'explore': 'understand_code',
   'learn': 'understand_code',
   'how': 'understand_code',
   'what': 'understand_code',
+  'review': 'understand_code',
+  'refactor': 'understand_code',
+  'explain': 'understand_code',
+  'performance': 'understand_code',
+  'dependency': 'understand_code',
+  'convention': 'understand_code',
+  'boundary': 'understand_code',
+  'coupling': 'understand_code',
+  'documentation': 'understand_code',
+  'risk': 'understand_code',
+  // security_audit
   'security': 'security_audit',
   'audit': 'security_audit',
   'vulnerability': 'security_audit',
   'vuln': 'security_audit',
+  'cve': 'security_audit',
+  'owasp': 'security_audit',
+  // generate_spec
   'spec': 'generate_spec',
   'specification': 'generate_spec',
   'document': 'generate_spec',
   'docs': 'generate_spec',
 };
 
-function resolveIntent(raw: string): typeof VALID_INTENTS[number] | null {
-  // Exact match first
+/**
+ * Extended intent names that the Rust NAPI binding accepts as aliases.
+ * These map to one of the 5 core intents on the Rust side.
+ */
+const RUST_INTENT_ALIASES: Record<string, typeof VALID_INTENTS[number]> = {
+  'understand': 'understand_code',
+  'review_code': 'understand_code',
+  'review': 'understand_code',
+  'refactor': 'understand_code',
+  'explain_pattern': 'understand_code',
+  'documentation': 'understand_code',
+  'debug': 'fix_bug',
+  'trace_dependency': 'fix_bug',
+  'performance_audit': 'security_audit',
+  'assess_risk': 'security_audit',
+  'security': 'security_audit',
+  'spec': 'generate_spec',
+};
+
+function resolveIntent(raw: string): string | null {
+  // Exact match against core intents
   if (VALID_INTENTS.includes(raw as typeof VALID_INTENTS[number])) {
-    return raw as typeof VALID_INTENTS[number];
+    return raw;
+  }
+
+  // Exact match against Rust-side aliases — pass through directly
+  // so the Rust binding can map them to the correct ContextIntent.
+  if (raw in RUST_INTENT_ALIASES) {
+    return raw;
   }
 
   // Keyword matching — find best match from input words
@@ -76,10 +134,11 @@ export function registerContextCommand(program: Command): void {
       try {
         const resolved = resolveIntent(intent);
         if (!resolved) {
+          const allIntents = [...VALID_INTENTS, ...Object.keys(RUST_INTENT_ALIASES)];
           process.stderr.write(
             `Could not resolve intent '${intent}'.\n` +
-            `Valid intents: ${VALID_INTENTS.join(', ')}\n` +
-            `Tip: Use keywords like "fix", "add", "understand", "security", or "spec".\n`,
+            `Valid intents: ${allIntents.join(', ')}\n` +
+            `Tip: Use keywords like "fix", "add", "understand", "review", "refactor", "security", or "spec".\n`,
           );
           process.exitCode = 2;
           return;
@@ -94,7 +153,8 @@ export function registerContextCommand(program: Command): void {
           process.exitCode = 2;
           return;
         }
-        const result = await napi.driftContext(resolved, opts.depth, opts.data);
+        const raw = await napi.driftContext(resolved, opts.depth, opts.data);
+        const result = parseNapiJson(raw);
         if (!opts.quiet) {
           process.stdout.write(formatOutput(result, opts.format));
         }

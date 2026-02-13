@@ -8,6 +8,7 @@
 import type { Command } from 'commander';
 import { loadNapi } from '../napi.js';
 import { formatOutput, type OutputFormat } from '../output/index.js';
+import * as fs from 'node:fs';
 
 export function registerScanCommand(program: Command): void {
   program
@@ -32,6 +33,18 @@ export function registerScanCommand(program: Command): void {
       const napi = loadNapi();
       const scanPaths = paths.length > 0 ? paths : [process.cwd()];
 
+      // Validate that all scan paths exist before scanning.
+      // Without this, the scanner sees all previously-known files as "removed"
+      // and returns a misleading filesRemoved count with exit 0.
+      const invalid = scanPaths.filter((p) => !fs.existsSync(p));
+      if (invalid.length > 0) {
+        process.stderr.write(
+          `Error: path${invalid.length > 1 ? 's' : ''} not found: ${invalid.join(', ')}\n`,
+        );
+        process.exitCode = 2;
+        return;
+      }
+
       // Build scan options from CLI flags
       const options: Record<string, unknown> = {};
       if (opts.incremental === true) {
@@ -53,22 +66,36 @@ export function registerScanCommand(program: Command): void {
       const scanOptions = Object.keys(options).length > 0 ? options : undefined;
 
       try {
-        // Scan each path and merge results
-        let totalFiles = 0;
-        let lastResult: Awaited<ReturnType<typeof napi.driftScan>> | undefined;
+        // Accumulate results across all scan paths
+        const merged = {
+          filesTotal: 0,
+          filesAdded: 0,
+          filesModified: 0,
+          filesRemoved: 0,
+          filesUnchanged: 0,
+          errorsCount: 0,
+          durationMs: 0,
+          status: 'complete' as string,
+          languages: {} as Record<string, number>,
+        };
+
         for (const scanPath of scanPaths) {
           const result = await napi.driftScan(scanPath, scanOptions as Parameters<typeof napi.driftScan>[1]);
-          totalFiles += result.filesTotal;
-          lastResult = result;
-        }
-        if (!opts.quiet && lastResult) {
-          if (scanPaths.length > 1) {
-            // Multi-path: show merged summary
-            const merged = { ...lastResult, filesTotal: totalFiles, paths: scanPaths };
-            process.stdout.write(formatOutput(merged, opts.format));
-          } else {
-            process.stdout.write(formatOutput(lastResult, opts.format));
+          merged.filesTotal += result.filesTotal;
+          merged.filesAdded += result.filesAdded;
+          merged.filesModified += result.filesModified;
+          merged.filesRemoved += result.filesRemoved;
+          merged.filesUnchanged += result.filesUnchanged;
+          merged.errorsCount += result.errorsCount;
+          merged.durationMs += result.durationMs;
+          if (result.status !== 'complete') merged.status = result.status;
+          for (const [lang, count] of Object.entries(result.languages)) {
+            merged.languages[lang] = (merged.languages[lang] ?? 0) + count;
           }
+        }
+
+        if (!opts.quiet) {
+          process.stdout.write(formatOutput(merged, opts.format));
         }
         process.exitCode = 0;
       } catch (err) {

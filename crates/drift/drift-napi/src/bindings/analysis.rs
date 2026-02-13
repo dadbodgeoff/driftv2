@@ -207,6 +207,15 @@ pub async fn drift_analyze(max_phase: Option<u32>) -> napi::Result<Vec<JsAnalysi
             std::path::PathBuf::from(&file_meta.path)
         };
 
+        // Normalize the path to collapse any `./` or `/./` artifacts.
+        // This is a safety net — persist_scan_diff already normalizes at
+        // storage time, but paths from older scans may still contain `./`.
+        let file_path = {
+            let s = file_path.to_string_lossy();
+            let normalized = s.replace("/./", "/");
+            std::path::PathBuf::from(normalized)
+        };
+
         // Skip files without a known language
         if file_meta.language.is_none() {
             continue;
@@ -666,8 +675,39 @@ pub async fn drift_analyze(max_phase: Option<u32>) -> napi::Result<Vec<JsAnalysi
     if !all_parse_results.is_empty() {
         // 5a: Coupling analysis → coupling_metrics + coupling_cycles tables
         // Uses prod_parse_results to exclude test configs (vitest, playwright, etc.)
+        // Also exclude compiled .js files when a corresponding .ts source exists,
+        // so coupling analysis reflects source structure, not build output.
+        let ts_files: std::collections::HashSet<String> = prod_pr_owned.iter()
+            .filter(|pr| pr.file.ends_with(".ts") || pr.file.ends_with(".tsx"))
+            .map(|pr| pr.file.trim_end_matches(".ts").trim_end_matches(".tsx").to_string())
+            .collect();
+        let coupling_prs: Vec<drift_analysis::parsers::ParseResult> = prod_pr_owned.iter()
+            .filter(|pr| {
+                // Keep .ts/.tsx files always
+                if pr.file.ends_with(".ts") || pr.file.ends_with(".tsx") {
+                    return true;
+                }
+                // Exclude .js/.jsx files if a .ts/.tsx source exists
+                if pr.file.ends_with(".js") || pr.file.ends_with(".jsx") {
+                    let stem = pr.file.trim_end_matches(".js").trim_end_matches(".jsx");
+                    if ts_files.contains(stem) {
+                        return false;
+                    }
+                }
+                // Also exclude common build output directories
+                let lower = pr.file.to_lowercase();
+                if lower.contains("/dist/") || lower.starts_with("dist/")
+                    || lower.contains("/build/") || lower.starts_with("build/")
+                    || lower.contains("/out/") || lower.starts_with("out/")
+                {
+                    return false;
+                }
+                true
+            })
+            .cloned()
+            .collect();
         let import_graph = drift_analysis::structural::coupling::ImportGraphBuilder::from_parse_results(
-            &prod_pr_owned, 2,
+            &coupling_prs, 2,
         );
         let coupling_metrics = drift_analysis::structural::coupling::compute_martin_metrics(&import_graph);
         let coupling_rows: Vec<drift_storage::batch::commands::CouplingMetricInsertRow> = coupling_metrics
@@ -1269,6 +1309,19 @@ pub async fn drift_analyze(max_phase: Option<u32>) -> napi::Result<Vec<JsAnalysi
 
     // Step 6: Graph intelligence — taint, error handling, impact, test topology
     if !all_parse_results.is_empty() {
+        // Clear graph intelligence tables before re-populating.
+        // These tables are fully recomputed from the current parse results each
+        // time, so stale rows from previous scans (potentially with different
+        // path formats) must be removed to prevent duplicates.
+        let _ = rt.storage.with_writer(|conn| {
+            conn.execute_batch(
+                "DELETE FROM taint_flows;
+                 DELETE FROM error_gaps;
+                 DELETE FROM impact_scores;
+                 DELETE FROM test_quality;
+                 DELETE FROM reachability_cache;"
+            ).map_err(|e| drift_core::errors::StorageError::SqliteError { message: e.to_string() })
+        });
         // Re-build call graph (or reuse from Step 3b if we stored it)
         let cg_builder = drift_analysis::call_graph::CallGraphBuilder::new();
         let call_graph_result = cg_builder.build(&all_parse_results);

@@ -150,6 +150,9 @@ secret_pattern!(RE_MAILGUN, r"\bkey-[A-Za-z0-9]{32}\b");
 // ── Square ─────────────────────────────────────────────────────────────────
 secret_pattern!(RE_SQUARE, r"\bsq0[a-z]{3}-[A-Za-z0-9_-]{22,}\b");
 
+// ── OpenAI / Anthropic / generic sk- prefixed API keys ─────────────────────
+secret_pattern!(RE_OPENAI_KEY, r"\bsk-[A-Za-z0-9]{16,}\b");
+
 /// All secret patterns in detection order.
 pub fn all_patterns() -> Vec<SecretPattern> {
     vec![
@@ -368,6 +371,12 @@ pub fn all_patterns() -> Vec<SecretPattern> {
             regex: &RE_SQUARE,
             placeholder: "[SQUARE_KEY]",
             base_confidence: 0.90,
+        },
+        SecretPattern {
+            name: "openai_key",
+            regex: &RE_OPENAI_KEY,
+            placeholder: "[API_KEY]",
+            base_confidence: 0.85,
         },
     ]
 }

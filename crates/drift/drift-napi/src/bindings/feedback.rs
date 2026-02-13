@@ -32,6 +32,14 @@ pub struct JsFeedbackResult {
 pub fn drift_dismiss_violation(input: JsFeedbackInput) -> napi::Result<JsFeedbackResult> {
     let rt = runtime::get()?;
 
+    // Validate that the violation exists before recording feedback.
+    if !violation_exists(&rt, &input.violation_id) {
+        return Ok(JsFeedbackResult {
+            success: false,
+            message: format!("Violation '{}' not found. Run 'drift analyze' first.", input.violation_id),
+        });
+    }
+
     let pattern_id = resolve_pattern_id(&rt, &input.violation_id);
 
     let detector_id = resolve_detector_id(&rt, &input.violation_id);
@@ -62,6 +70,14 @@ pub fn drift_dismiss_violation(input: JsFeedbackInput) -> napi::Result<JsFeedbac
 #[napi]
 pub fn drift_fix_violation(violation_id: String) -> napi::Result<JsFeedbackResult> {
     let rt = runtime::get()?;
+
+    // Validate that the violation exists before recording feedback.
+    if !violation_exists(&rt, &violation_id) {
+        return Ok(JsFeedbackResult {
+            success: false,
+            message: format!("Violation '{}' not found. Run 'drift analyze' first.", violation_id),
+        });
+    }
 
     let pattern_id = resolve_pattern_id(&rt, &violation_id);
 
@@ -97,6 +113,14 @@ pub fn drift_suppress_violation(
 ) -> napi::Result<JsFeedbackResult> {
     let rt = runtime::get()?;
 
+    // Validate that the violation exists before recording feedback.
+    if !violation_exists(&rt, &violation_id) {
+        return Ok(JsFeedbackResult {
+            success: false,
+            message: format!("Violation '{}' not found. Run 'drift analyze' first.", violation_id),
+        });
+    }
+
     let pattern_id = resolve_pattern_id(&rt, &violation_id);
 
     let detector_id = resolve_detector_id(&rt, &violation_id);
@@ -121,6 +145,23 @@ pub fn drift_suppress_violation(
         success: true,
         message: format!("Violation {violation_id} suppressed: {reason}"),
     })
+}
+
+/// Check whether a violation ID exists in the violations table.
+fn violation_exists(rt: &crate::runtime::DriftRuntime, violation_id: &str) -> bool {
+    rt.storage
+        .with_reader(|conn| {
+            let result = conn
+                .prepare_cached("SELECT 1 FROM violations WHERE id = ?1")
+                .and_then(|mut stmt| stmt.query_row([violation_id], |_| Ok(true)));
+            match result {
+                Ok(val) => Ok(Some(val)),
+                Err(_) => Ok(None),
+            }
+        })
+        .ok()
+        .flatten()
+        .unwrap_or(false)
 }
 
 /// Resolve pattern_id from the violations table for a given violation_id.

@@ -58,7 +58,7 @@ export function registerCortexCommand(program: Command): void {
         process.stdout.write(formatOutput(result, opts.format));
       } catch (err) {
         process.stderr.write(`Error: ${err instanceof Error ? err.message : err}\n`);
-        process.exitCode = 1;
+        process.exitCode = 2;
       }
     });
 
@@ -76,7 +76,7 @@ export function registerCortexCommand(program: Command): void {
         process.stdout.write(formatOutput(results, opts.format));
       } catch (err) {
         process.stderr.write(`Error: ${err instanceof Error ? err.message : err}\n`);
-        process.exitCode = 1;
+        process.exitCode = 2;
       }
     });
 
@@ -91,7 +91,7 @@ export function registerCortexCommand(program: Command): void {
         process.stdout.write(JSON.stringify(memory, null, 2) + '\n');
       } catch (err) {
         process.stderr.write(`Error: ${err instanceof Error ? err.message : err}\n`);
-        process.exitCode = 1;
+        process.exitCode = 2;
       }
     });
 
@@ -108,22 +108,28 @@ export function registerCortexCommand(program: Command): void {
         process.stdout.write(formatOutput(memories, opts.format));
       } catch (err) {
         process.stderr.write(`Error: ${err instanceof Error ? err.message : err}\n`);
-        process.exitCode = 1;
+        process.exitCode = 2;
       }
     });
 
   cortex
     .command('delete <id>')
     .description('Delete (archive) a memory')
+    .option('--hard', 'Permanently delete instead of archiving')
     .option('--db <path>', 'Cortex database path')
-    .action(async (id: string, opts: { db?: string }) => {
+    .action(async (id: string, opts: { hard?: boolean; db?: string }) => {
       try {
         const client = await getCortex(opts.db);
-        await client.memoryDelete(id);
-        process.stdout.write(JSON.stringify({ id, status: 'deleted' }) + '\n');
+        if (opts.hard) {
+          await client.memoryDelete(id);
+          process.stdout.write(JSON.stringify({ id, status: 'deleted' }) + '\n');
+        } else {
+          await client.memoryArchive(id);
+          process.stdout.write(JSON.stringify({ id, status: 'archived' }) + '\n');
+        }
       } catch (err) {
         process.stderr.write(`Error: ${err instanceof Error ? err.message : err}\n`);
-        process.exitCode = 1;
+        process.exitCode = 2;
       }
     });
 
@@ -138,7 +144,7 @@ export function registerCortexCommand(program: Command): void {
         process.stdout.write(JSON.stringify({ id, status: 'restored' }) + '\n');
       } catch (err) {
         process.stderr.write(`Error: ${err instanceof Error ? err.message : err}\n`);
-        process.exitCode = 1;
+        process.exitCode = 2;
       }
     });
 
@@ -175,7 +181,7 @@ export function registerCortexCommand(program: Command): void {
         process.stdout.write(JSON.stringify(result, null, 2) + '\n');
       } catch (err) {
         process.stderr.write(`Error: ${err instanceof Error ? err.message : err}\n`);
-        process.exitCode = 1;
+        process.exitCode = 2;
       }
     });
 
@@ -191,7 +197,7 @@ export function registerCortexCommand(program: Command): void {
         process.stdout.write(JSON.stringify(result, null, 2) + '\n');
       } catch (err) {
         process.stderr.write(`Error: ${err instanceof Error ? err.message : err}\n`);
-        process.exitCode = 1;
+        process.exitCode = 2;
       }
     });
 
@@ -210,7 +216,7 @@ export function registerCortexCommand(program: Command): void {
         process.stdout.write(JSON.stringify({ memory, why, related }, null, 2) + '\n');
       } catch (err) {
         process.stderr.write(`Error: ${err instanceof Error ? err.message : err}\n`);
-        process.exitCode = 1;
+        process.exitCode = 2;
       }
     });
 
@@ -228,7 +234,7 @@ export function registerCortexCommand(program: Command): void {
         process.stdout.write(JSON.stringify(result, null, 2) + '\n');
       } catch (err) {
         process.stderr.write(`Error: ${err instanceof Error ? err.message : err}\n`);
-        process.exitCode = 1;
+        process.exitCode = 2;
       }
     });
 
@@ -247,7 +253,7 @@ export function registerCortexCommand(program: Command): void {
         process.stdout.write(formatOutput(result, opts.format));
       } catch (err) {
         process.stderr.write(`Error: ${err instanceof Error ? err.message : err}\n`);
-        process.exitCode = 1;
+        process.exitCode = 2;
       }
     });
 
@@ -263,7 +269,7 @@ export function registerCortexCommand(program: Command): void {
         process.stdout.write(JSON.stringify(result, null, 2) + '\n');
       } catch (err) {
         process.stderr.write(`Error: ${err instanceof Error ? err.message : err}\n`);
-        process.exitCode = 1;
+        process.exitCode = 2;
       }
     });
 
@@ -279,7 +285,7 @@ export function registerCortexCommand(program: Command): void {
         process.stdout.write(JSON.stringify(result, null, 2) + '\n');
       } catch (err) {
         process.stderr.write(`Error: ${err instanceof Error ? err.message : err}\n`);
-        process.exitCode = 1;
+        process.exitCode = 2;
       }
     });
 
@@ -294,7 +300,7 @@ export function registerCortexCommand(program: Command): void {
         process.stdout.write(JSON.stringify(result, null, 2) + '\n');
       } catch (err) {
         process.stderr.write(`Error: ${err instanceof Error ? err.message : err}\n`);
-        process.exitCode = 1;
+        process.exitCode = 2;
       }
     });
 
@@ -311,7 +317,7 @@ export function registerCortexCommand(program: Command): void {
         process.stdout.write(JSON.stringify({ session_id: sessionId }) + '\n');
       } catch (err) {
         process.stderr.write(`Error: ${err instanceof Error ? err.message : err}\n`);
-        process.exitCode = 1;
+        process.exitCode = 2;
       }
     });
 
@@ -330,7 +336,7 @@ export function registerCortexCommand(program: Command): void {
         process.stdout.write(JSON.stringify(result, null, 2) + '\n');
       } catch (err) {
         process.stderr.write(`Error: ${err instanceof Error ? err.message : err}\n`);
-        process.exitCode = 1;
+        process.exitCode = 2;
       }
     });
 
@@ -349,7 +355,7 @@ export function registerCortexCommand(program: Command): void {
         process.stdout.write(JSON.stringify({ decay, sessions_cleaned: sessions }, null, 2) + '\n');
       } catch (err) {
         process.stderr.write(`Error: ${err instanceof Error ? err.message : err}\n`);
-        process.exitCode = 1;
+        process.exitCode = 2;
       }
     });
 
@@ -366,7 +372,7 @@ export function registerCortexCommand(program: Command): void {
         process.stdout.write(JSON.stringify(result, null, 2) + '\n');
       } catch (err) {
         process.stderr.write(`Error: ${err instanceof Error ? err.message : err}\n`);
-        process.exitCode = 1;
+        process.exitCode = 2;
       }
     });
 
@@ -383,7 +389,7 @@ export function registerCortexCommand(program: Command): void {
         process.stdout.write(JSON.stringify(memories, null, 2) + '\n');
       } catch (err) {
         process.stderr.write(`Error: ${err instanceof Error ? err.message : err}\n`);
-        process.exitCode = 1;
+        process.exitCode = 2;
       }
     });
 
@@ -400,7 +406,7 @@ export function registerCortexCommand(program: Command): void {
         process.stdout.write(JSON.stringify({ agents, count: agents.length }, null, 2) + '\n');
       } catch (err) {
         process.stderr.write(`Error: ${err instanceof Error ? err.message : err}\n`);
-        process.exitCode = 1;
+        process.exitCode = 2;
       }
     });
 
@@ -420,7 +426,7 @@ export function registerCortexCommand(program: Command): void {
         process.stdout.write(JSON.stringify(result, null, 2) + '\n');
       } catch (err) {
         process.stderr.write(`Error: ${err instanceof Error ? err.message : err}\n`);
-        process.exitCode = 1;
+        process.exitCode = 2;
       }
     });
 
@@ -440,7 +446,7 @@ export function registerCortexCommand(program: Command): void {
         process.stdout.write(JSON.stringify({ consolidation, health, cache }, null, 2) + '\n');
       } catch (err) {
         process.stderr.write(`Error: ${err instanceof Error ? err.message : err}\n`);
-        process.exitCode = 1;
+        process.exitCode = 2;
       }
     });
 
@@ -457,7 +463,7 @@ export function registerCortexCommand(program: Command): void {
         process.stdout.write(JSON.stringify(result, null, 2) + '\n');
       } catch (err) {
         process.stderr.write(`Error: ${err instanceof Error ? err.message : err}\n`);
-        process.exitCode = 1;
+        process.exitCode = 2;
       }
     });
 
@@ -481,7 +487,7 @@ export function registerCortexCommand(program: Command): void {
         process.stdout.write(JSON.stringify(result, null, 2) + '\n');
       } catch (err) {
         process.stderr.write(`Error: ${err instanceof Error ? err.message : err}\n`);
-        process.exitCode = 1;
+        process.exitCode = 2;
       }
     });
 
@@ -500,7 +506,7 @@ export function registerCortexCommand(program: Command): void {
         process.stdout.write(JSON.stringify(result, null, 2) + '\n');
       } catch (err) {
         process.stderr.write(`Error: ${err instanceof Error ? err.message : err}\n`);
-        process.exitCode = 1;
+        process.exitCode = 2;
       }
     });
 
@@ -517,7 +523,7 @@ export function registerCortexCommand(program: Command): void {
         process.stdout.write(JSON.stringify(result, null, 2) + '\n');
       } catch (err) {
         process.stderr.write(`Error: ${err instanceof Error ? err.message : err}\n`);
-        process.exitCode = 1;
+        process.exitCode = 2;
       }
     });
 
@@ -546,7 +552,7 @@ export function registerCortexCommand(program: Command): void {
         }
       } catch (err) {
         process.stderr.write(`Error: ${err instanceof Error ? err.message : err}\n`);
-        process.exitCode = 1;
+        process.exitCode = 2;
       }
     });
 
@@ -566,7 +572,7 @@ export function registerCortexCommand(program: Command): void {
         process.stdout.write(JSON.stringify({ provenance, cross_agent_trace: trace }, null, 2) + '\n');
       } catch (err) {
         process.stderr.write(`Error: ${err instanceof Error ? err.message : err}\n`);
-        process.exitCode = 1;
+        process.exitCode = 2;
       }
     });
 
@@ -582,7 +588,7 @@ export function registerCortexCommand(program: Command): void {
         process.stdout.write(JSON.stringify(result, null, 2) + '\n');
       } catch (err) {
         process.stderr.write(`Error: ${err instanceof Error ? err.message : err}\n`);
-        process.exitCode = 1;
+        process.exitCode = 2;
       }
     });
 
@@ -603,7 +609,7 @@ export function registerCortexCommand(program: Command): void {
         process.stdout.write(JSON.stringify(result, null, 2) + '\n');
       } catch (err) {
         process.stderr.write(`Error: ${err instanceof Error ? err.message : err}\n`);
-        process.exitCode = 1;
+        process.exitCode = 2;
       }
     });
 
@@ -622,7 +628,7 @@ export function registerCortexCommand(program: Command): void {
         process.stdout.write(JSON.stringify(result, null, 2) + '\n');
       } catch (err) {
         process.stderr.write(`Error: ${err instanceof Error ? err.message : err}\n`);
-        process.exitCode = 1;
+        process.exitCode = 2;
       }
     });
 
@@ -644,7 +650,7 @@ export function registerCortexCommand(program: Command): void {
         process.stdout.write(JSON.stringify(result, null, 2) + '\n');
       } catch (err) {
         process.stderr.write(`Error: ${err instanceof Error ? err.message : err}\n`);
-        process.exitCode = 1;
+        process.exitCode = 2;
       }
     });
 
@@ -662,7 +668,7 @@ export function registerCortexCommand(program: Command): void {
         process.stdout.write(JSON.stringify(result, null, 2) + '\n');
       } catch (err) {
         process.stderr.write(`Error: ${err instanceof Error ? err.message : err}\n`);
-        process.exitCode = 1;
+        process.exitCode = 2;
       }
     });
 
@@ -679,7 +685,7 @@ export function registerCortexCommand(program: Command): void {
         process.stdout.write(JSON.stringify(result, null, 2) + '\n');
       } catch (err) {
         process.stderr.write(`Error: ${err instanceof Error ? err.message : err}\n`);
-        process.exitCode = 1;
+        process.exitCode = 2;
       }
     });
 
@@ -695,7 +701,7 @@ export function registerCortexCommand(program: Command): void {
         process.stdout.write(JSON.stringify(result, null, 2) + '\n');
       } catch (err) {
         process.stderr.write(`Error: ${err instanceof Error ? err.message : err}\n`);
-        process.exitCode = 1;
+        process.exitCode = 2;
       }
     });
 
@@ -715,7 +721,7 @@ export function registerCortexCommand(program: Command): void {
         process.stdout.write(JSON.stringify({ metrics, alerts }, null, 2) + '\n');
       } catch (err) {
         process.stderr.write(`Error: ${err instanceof Error ? err.message : err}\n`);
-        process.exitCode = 1;
+        process.exitCode = 2;
       }
     });
 
@@ -734,7 +740,7 @@ export function registerCortexCommand(program: Command): void {
         process.stdout.write(JSON.stringify(result, null, 2) + '\n');
       } catch (err) {
         process.stderr.write(`Error: ${err instanceof Error ? err.message : err}\n`);
-        process.exitCode = 1;
+        process.exitCode = 2;
       }
     });
 
@@ -751,7 +757,7 @@ export function registerCortexCommand(program: Command): void {
         process.stdout.write(JSON.stringify({ agent_id: opts.agentId, status: 'deregistered' }) + '\n');
       } catch (err) {
         process.stderr.write(`Error: ${err instanceof Error ? err.message : err}\n`);
-        process.exitCode = 1;
+        process.exitCode = 2;
       }
     });
 
@@ -768,7 +774,7 @@ export function registerCortexCommand(program: Command): void {
         process.stdout.write(JSON.stringify(result, null, 2) + '\n');
       } catch (err) {
         process.stderr.write(`Error: ${err instanceof Error ? err.message : err}\n`);
-        process.exitCode = 1;
+        process.exitCode = 2;
       }
     });
 
@@ -787,7 +793,7 @@ export function registerCortexCommand(program: Command): void {
         process.stdout.write(JSON.stringify(result, null, 2) + '\n');
       } catch (err) {
         process.stderr.write(`Error: ${err instanceof Error ? err.message : err}\n`);
-        process.exitCode = 1;
+        process.exitCode = 2;
       }
     });
 
@@ -806,7 +812,7 @@ export function registerCortexCommand(program: Command): void {
         process.stdout.write(JSON.stringify({ memory_id: opts.memoryId, status: 'retracted' }) + '\n');
       } catch (err) {
         process.stderr.write(`Error: ${err instanceof Error ? err.message : err}\n`);
-        process.exitCode = 1;
+        process.exitCode = 2;
       }
     });
 
@@ -824,7 +830,7 @@ export function registerCortexCommand(program: Command): void {
         process.stdout.write(JSON.stringify(result, null, 2) + '\n');
       } catch (err) {
         process.stderr.write(`Error: ${err instanceof Error ? err.message : err}\n`);
-        process.exitCode = 1;
+        process.exitCode = 2;
       }
     });
 
@@ -842,7 +848,7 @@ export function registerCortexCommand(program: Command): void {
         process.stdout.write(JSON.stringify(result, null, 2) + '\n');
       } catch (err) {
         process.stderr.write(`Error: ${err instanceof Error ? err.message : err}\n`);
-        process.exitCode = 1;
+        process.exitCode = 2;
       }
     });
 
@@ -866,7 +872,7 @@ export function registerCortexCommand(program: Command): void {
         process.stdout.write(JSON.stringify({ projection_id: result }, null, 2) + '\n');
       } catch (err) {
         process.stderr.write(`Error: ${err instanceof Error ? err.message : err}\n`);
-        process.exitCode = 1;
+        process.exitCode = 2;
       }
     });
 }

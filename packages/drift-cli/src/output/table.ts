@@ -68,7 +68,23 @@ function formatCellValue(v: unknown): string {
     // For arrays of objects (e.g. matches), show count
     return String(v.length);
   }
-  if (typeof v === 'object') return JSON.stringify(v);
+  if (typeof v === 'object') {
+    // Flatten simple objects into "key=value, key=value" format
+    // instead of dumping raw JSON.
+    const entries = Object.entries(v as Record<string, unknown>);
+    if (entries.length === 0) return '{}';
+    const flat = entries.map(([k, val]) => {
+      if (val === null || val === undefined) return `${k}=—`;
+      if (typeof val === 'number') return `${k}=${Number.isInteger(val) ? val : val.toFixed(3)}`;
+      if (typeof val === 'boolean') return `${k}=${val}`;
+      if (typeof val === 'string') return `${k}=${val.length > 20 ? val.slice(0, 17) + '...' : val}`;
+      if (Array.isArray(val)) return `${k}=[${val.length}]`;
+      // Nested object — just show key count
+      return `${k}={${Object.keys(val as object).length}}`;
+    }).join(', ');
+    if (flat.length > 80) return flat.slice(0, 77) + '...';
+    return flat;
+  }
   const s = String(v);
   // Truncate very long values for table readability
   if (s.length > 80) return s.slice(0, 77) + '...';
@@ -89,6 +105,9 @@ function renderKeyValue(obj: Record<string, unknown>): string {
 
 function formatValue(v: unknown): string {
   if (v === null || v === undefined) return '—';
-  if (typeof v === 'object') return JSON.stringify(v);
+  if (typeof v === 'object') {
+    // Use the same smart formatting as table cells
+    return formatCellValue(v);
+  }
   return String(v);
 }
