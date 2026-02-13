@@ -19,6 +19,47 @@ macro_rules! drift_log {
     };
 }
 
+/// Check if a file path belongs to a test, benchmark, or fixture directory.
+/// Used to exclude embedded code samples from contract/endpoint extraction.
+fn is_test_or_fixture_file(path: &str) -> bool {
+    let p = path.replace('\\', "/");
+    // Suffix-based patterns: *_test.ext, *.test.ext, *.spec.ext (all languages)
+    let lower = p.to_lowercase();
+    if lower.ends_with("_test.rs") || lower.ends_with("_test.ts") || lower.ends_with("_test.js")
+        || lower.ends_with("_test.py") || lower.ends_with("_test.go") || lower.ends_with("_test.java")
+        || lower.ends_with("_test.rb") || lower.ends_with("_test.kt") || lower.ends_with("_test.cs")
+        || lower.ends_with("_test.php")
+    {
+        return true;
+    }
+    if lower.ends_with(".test.ts") || lower.ends_with(".test.js") || lower.ends_with(".test.tsx")
+        || lower.ends_with(".test.jsx") || lower.ends_with(".spec.ts") || lower.ends_with(".spec.js")
+        || lower.ends_with(".spec.tsx") || lower.ends_with(".spec.jsx")
+    {
+        return true;
+    }
+    // Test runner config files
+    if let Some(filename) = p.rsplit('/').next() {
+        let fl = filename.to_lowercase();
+        if fl.starts_with("vitest") || fl.starts_with("jest.config")
+            || fl.starts_with("karma.conf") || fl.starts_with("cypress.config")
+            || fl.starts_with("playwright.config") || fl.starts_with("pytest.ini")
+            || fl.starts_with("setup.test") || fl.starts_with("setuptest")
+            || fl == "conftest.py"
+        {
+            return true;
+        }
+    }
+    // Directory-based patterns
+    let segments: Vec<&str> = p.split('/').collect();
+    segments.iter().any(|s| {
+        *s == "tests" || *s == "test" || *s == "benches" || *s == "benchmarks"
+            || *s == "test-fixtures" || *s == "__tests__" || *s == "__mocks__"
+            || *s == "fixtures" || *s == "testdata" || *s == "e2e"
+            || *s == "cypress" || *s == "playwright"
+    })
+}
+
 /// Analysis result returned to TypeScript.
 #[napi(object)]
 #[derive(Debug, Clone, Serialize, Deserialize)]
@@ -399,6 +440,25 @@ pub async fn drift_analyze(max_phase: Option<u32>) -> napi::Result<Vec<JsAnalysi
         return Ok(all_results);
     }
 
+    // Build production-only filtered views.
+    // Test/bench/fixture files are excluded from subsystems where their patterns
+    // would create noise (coupling, wrappers, crypto, DNA, secrets, constants,
+    // taint, error handling, impact, enforcement). They are kept for test topology,
+    // boundary detection, call graph, and reachability.
+    let prod_parse_results: Vec<&drift_analysis::parsers::ParseResult> = all_parse_results
+        .iter()
+        .filter(|pr| !is_test_or_fixture_file(&pr.file))
+        .collect();
+    let prod_matches: Vec<&drift_analysis::engine::types::PatternMatch> = all_matches
+        .iter()
+        .filter(|m| !is_test_or_fixture_file(&m.file))
+        .collect();
+    // Owned clone for APIs that require &[ParseResult] instead of &[&ParseResult].
+    let prod_pr_owned: Vec<drift_analysis::parsers::ParseResult> = prod_parse_results
+        .iter()
+        .map(|pr| (*pr).clone())
+        .collect();
+
     // Step 3b: Run cross-file analyses (boundary detection, call graph)
     if !all_parse_results.is_empty() {
         // Boundary detection → persist boundary rows
@@ -605,8 +665,9 @@ pub async fn drift_analyze(max_phase: Option<u32>) -> napi::Result<Vec<JsAnalysi
     // Step 5: Structural analysis — coupling, wrappers, crypto, constraints
     if !all_parse_results.is_empty() {
         // 5a: Coupling analysis → coupling_metrics + coupling_cycles tables
+        // Uses prod_parse_results to exclude test configs (vitest, playwright, etc.)
         let import_graph = drift_analysis::structural::coupling::ImportGraphBuilder::from_parse_results(
-            &all_parse_results, 2,
+            &prod_pr_owned, 2,
         );
         let coupling_metrics = drift_analysis::structural::coupling::compute_martin_metrics(&import_graph);
         let coupling_rows: Vec<drift_storage::batch::commands::CouplingMetricInsertRow> = coupling_metrics
@@ -646,7 +707,7 @@ pub async fn drift_analyze(max_phase: Option<u32>) -> napi::Result<Vec<JsAnalysi
 
         // 5b: Wrapper detection → wrappers table (parallel)
         let wrapper_detector = drift_analysis::structural::wrappers::WrapperDetector::new();
-        let wrapper_rows: Vec<drift_storage::batch::commands::WrapperInsertRow> = all_parse_results.par_iter()
+        let wrapper_rows: Vec<drift_storage::batch::commands::WrapperInsertRow> = prod_parse_results.par_iter()
             .filter_map(|pr| file_contents.get(&pr.file).map(|c| (pr, c)))
             .flat_map(|(pr, content)| {
                 let wrappers = wrapper_detector.detect(content, &pr.file);
@@ -679,7 +740,7 @@ pub async fn drift_analyze(max_phase: Option<u32>) -> napi::Result<Vec<JsAnalysi
 
         // 5c: Crypto detection → crypto_findings table (parallel)
         let crypto_detector = drift_analysis::structural::crypto::CryptoDetector::new();
-        let crypto_rows: Vec<drift_storage::batch::commands::CryptoFindingInsertRow> = all_parse_results.par_iter()
+        let crypto_rows: Vec<drift_storage::batch::commands::CryptoFindingInsertRow> = prod_parse_results.par_iter()
             .filter_map(|pr| file_contents.get(&pr.file).map(|c| (pr, c)))
             .flat_map(|(pr, content)| {
                 let lang = format!("{:?}", pr.language).to_lowercase();
@@ -717,12 +778,13 @@ pub async fn drift_analyze(max_phase: Option<u32>) -> napi::Result<Vec<JsAnalysi
 
         // Language pre-filter: frontend extractors only run on JS/TS files (~324 vs 1707).
         // Backend extractors run on all files. ~3-4x speedup for 6 of 10 extractors.
+        // Uses prod_parse_results so test patterns don't define codebase "genes".
         use drift_analysis::scanner::language_detect::Language as Lang;
-        let frontend_files: Vec<(&str, &str)> = all_parse_results.iter()
+        let frontend_files: Vec<(&str, &str)> = prod_parse_results.iter()
             .filter(|pr| matches!(pr.language, Lang::TypeScript | Lang::JavaScript))
             .filter_map(|pr| file_contents.get(&pr.file).map(|c| (c.as_str(), pr.file.as_str())))
             .collect();
-        let all_files: Vec<(&str, &str)> = all_parse_results.iter()
+        let all_files: Vec<(&str, &str)> = prod_parse_results.iter()
             .filter_map(|pr| file_contents.get(&pr.file).map(|c| (c.as_str(), pr.file.as_str())))
             .collect();
 
@@ -802,7 +864,7 @@ pub async fn drift_analyze(max_phase: Option<u32>) -> napi::Result<Vec<JsAnalysi
 
         // 5e: Secrets detection → secrets table (pre-compiled + parallel)
         let secret_detector = drift_analysis::structural::constants::secrets::CompiledSecretDetector::new();
-        let secret_rows: Vec<drift_storage::batch::commands::SecretInsertRow> = all_parse_results.par_iter()
+        let secret_rows: Vec<drift_storage::batch::commands::SecretInsertRow> = prod_parse_results.par_iter()
             .filter_map(|pr| file_contents.get(&pr.file).map(|c| (pr, c)))
             .flat_map(|(_pr, content)| {
                 let secrets = secret_detector.detect(content, &_pr.file);
@@ -830,7 +892,7 @@ pub async fn drift_analyze(max_phase: Option<u32>) -> napi::Result<Vec<JsAnalysi
         let step_timer = std::time::Instant::now();
 
         // 5f: Constants & magic numbers → constants table (parallel)
-        let constant_rows: Vec<drift_storage::batch::commands::ConstantInsertRow> = all_parse_results.par_iter()
+        let constant_rows: Vec<drift_storage::batch::commands::ConstantInsertRow> = prod_parse_results.par_iter()
             .filter_map(|pr| file_contents.get(&pr.file).map(|c| (pr, c)))
             .flat_map(|(pr, content)| {
                 let lang = format!("{:?}", pr.language).to_lowercase();
@@ -865,7 +927,7 @@ pub async fn drift_analyze(max_phase: Option<u32>) -> napi::Result<Vec<JsAnalysi
         if !constraint_rows.is_empty() {
             // Populate the invariant detector from parse results
             let mut inv_detector = drift_analysis::structural::constraints::detector::InvariantDetector::new();
-            for pr in &all_parse_results {
+            for pr in &prod_parse_results {
                 let funcs: Vec<drift_analysis::structural::constraints::detector::FunctionInfo> = pr.functions.iter().map(|f| {
                     drift_analysis::structural::constraints::detector::FunctionInfo {
                         name: f.name.clone(),
@@ -916,7 +978,7 @@ pub async fn drift_analyze(max_phase: Option<u32>) -> napi::Result<Vec<JsAnalysi
         let step_timer = std::time::Instant::now();
 
         // 5h: Environment variable extraction → env_variables table (parallel)
-        let env_rows: Vec<drift_storage::batch::commands::EnvVariableInsertRow> = all_parse_results.par_iter()
+        let env_rows: Vec<drift_storage::batch::commands::EnvVariableInsertRow> = prod_parse_results.par_iter()
             .filter_map(|pr| file_contents.get(&pr.file).map(|c| (pr, c)))
             .flat_map(|(pr, content)| {
                 let lang = format!("{:?}", pr.language).to_lowercase();
@@ -1016,7 +1078,7 @@ pub async fn drift_analyze(max_phase: Option<u32>) -> napi::Result<Vec<JsAnalysi
         {
             // Build DecompositionInput from parse results and call graph
             let decomp_files: Vec<drift_analysis::structural::decomposition::decomposer::FileEntry> =
-                all_parse_results.iter().map(|pr| {
+                prod_parse_results.iter().map(|pr| {
                     let line_count = file_contents.get(&pr.file)
                         .map(|c| c.lines().count() as u64)
                         .unwrap_or(0);
@@ -1027,14 +1089,14 @@ pub async fn drift_analyze(max_phase: Option<u32>) -> napi::Result<Vec<JsAnalysi
                     }
                 }).collect();
 
-            let decomp_functions: Vec<(String, String, bool)> = all_parse_results.iter()
+            let decomp_functions: Vec<(String, String, bool)> = prod_parse_results.iter()
                 .flat_map(|pr| {
                     pr.functions.iter().map(move |f| (pr.file.clone(), f.name.clone(), f.is_exported))
                 })
                 .collect();
 
             // PH2-11: Build call_edges from parse results' call sites
-            let decomp_call_edges: Vec<(String, String, String)> = all_parse_results.iter()
+            let decomp_call_edges: Vec<(String, String, String)> = prod_parse_results.iter()
                 .flat_map(|pr| {
                     pr.call_sites.iter().filter_map(move |cs| {
                         cs.receiver.as_ref().map(|_| {
@@ -1097,11 +1159,14 @@ pub async fn drift_analyze(max_phase: Option<u32>) -> napi::Result<Vec<JsAnalysi
             let contract_registry = ExtractorRegistry::new();
 
             // Parallel contract extraction: each file processed independently across cores.
+            // Skip test files, benchmarks, and test fixtures — their embedded code
+            // samples produce phantom endpoints that pollute contract analysis.
             #[allow(clippy::type_complexity)]
             let per_file_results: Vec<(
                 Vec<drift_storage::batch::commands::ContractInsertRow>,
                 Vec<(String, drift_analysis::structural::contracts::types::Endpoint)>,
             )> = all_parse_results.par_iter()
+                .filter(|pr| !is_test_or_fixture_file(&pr.file))
                 .filter_map(|pr| {
                     let content = file_contents.get(&pr.file)?;
                     let results = contract_registry.extract_all_with_context(
@@ -1213,14 +1278,15 @@ pub async fn drift_analyze(max_phase: Option<u32>) -> napi::Result<Vec<JsAnalysi
             let taint_registry = drift_analysis::graph::taint::TaintRegistry::with_defaults();
 
             // Phase 1: intraprocedural (per-file)
+            // Uses prod_parse_results to avoid false taint flows from test mocks.
             let mut all_taint_flows = Vec::new();
-            for pr in &all_parse_results {
+            for pr in &prod_parse_results {
                 let intra_flows = drift_analysis::graph::taint::analyze_intraprocedural(pr, &taint_registry);
                 all_taint_flows.extend(intra_flows);
             }
             // Phase 2: interprocedural (cross-function via call graph)
             if let Ok(inter_flows) = drift_analysis::graph::taint::analyze_interprocedural(
-                call_graph, &all_parse_results, &taint_registry, None,
+                call_graph, &prod_pr_owned, &taint_registry, None,
             ) {
                 all_taint_flows.extend(inter_flows);
             }
@@ -1247,12 +1313,15 @@ pub async fn drift_analyze(max_phase: Option<u32>) -> napi::Result<Vec<JsAnalysi
             }
 
             // 6b: Error handling analysis → error_gaps table
-            let handlers = drift_analysis::graph::error_handling::handler_detection::detect_handlers(&all_parse_results);
+            // Uses prod_parse_results — test files intentionally have bare try/catch.
+            let handlers = drift_analysis::graph::error_handling::handler_detection::detect_handlers(
+                &prod_pr_owned,
+            );
             let chains = drift_analysis::graph::error_handling::propagation::trace_propagation(
-                call_graph, &all_parse_results, &handlers,
+                call_graph, &prod_pr_owned, &handlers,
             );
             let gaps = drift_analysis::graph::error_handling::gap_analysis::analyze_gaps(
-                &handlers, &chains, &all_parse_results,
+                &handlers, &chains, &prod_pr_owned,
             );
 
             let gap_rows: Vec<drift_storage::batch::commands::ErrorGapInsertRow> = gaps
@@ -1415,11 +1484,13 @@ pub async fn drift_analyze(max_phase: Option<u32>) -> napi::Result<Vec<JsAnalysi
         use drift_analysis::enforcement::rules::types::PatternInfo as RulesPatternInfo;
 
         // Build GateInput from upstream analysis results
-        let file_list: Vec<String> = all_parse_results.iter().map(|pr| pr.file.clone()).collect();
+        // Uses prod_parse_results so test file violations don't inflate gate scores.
+        let file_list: Vec<String> = prod_parse_results.iter().map(|pr| pr.file.clone()).collect();
 
         // Convert detection matches into PatternInfo for enforcement gates
+        // Uses prod_matches to exclude test file detections from gate evaluation.
         let mut pattern_map: std::collections::HashMap<String, RulesPatternInfo> = std::collections::HashMap::new();
-        for m in &all_matches {
+        for m in &prod_matches {
             let entry = pattern_map.entry(m.pattern_id.clone()).or_insert_with(|| RulesPatternInfo {
                 pattern_id: m.pattern_id.clone(),
                 category: format!("{:?}", m.category),

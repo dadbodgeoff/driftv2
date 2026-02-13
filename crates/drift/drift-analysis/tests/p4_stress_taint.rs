@@ -85,7 +85,9 @@ fn stress_registry_defaults_have_sources_sinks_sanitizers() {
 fn stress_registry_bidirectional_matching() {
     let reg = TaintRegistry::with_defaults();
     assert!(reg.match_source("req.query").is_some());
-    assert!(reg.match_source("query").is_some());
+    // Bare "query" should NOT match source "req.query" — anchored matching
+    // prevents reverse substring matches that caused massive false positives.
+    assert!(reg.match_source("query").is_none());
     assert!(reg.match_sink("db.query").is_some());
     assert!(reg.match_sanitizer("escapeHtml").is_some());
 }

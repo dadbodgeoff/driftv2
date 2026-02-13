@@ -91,14 +91,64 @@ impl ImportGraphBuilder {
     }
 
     /// Extract module name from a file path based on module_depth.
+    ///
+    /// Handles absolute paths by stripping the common prefix shared by all
+    /// files in the graph, so that module grouping operates on the relative
+    /// project-internal path segments rather than the OS-level prefix
+    /// (e.g. `/Users/name/project/`).
     fn file_to_module(&self, file: &str) -> String {
         let normalized = file.replace('\\', "/");
-        let parts: Vec<&str> = normalized.split('/').collect();
+        // Strip the common prefix so absolute paths don't collapse into one module.
+        let relative = self.strip_common_prefix(&normalized);
+        let parts: Vec<&str> = relative.split('/').filter(|s| !s.is_empty() && *s != ".").collect();
         if parts.len() <= self.module_depth {
             parts.join("/")
         } else {
             parts[..self.module_depth].join("/")
         }
+    }
+
+    /// Compute and cache the longest common directory prefix across all file paths.
+    /// This strips the absolute project root so module grouping works on relative paths.
+    fn strip_common_prefix<'a>(&self, path: &'a str) -> &'a str {
+        // Fast path: if the path doesn't start with '/', it's already relative.
+        if !path.starts_with('/') {
+            return path;
+        }
+        // Find the common prefix from all registered file paths.
+        // We compute it lazily from the first two files.
+        let prefix = self.compute_common_prefix();
+        path.strip_prefix(&prefix).unwrap_or(path)
+    }
+
+    /// Compute the longest common directory prefix of all file paths in the builder.
+    fn compute_common_prefix(&self) -> String {
+        let mut iter = self.file_imports.keys();
+        let first = match iter.next() {
+            Some(f) => f.replace('\\', "/"),
+            None => return String::new(),
+        };
+        // Start with the directory of the first file
+        let mut prefix = match first.rfind('/') {
+            Some(pos) => first[..=pos].to_string(),
+            None => return String::new(),
+        };
+        for file in iter {
+            let normalized = file.replace('\\', "/");
+            // Shrink prefix to match this file
+            while !normalized.starts_with(&prefix) && !prefix.is_empty() {
+                // Remove last path segment from prefix
+                let trimmed = prefix.trim_end_matches('/');
+                match trimmed.rfind('/') {
+                    Some(pos) => prefix = trimmed[..=pos].to_string(),
+                    None => { prefix.clear(); break; }
+                }
+            }
+            if prefix.is_empty() {
+                break;
+            }
+        }
+        prefix
     }
 
     /// CG-COUP-01/02: Build from parse results using resolved import paths
@@ -111,8 +161,9 @@ impl ImportGraphBuilder {
 
         for pr in parse_results {
             // CG-COUP-01: Use resolved import source paths, not raw text
+            // Skip unresolvable imports (Rust module paths, bare packages)
             let resolved_imports: Vec<String> = pr.imports.iter()
-                .map(|imp| normalize_import_source(&imp.source, &pr.file))
+                .filter_map(|imp| normalize_import_source(&imp.source, &pr.file))
                 .collect();
             builder.add_file(&pr.file, &resolved_imports);
 
@@ -138,8 +189,22 @@ impl ImportGraphBuilder {
 
 /// Normalize an import source path to a file-system-like path.
 /// Strips relative prefixes and adds extension if missing.
-fn normalize_import_source(source: &str, importer_file: &str) -> String {
+/// Returns None for imports that can't be resolved to file paths
+/// (e.g., Rust module paths like `crate::models`, package imports).
+fn normalize_import_source(source: &str, importer_file: &str) -> Option<String> {
     let mut path = source.to_string();
+
+    // Skip Rust module paths (contain ::) — these are not file paths
+    // and can't be resolved without full module resolution.
+    if path.contains("::") {
+        return None;
+    }
+
+    // Skip bare package imports (no path separator, no relative prefix)
+    // e.g., "commander", "lodash", "serde" — these are external dependencies
+    if !path.contains('/') && !path.starts_with("./") && !path.starts_with("../") && !path.starts_with('@') {
+        return None;
+    }
 
     // If it's a relative path, resolve relative to importer
     if path.starts_with("./") || path.starts_with("../") {
@@ -158,8 +223,6 @@ fn normalize_import_source(source: &str, importer_file: &str) -> String {
         // Handle ../ by going up directories
         while path.starts_with("../") {
             path = path[3..].to_string();
-            // Would go up a directory in importer_dir, but for module grouping
-            // the exact resolution isn't critical — just normalize
         }
 
         // Prepend importer directory for relative paths
@@ -177,7 +240,7 @@ fn normalize_import_source(source: &str, importer_file: &str) -> String {
         }
     }
 
-    path
+    Some(path)
 }
 
 impl Default for ImportGraphBuilder {

@@ -60,7 +60,7 @@ fn t1_napi_01_initialize_creates_db_with_pragmas() {
             .map_err(|e| drift_core::errors::StorageError::SqliteError {
                 message: e.to_string(),
             })?;
-        assert_eq!(version, 7, "schema version should match latest migration");
+        assert_eq!(version, 9, "schema version should match latest migration");
         Ok(())
     })
     .unwrap();

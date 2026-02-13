@@ -285,7 +285,7 @@ fn extract_calls_recursive(
                         range: Range::from_ts_node(&node),
                         caught_type: None,
                         has_body: true,
-                        function_scope: None,
+                        function_scope: find_enclosing_function_name(node, source),
                     });
                 }
 
@@ -299,7 +299,7 @@ fn extract_calls_recursive(
                         range: Range::from_ts_node(&node),
                         caught_type: None,
                         has_body: false,
-                        function_scope: None,
+                        function_scope: find_enclosing_function_name(node, source),
                     });
                 }
 
@@ -395,7 +395,7 @@ fn extract_calls_recursive(
                 range: Range::from_ts_node(&node),
                 caught_type,
                 has_body,
-                function_scope: None,
+                function_scope: find_enclosing_function_name(node, source),
             });
         }
         "throw_statement" | "throw" | "raise_statement" | "raise" => {
@@ -407,7 +407,7 @@ fn extract_calls_recursive(
                 range: Range::from_ts_node(&node),
                 caught_type: None,
                 has_body: false,
-                function_scope: None,
+                function_scope: find_enclosing_function_name(node, source),
             });
         }
         // Ruby begin/rescue
@@ -431,7 +431,7 @@ fn extract_calls_recursive(
                 range: Range::from_ts_node(&node),
                 caught_type,
                 has_body,
-                function_scope: None,
+                function_scope: find_enclosing_function_name(node, source),
             });
         }
         // Ruby inline rescue: x = dangerous rescue default
@@ -444,7 +444,7 @@ fn extract_calls_recursive(
                 range: Range::from_ts_node(&node),
                 caught_type: None,
                 has_body: true,
-                function_scope: None,
+                function_scope: find_enclosing_function_name(node, source),
             });
         }
         // Go defer statement
@@ -460,7 +460,7 @@ fn extract_calls_recursive(
                 range: Range::from_ts_node(&node),
                 caught_type: None,
                 has_body: true,
-                function_scope: None,
+                function_scope: find_enclosing_function_name(node, source),
             });
         }
         // Python with statement → WithStatement (context manager)
@@ -473,7 +473,7 @@ fn extract_calls_recursive(
                 range: Range::from_ts_node(&node),
                 caught_type: None,
                 has_body: true,
-                function_scope: None,
+                function_scope: find_enclosing_function_name(node, source),
             });
         }
         // DP-RERR-03: Rust match on Result/Option → ResultMatch
@@ -488,7 +488,7 @@ fn extract_calls_recursive(
                     range: Range::from_ts_node(&node),
                     caught_type: None,
                     has_body: true,
-                    function_scope: None,
+                    function_scope: find_enclosing_function_name(node, source),
                 });
             }
         }
@@ -1648,6 +1648,80 @@ fn classify_numeric_context(node: Node) -> NumericContext {
 
 fn node_text(node: Node, source: &[u8]) -> String {
     node.utf8_text(source).unwrap_or("").to_string()
+}
+
+/// Walk up the AST from a node to find the nearest enclosing function/method name.
+/// Works across all languages by checking for common function-like node kinds.
+/// Returns None only if the node is at module/file scope (no enclosing function).
+fn find_enclosing_function_name<'a>(node: Node<'a>, source: &[u8]) -> Option<String> {
+    let function_kinds = [
+        // JS/TS/Java/C#/PHP/Kotlin
+        "function_declaration", "function_definition", "method_declaration",
+        "method_definition", "method",
+        // Rust
+        "function_item",
+        // Arrow functions (JS/TS)
+        "arrow_function",
+        // Ruby
+        "singleton_method",
+        // Go
+        "func_literal",
+        // Python
+        "lambda",
+    ];
+
+    let mut current = node;
+    loop {
+        match current.parent() {
+            Some(parent) => {
+                if function_kinds.contains(&parent.kind()) {
+                    // Try to extract the function name from the "name" field
+                    if let Some(name_node) = parent.child_by_field_name("name") {
+                        let name = node_text(name_node, source);
+                        if !name.is_empty() {
+                            return Some(name);
+                        }
+                    }
+                    // For arrow functions assigned to a variable, check the parent
+                    // e.g., const handler = async (req, res) => { ... }
+                    if parent.kind() == "arrow_function" {
+                        if let Some(grandparent) = parent.parent() {
+                            if grandparent.kind() == "variable_declarator"
+                                || grandparent.kind() == "assignment_expression"
+                            {
+                                if let Some(name_node) = grandparent.child_by_field_name("name") {
+                                    let name = node_text(name_node, source);
+                                    if !name.is_empty() {
+                                        return Some(name);
+                                    }
+                                }
+                                // Also try "left" field for assignments
+                                if let Some(left) = grandparent.child_by_field_name("left") {
+                                    let name = node_text(left, source);
+                                    if !name.is_empty() {
+                                        return Some(name);
+                                    }
+                                }
+                            }
+                        }
+                    }
+                    // Fallback: couldn't extract name from this function node
+                    return None;
+                }
+                // Rust impl blocks: extract the type name as context
+                if parent.kind() == "impl_item" {
+                    if let Some(type_node) = parent.child_by_field_name("type") {
+                        let type_name = node_text(type_node, source);
+                        if !type_name.is_empty() {
+                            return Some(format!("<impl {}>", type_name));
+                        }
+                    }
+                }
+                current = parent;
+            }
+            None => return None,
+        }
+    }
 }
 
 fn extract_text_from_node(node: Node, source: &[u8]) -> Option<String> {

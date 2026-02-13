@@ -70,10 +70,21 @@ sub_type = "sql-injection"
 confidence = 0.90
 [patterns.match]
 content_patterns = [
+    # JDBC/sqlite style: VALUES (?, ?, ?) or WHERE id = ?
     "(?i)\\?\\s*,\\s*\\[",
-    "(?i)\\$\\d+",
+    # PostgreSQL positional params: $1, $2 — but only in SQL context
+    "(?i)(?:SELECT|INSERT|UPDATE|DELETE|WHERE|SET|VALUES|FROM)\\s+.*\\$\\d+",
+    # Python DB-API: %s with execute
     "(?i)%s.*execute",
-    "(?i):param|:name|:id",
+    # Named params in SQL strings: require SQL keyword on the SAME line
+    "(?i)(?:SELECT|INSERT|UPDATE|DELETE|WHERE|SET|VALUES|FROM)\\s+.*(?::param|:name|:id|:value|:user)",
+]
+[patterns.match.not]
+content_patterns = [
+    # Exclude Express/Hono/Fastify URL route definitions: app.get("/path/:id", ...)
+    "(?i)(?:app|router|server|fastify)\\s*\\.\\s*(?:get|post|put|delete|patch|all|options|head)\\s*\\(\\s*['\"/]",
+    # Exclude route path strings: "/api/v1/teams/:id" or '/users/:user_id'
+    "(?i)['\"]\\s*/[\\w/]*:[\\w]+",
 ]
 
 # --- XSS Prevention ---

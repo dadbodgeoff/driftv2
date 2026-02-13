@@ -194,6 +194,41 @@ fn compile_pattern(def: PatternDef) -> Result<CompiledPattern, DetectionError> {
 
     let match_block = compile_match_block(&def.match_predicates, &def.id)?;
 
+    // FWT-LOAD-01/02: If the original TOML specified regex-based fields but
+    // all regexes were invalid/empty and no other matchers survived, skip the
+    // entire pattern so it doesn't produce false matches.
+    let had_regex_input = !def.match_predicates.content_patterns.is_empty()
+        || !def.match_predicates.function_names.is_empty()
+        || !def.match_predicates.class_names.is_empty()
+        || !def.match_predicates.string_literals.is_empty()
+        || !def.match_predicates.doc_comments.is_empty()
+        || !def.match_predicates.type_annotations.is_empty();
+
+    let has_compiled_regex = !match_block.content_patterns.is_empty()
+        || !match_block.function_names.is_empty()
+        || !match_block.class_names.is_empty()
+        || !match_block.string_literals.is_empty()
+        || !match_block.doc_comments.is_empty()
+        || !match_block.type_annotations.is_empty();
+
+    let has_non_regex_matchers = !match_block.imports.is_empty()
+        || !match_block.decorators.is_empty()
+        || !match_block.calls.is_empty()
+        || !match_block.extends.is_empty()
+        || !match_block.implements.is_empty()
+        || !match_block.param_types.is_empty()
+        || !match_block.return_types.is_empty()
+        || !match_block.exports.is_empty()
+        || !match_block.error_handling.is_empty()
+        || !match_block.file_patterns.is_empty();
+
+    if had_regex_input && !has_compiled_regex && !has_non_regex_matchers {
+        return Err(DetectionError::InvalidPattern(format!(
+            "all regex patterns in '{}' were invalid or empty — skipping pattern",
+            def.id
+        )));
+    }
+
     let (has_learn, learn_group_by, learn_signal, learn_deviation_threshold) =
         if let Some(learn) = &def.learn {
             (

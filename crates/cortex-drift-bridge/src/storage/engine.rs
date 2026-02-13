@@ -266,8 +266,8 @@ impl IBridgeStorage for BridgeStorageEngine {
     fn get_metrics(&self, key: &str) -> BridgeResult<Vec<BridgeMetricRow>> {
         self.pool.with_reader(|conn| {
             let mut stmt = conn.prepare(
-                "SELECT metric_name, metric_value, created_at FROM bridge_metrics \
-                 WHERE metric_name = ?1 ORDER BY created_at DESC",
+                "SELECT metric_name, metric_value, recorded_at FROM bridge_metrics \
+                 WHERE metric_name = ?1 ORDER BY recorded_at DESC",
             )?;
             let rows = stmt.query_map(rusqlite::params![key], |row| {
                 Ok(BridgeMetricRow {

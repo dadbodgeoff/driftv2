@@ -15,6 +15,46 @@ fn storage_err(e: impl std::fmt::Display) -> napi::Error {
     napi::Error::from_reason(format!("[{}] {e}", error_codes::STORAGE_ERROR))
 }
 
+/// Check if a file path belongs to a test, benchmark, or fixture directory.
+fn is_test_or_fixture_file(path: &str) -> bool {
+    let p = path.replace('\\', "/");
+    // Suffix-based patterns: *_test.ext, *.test.ext, *.spec.ext (all languages)
+    let lower = p.to_lowercase();
+    if lower.ends_with("_test.rs") || lower.ends_with("_test.ts") || lower.ends_with("_test.js")
+        || lower.ends_with("_test.py") || lower.ends_with("_test.go") || lower.ends_with("_test.java")
+        || lower.ends_with("_test.rb") || lower.ends_with("_test.kt") || lower.ends_with("_test.cs")
+        || lower.ends_with("_test.php")
+    {
+        return true;
+    }
+    if lower.ends_with(".test.ts") || lower.ends_with(".test.js") || lower.ends_with(".test.tsx")
+        || lower.ends_with(".test.jsx") || lower.ends_with(".spec.ts") || lower.ends_with(".spec.js")
+        || lower.ends_with(".spec.tsx") || lower.ends_with(".spec.jsx")
+    {
+        return true;
+    }
+    // Test runner config files
+    if let Some(filename) = p.rsplit('/').next() {
+        let fl = filename.to_lowercase();
+        if fl.starts_with("vitest") || fl.starts_with("jest.config")
+            || fl.starts_with("karma.conf") || fl.starts_with("cypress.config")
+            || fl.starts_with("playwright.config") || fl.starts_with("pytest.ini")
+            || fl.starts_with("setup.test") || fl.starts_with("setuptest")
+            || fl == "conftest.py"
+        {
+            return true;
+        }
+    }
+    // Directory-based patterns
+    let segments: Vec<&str> = p.split('/').collect();
+    segments.iter().any(|s| {
+        *s == "tests" || *s == "test" || *s == "benches" || *s == "benchmarks"
+            || *s == "test-fixtures" || *s == "__tests__" || *s == "__mocks__"
+            || *s == "fixtures" || *s == "testdata" || *s == "e2e"
+            || *s == "cypress" || *s == "playwright"
+    })
+}
+
 // ─── Coupling Analysis ───────────────────────────────────────────────
 
 #[napi(object)]
@@ -205,6 +245,11 @@ pub fn drift_contract_tracking(root: String) -> napi::Result<JsContractResult> {
 
     if let Ok(walker) = walk_source_files(&root, &source_extensions) {
         for file_path in walker {
+            // Skip test/fixture files — they contain embedded code samples
+            // that produce false-positive endpoint detections.
+            if is_test_or_fixture_file(&file_path) {
+                continue;
+            }
             if let Ok(content) = std::fs::read_to_string(&file_path) {
                 // CT-FIX-01: Parse file to get ParseResult for field extraction.
                 let parse_result = parser_manager
@@ -659,28 +704,121 @@ pub struct JsOwaspResult {
 pub fn drift_owasp_analysis(_root: String) -> napi::Result<JsOwaspResult> {
     let rt = runtime::get()?;
 
-    // Read violations that have CWE/OWASP mappings
+    let mut findings: Vec<JsSecurityFinding> = Vec::new();
+
+    // Source 1: Violations with CWE/OWASP mappings
     let violations = rt.storage.with_reader(|conn| {
         drift_storage::queries::enforcement::query_all_violations(conn)
     }).map_err(storage_err)?;
 
-    let findings: Vec<JsSecurityFinding> = violations.iter()
-        .filter(|v| v.cwe_id.is_some() || v.owasp_category.is_some())
-        .map(|v| JsSecurityFinding {
-            id: v.id.clone(),
-            detector: v.pattern_id.clone(),
-            file: v.file.clone(),
-            line: v.line,
-            description: v.message.clone(),
-            severity: match v.severity.as_str() {
-                "critical" => 1.0, "high" => 0.8, "medium" => 0.5, _ => 0.2,
-            },
-            cwe_ids: v.cwe_id.into_iter().collect(),
-            owasp_categories: v.owasp_category.iter().cloned().collect(),
-            confidence: 0.8,
-            remediation: None,
+    for v in &violations {
+        if v.cwe_id.is_some() || v.owasp_category.is_some() {
+            findings.push(JsSecurityFinding {
+                id: v.id.clone(),
+                detector: v.pattern_id.clone(),
+                file: v.file.clone(),
+                line: v.line,
+                description: v.message.clone(),
+                severity: match v.severity.as_str() {
+                    "critical" => 1.0, "high" => 0.8, "medium" => 0.5, _ => 0.2,
+                },
+                cwe_ids: v.cwe_id.into_iter().collect(),
+                owasp_categories: v.owasp_category.iter().cloned().collect(),
+                confidence: 0.8,
+                remediation: None,
+            });
+        }
+    }
+
+    // Source 2: Taint flows — unsanitized data flows are security findings
+    let taint_flows = rt.storage.with_reader(|conn| {
+        conn.prepare_cached(
+            "SELECT id, source_file, source_line, source_type, sink_file, sink_line, sink_type, cwe_id, is_sanitized, path, confidence
+             FROM taint_flows WHERE is_sanitized = 0 ORDER BY confidence DESC LIMIT 500"
+        )
+        .map_err(|e| drift_core::errors::StorageError::SqliteError { message: e.to_string() })
+        .and_then(|mut stmt| {
+            let rows = stmt.query_map([], |row| {
+                Ok((
+                    row.get::<_, i64>(0)?,
+                    row.get::<_, String>(1)?,
+                    row.get::<_, u32>(2)?,
+                    row.get::<_, String>(3)?,
+                    row.get::<_, String>(4)?,
+                    row.get::<_, u32>(5)?,
+                    row.get::<_, String>(6)?,
+                    row.get::<_, u32>(7)?,
+                    row.get::<_, f64>(10)?,
+                ))
+            }).map_err(|e| drift_core::errors::StorageError::SqliteError { message: e.to_string() })?;
+            let mut result = Vec::new();
+            for row in rows {
+                result.push(row.map_err(|e| drift_core::errors::StorageError::SqliteError { message: e.to_string() })?);
+            }
+            Ok(result)
         })
-        .collect();
+    }).map_err(storage_err)?;
+
+    for (id, src_file, src_line, _src_type, sink_file, sink_line, sink_type, cwe_id, confidence) in &taint_flows {
+        let severity = match sink_type.as_str() {
+            "os_command" => 0.9,
+            "sql_query" => 0.9,
+            "http_request" => 0.7,
+            "deserialization" => 0.7,
+            "log_output" => 0.4,
+            _ => 0.5,
+        };
+        let owasp = match sink_type.as_str() {
+            "os_command" => "A03:2021",
+            "sql_query" => "A03:2021",
+            "http_request" => "A10:2021",
+            "deserialization" => "A08:2021",
+            "log_output" => "A09:2021",
+            _ => "A03:2021",
+        };
+        findings.push(JsSecurityFinding {
+            id: format!("taint-{}", id),
+            detector: format!("taint-{}", sink_type),
+            file: sink_file.clone(),
+            line: *sink_line,
+            description: format!(
+                "Unsanitized data flow from {}:{} to {}:{} (sink: {})",
+                src_file.split('/').last().unwrap_or(src_file), src_line,
+                sink_file.split('/').last().unwrap_or(sink_file), sink_line,
+                sink_type,
+            ),
+            severity,
+            cwe_ids: vec![*cwe_id],
+            owasp_categories: vec![owasp.to_string()],
+            confidence: *confidence,
+            remediation: None,
+        });
+    }
+
+    // Source 3: Security-category detections with CWE IDs
+    let detections = rt.storage.with_reader(|conn| {
+        drift_storage::queries::detections::query_all_detections(conn, 5000)
+    }).map_err(storage_err)?;
+
+    for d in &detections {
+        if d.category != "security" { continue; }
+        let cwe_ids: Vec<u32> = d.cwe_ids.as_deref()
+            .map(|s| s.split(',').filter_map(|c| c.trim().parse().ok()).collect())
+            .unwrap_or_default();
+        if cwe_ids.is_empty() && d.owasp.is_none() { continue; }
+        findings.push(JsSecurityFinding {
+            id: format!("det-{}", d.id),
+            detector: d.pattern_id.clone(),
+            file: d.file.clone(),
+            line: d.line as u32,
+            description: d.matched_text.clone().unwrap_or_else(|| d.pattern_id.clone()),
+            severity: if d.confidence >= 0.9 { 0.8 } else if d.confidence >= 0.7 { 0.5 } else { 0.3 },
+            cwe_ids: cwe_ids.clone(),
+            owasp_categories: d.owasp.iter().cloned().collect(),
+            confidence: d.confidence,
+            remediation: None,
+        });
+    }
 
     let mut critical = 0u32; let mut high = 0u32;
     let mut medium = 0u32; let mut low = 0u32;
@@ -691,6 +829,33 @@ pub fn drift_owasp_analysis(_root: String) -> napi::Result<JsOwaspResult> {
         else { low += 1; }
     }
 
+    // Compute OWASP coverage: how many of the 10 OWASP categories are represented
+    let mut owasp_cats: std::collections::HashSet<String> = std::collections::HashSet::new();
+    for f in &findings {
+        for cat in &f.owasp_categories {
+            if let Some(prefix) = cat.split(':').next() {
+                owasp_cats.insert(prefix.to_string());
+            }
+        }
+    }
+    let owasp_coverage = owasp_cats.len() as f64 / 10.0;
+
+    // CWE Top 25 coverage
+    let cwe_top25: std::collections::HashSet<u32> = [
+        787, 79, 89, 416, 78, 20, 125, 22, 352, 434,
+        862, 476, 287, 190, 502, 77, 119, 798, 918, 306,
+        362, 269, 94, 863, 276,
+    ].into_iter().collect();
+    let mut found_cwe25: std::collections::HashSet<u32> = std::collections::HashSet::new();
+    for f in &findings {
+        for cwe in &f.cwe_ids {
+            if cwe_top25.contains(cwe) {
+                found_cwe25.insert(*cwe);
+            }
+        }
+    }
+    let cwe_coverage = found_cwe25.len() as f64 / 25.0;
+
     let posture = if findings.is_empty() { 100.0 } else {
         (100.0 - (critical as f64 * 20.0 + high as f64 * 10.0 + medium as f64 * 3.0 + low as f64)).max(0.0)
     };
@@ -699,8 +864,8 @@ pub fn drift_owasp_analysis(_root: String) -> napi::Result<JsOwaspResult> {
         findings,
         compliance: JsComplianceReport {
             posture_score: posture,
-            owasp_coverage: 0.0,
-            cwe_top25_coverage: 0.0,
+            owasp_coverage,
+            cwe_top25_coverage: cwe_coverage,
             critical_count: critical,
             high_count: high,
             medium_count: medium,

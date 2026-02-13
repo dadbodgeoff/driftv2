@@ -159,7 +159,20 @@ confidence = 0.75
 cwe_ids = [312]
 [patterns.match]
 content_patterns = [
-    "(?i)(?:password|passwd|secret|token|api_key|apiKey|ssn|social_security)",
-    "(?i)(?:credit_card|creditCard|card_number|cardNumber)",
-    "(?i)(?:private_key|privateKey|encryption_key|encryptionKey)",
+    # Require word boundary + assignment/declaration context to avoid matching
+    # variable names, type names, module names, and pattern definition files.
+    # Matches: password = "x", secret: "x", token := val, api_key => val
+    # Does NOT match: token_count, SecretPattern, PasswordHasher, count_tokens
+    "(?i)\\b(?:password|passwd|secret|api_key|apiKey|ssn|social_security)\\b\\s*(?:[:=]|=>|:=)\\s*[\"'`]",
+    "(?i)\\b(?:credit_card|creditCard|card_number|cardNumber)\\b\\s*(?:[:=]|=>|:=)\\s*[\"'`]",
+    "(?i)\\b(?:private_key|privateKey|encryption_key|encryptionKey)\\b\\s*(?:[:=]|=>|:=)\\s*[\"'`]",
+    # Also catch struct/class field declarations with sensitive names that have a type annotation
+    # Matches: password: String, secret: str, token: string
+    # Does NOT match: token_count: usize, secret_pattern: Regex
+    "(?i)\\b(?:password|passwd|secret|api_key|apiKey|ssn|social_security)\\b\\s*:\\s*(?:String|str|string|&str|&'static str|Vec<u8>|bytes|\\[u8\\])",
+    "(?i)\\b(?:credit_card|creditCard|card_number|cardNumber)\\b\\s*:\\s*(?:String|str|string|&str)",
+    "(?i)\\b(?:private_key|privateKey|encryption_key|encryptionKey)\\b\\s*:\\s*(?:String|str|string|&str|Vec<u8>|bytes|\\[u8\\])",
 ]
+[patterns.match.not]
+# Exclude pattern definition files, test fixtures, and token counter modules
+file_patterns = ["**/patterns/**", "**/fixtures/**", "**/test*/**", "**/*token*counter*", "**/*tokeniz*"]

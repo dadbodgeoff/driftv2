@@ -54,6 +54,15 @@ fn analyze_function(
     // Mark source variables as tainted
     for source in &func_sources {
         tainted_vars.insert(source.expression.clone(), source.label.clone());
+        // If the source is a dotted expression (e.g., "req.query"), also mark the
+        // receiver prefix ("req") as tainted. This ensures that when tainted data
+        // flows through the receiver to other sinks (e.g., res.send(req.body)),
+        // the taint is properly tracked.
+        if let Some(dot_pos) = source.expression.find('.') {
+            let receiver = &source.expression[..dot_pos];
+            tainted_vars.entry(receiver.to_string())
+                .or_insert_with(|| source.label.clone());
+        }
     }
 
     // Phase 2: Identify tainted parameters
@@ -240,9 +249,10 @@ fn find_calls_in_function<'a>(
 ///
 /// Uses a layered approach:
 /// 1. Direct: receiver or full expression is tainted
-/// 2. Bare calls: no receiver + any tainted var in scope → likely receives tainted arg
+/// 2. Bare calls: no receiver + callee name appears as a tainted var, OR
+///    the function has only one tainted var and only one argument (high confidence)
 /// 3. Receiver calls: receiver is a known parameter in the same function as a tainted
-///    parameter, or a tainted var's callee component matches the sink's callee
+///    parameter (e.g., function(req, res) — "req" is tainted, "res.send" is the sink)
 fn check_taint_reaches_sink(
     tainted_vars: &FxHashMap<String, TaintLabel>,
     sanitized_vars: &FxHashSet<String>,
@@ -269,12 +279,40 @@ fn check_taint_reaches_sink(
         return true;
     }
 
-    // Layer 2: Bare function calls (no receiver) with tainted vars in scope
-    // e.g., `spawn(userInput)`, `eval(data)` — tainted data likely flows as argument
-    if call.receiver.is_none() {
-        let has_unsanitized_taint = tainted_vars.keys().any(|k| !sanitized_vars.contains(k));
-        if has_unsanitized_taint {
+    // Layer 2: Bare function calls (no receiver) — require evidence that tainted
+    // data actually flows as an argument. Without argument-level AST tracking,
+    // we use a conservative heuristic: the call must have at least one argument,
+    // and there must be unsanitized tainted variables in scope.
+    // Previously this returned true for ANY bare call with ANY tainted var in scope,
+    // which caused ~8,000 false positives (e.g., format!(), println!(), assert!()).
+    if call.receiver.is_none() && call.argument_count > 0 {
+        // Only flag if the number of distinct taint sources is small (high signal)
+        // and the call takes arguments (data could flow through).
+        // Count distinct taint labels rather than variable names, because a single
+        // source like "req.query" may also taint the receiver "req" — both share
+        // the same label and represent one logical taint source.
+        let unsanitized_labels: FxHashSet<u64> = tainted_vars.iter()
+            .filter(|(k, _)| !sanitized_vars.contains(*k))
+            .map(|(_, label)| label.id)
+            .collect();
+        let unsanitized_taint_count = unsanitized_labels.len();
+        // If there's exactly 1 tainted var and the call takes args, it's likely
+        // the tainted data is being passed. If there are many tainted vars,
+        // we can't be sure which (if any) flows to this call — skip it.
+        if unsanitized_taint_count == 1 && call.argument_count <= 3 {
             return true;
+        }
+        // Also flag if a tainted var name is a substring of the callee
+        // (e.g., tainted "query" → call "executeQuery")
+        for var_name in tainted_vars.keys() {
+            if sanitized_vars.contains(var_name) {
+                continue;
+            }
+            let var_lower = var_name.to_lowercase();
+            let callee_lower = call.callee_name.to_lowercase();
+            if callee_lower.contains(&var_lower) || var_lower.contains(&callee_lower) {
+                return true;
+            }
         }
     }
 

@@ -896,6 +896,8 @@ fn e2e_full_pipeline_all_languages() {
         pattern_count: 10,
         category_scores: std::collections::HashMap::new(),
         timestamp: 1699000000,
+        root_path: None,
+        total_files: None,
     };
     let curr_snapshot = AuditSnapshot {
         health_score,
@@ -907,6 +909,8 @@ fn e2e_full_pipeline_all_languages() {
         pattern_count: audit_patterns.len(),
         category_scores: std::collections::HashMap::new(),
         timestamp: 1700000000,
+        root_path: None,
+        total_files: None,
     };
     let alerts = degradation.detect(&curr_snapshot, &prev_snapshot);
     eprintln!("[Audit] Degradation alerts: {}", alerts.len());
@@ -2567,6 +2571,8 @@ fn e2e_audit_degradation_edge_cases() {
         pattern_count: 50,
         category_scores: std::collections::HashMap::new(),
         timestamp: 1700000000,
+        root_path: None,
+        total_files: None,
     };
     let alerts_same = degradation.detect(&snapshot, &snapshot);
     assert!(
@@ -2587,6 +2593,8 @@ fn e2e_audit_degradation_edge_cases() {
         pattern_count: 60,
         category_scores: std::collections::HashMap::new(),
         timestamp: 1700100000,
+        root_path: None,
+        total_files: None,
     };
     let alerts_improved = degradation.detect(&improved, &snapshot);
     eprintln!("[Audit] Improving snapshot: {} alerts", alerts_improved.len());
@@ -2602,6 +2610,8 @@ fn e2e_audit_degradation_edge_cases() {
         pattern_count: 10,
         category_scores: std::collections::HashMap::new(),
         timestamp: 1700200000,
+        root_path: None,
+        total_files: None,
     };
     let alerts_degraded = degradation.detect(&degraded, &snapshot);
     assert!(
@@ -2624,6 +2634,8 @@ fn e2e_audit_degradation_edge_cases() {
         pattern_count: 0,
         category_scores: std::collections::HashMap::new(),
         timestamp: 1700300000,
+        root_path: None,
+        total_files: None,
     };
     let alerts_zero = degradation.detect(&zero_snapshot, &snapshot);
     eprintln!("[Audit] Zero snapshot: {} alerts (no panic = success)", alerts_zero.len());

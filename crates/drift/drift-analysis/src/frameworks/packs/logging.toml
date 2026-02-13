@@ -59,6 +59,12 @@ content_patterns = [
     "(?i)\\[REDACTED\\]", "(?i)\\*\\*\\*\\*",
     "(?i)pii[_-]?filter", "(?i)sensitive[_-]?field",
 ]
+[patterns.match.not]
+file_patterns = [
+    # Exclude PII pattern definition files — they reference PII concepts
+    # but are defining detection rules, not logging PII.
+    "patterns/", "patterns\\\\",
+]
 
 [[patterns]]
 id = "LOG-LEVEL-001"

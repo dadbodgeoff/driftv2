@@ -11,9 +11,18 @@ sub_type = "pagination"
 confidence = 0.80
 [patterns.match]
 content_patterns = [
-    "(?i)(?:page|offset|limit|cursor|per_page|pageSize|page_size)",
+    # Require co-occurrence of pagination-specific terms with API/query context
+    # or multiple pagination terms on the same line to reduce false positives
+    # from standalone variable names like `limit` or `offset`.
     "(?i)paginate\\s*\\(", "(?i)Paginator\\s*\\(",
-    "(?i)\\?page=|&page=|\\?offset=|&offset=",
+    "(?i)\\?page=|&page=|\\?offset=|&offset=|\\?limit=|&limit=|\\?cursor=|&cursor=",
+    "(?i)(?:page|offset|limit|cursor)\\s*[=:]\\s*(?:page|offset|limit|cursor|per_page|pageSize|page_size|\\d+)\\b",
+    "(?i)(?:per_page|pageSize|page_size|nextCursor|next_cursor|hasMore|has_more|totalPages|total_pages)",
+]
+[patterns.match.not]
+content_patterns = [
+    # Exclude SQLite/database pragma fields (page_count, page_size, freelist_count)
+    "(?i)(?:pragma|page_count|freelist_count|page_size\\s*:\\s*u(?:32|64))",
 ]
 [patterns.learn]
 group_by = "sub_type"

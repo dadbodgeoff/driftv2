@@ -101,6 +101,8 @@ fn test_degradation_detection() {
         pattern_count: 50,
         category_scores: std::collections::HashMap::new(),
         timestamp: 1000,
+        root_path: None,
+        total_files: None,
     };
 
     // 5-point drop → warning

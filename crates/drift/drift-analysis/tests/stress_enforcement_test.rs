@@ -289,6 +289,8 @@ fn stress_degradation_identical_snapshots() {
         pattern_count: 50,
         category_scores: HashMap::new(),
         timestamp: 1000,
+        root_path: None,
+        total_files: None,
     };
 
     let alerts = detector.detect(&snapshot, &snapshot);
@@ -309,6 +311,8 @@ fn stress_degradation_improving_scores() {
         pattern_count: 30,
         category_scores: HashMap::new(),
         timestamp: 1000,
+        root_path: None,
+        total_files: None,
     };
     let current = AuditSnapshot {
         health_score: 90.0,
@@ -752,6 +756,8 @@ fn stress_serde_round_trip_all_types() {
             m
         },
         timestamp: 1706000000,
+        root_path: None,
+        total_files: None,
     };
     let json = serde_json::to_string(&snap).unwrap();
     let snap2: AuditSnapshot = serde_json::from_str(&json).unwrap();

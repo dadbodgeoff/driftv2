@@ -25,11 +25,31 @@ impl DegradationDetector {
     }
 
     /// Detect degradation between current and previous snapshots.
+    /// Returns empty if the snapshots have incompatible scopes (different root_path).
     pub fn detect(
         &self,
         current: &AuditSnapshot,
         previous: &AuditSnapshot,
     ) -> Vec<DegradationAlert> {
+        // Guard: skip comparison if scans have different scopes.
+        // Comparing a scan of "packages/drift-cli" (46 files) against a scan of "." (970 files)
+        // would produce false "100% decrease" alerts for every pattern.
+        if let (Some(curr_root), Some(prev_root)) = (&current.root_path, &previous.root_path) {
+            if curr_root != prev_root {
+                return Vec::new();
+            }
+        }
+        // Also skip if file counts differ by more than 50% — likely a scope change
+        // even if root_path wasn't set (backward compatibility with old snapshots).
+        if let (Some(curr_files), Some(prev_files)) = (current.total_files, previous.total_files) {
+            if curr_files > 0 && prev_files > 0 {
+                let ratio = curr_files as f64 / prev_files as f64;
+                if ratio < 0.5 || ratio > 2.0 {
+                    return Vec::new();
+                }
+            }
+        }
+
         let mut alerts = Vec::new();
 
         // Health score drop

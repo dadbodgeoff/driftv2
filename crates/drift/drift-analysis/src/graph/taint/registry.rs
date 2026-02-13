@@ -233,10 +233,14 @@ impl TaintRegistry {
 /// Matches if:
 /// 1. Exact match (case-insensitive): `expression == pattern`
 /// 2. Expression ends with `.pattern` (dotted suffix): `foo.req.body` matches `req.body`
-/// 3. Expression contains pattern as a dotted segment: `obj.open.file` matches `open`
+/// 3. Expression starts with `pattern.` (dotted prefix): `req.body.name` matches `req.body`
+/// 4. Pattern appears as a complete dotted segment: `a.open.b` matches `open`
 ///
 /// Does NOT match if pattern is merely a substring of a longer identifier:
-/// `openDialog` does NOT match `open`
+/// `openDialog` does NOT match `open`.
+/// Does NOT do reverse matching (expression "query" no longer matches pattern "req.query")
+/// because that caused massive false positives — a call to any function named "query"
+/// would match the source pattern "req.query" and be treated as a taint source.
 fn pattern_matches(expression: &str, pattern: &str) -> bool {
     let expr = expression.to_lowercase();
     let pat = pattern.to_lowercase();
@@ -247,34 +251,23 @@ fn pattern_matches(expression: &str, pattern: &str) -> bool {
     }
 
     // 2. Expression ends with the pattern after a dot separator
+    //    e.g., expression "foo.req.body" matches pattern "req.body"
     let dotted = format!(".{}", pat);
     if expr.ends_with(&dotted) {
         return true;
     }
 
     // 3. Expression starts with the pattern followed by a dot (prefix match)
+    //    e.g., expression "req.body.name" matches pattern "req.body"
     let prefix = format!("{}.", pat);
     if expr.starts_with(&prefix) {
         return true;
     }
 
     // 4. Pattern appears as a complete dotted segment in the expression
+    //    e.g., expression "a.open.b" matches pattern "open"
     let segment = format!(".{}.", pat);
     if expr.contains(&segment) {
-        return true;
-    }
-
-    // 5. Reverse suffix: pattern ends with the expression after a dot
-    //    e.g., expression "query" matches pattern "req.query"
-    let rev_dotted = format!(".{}", expr);
-    if pat.ends_with(&rev_dotted) {
-        return true;
-    }
-
-    // 6. Reverse prefix: pattern starts with expression followed by dot
-    //    e.g., expression "req" matches pattern "req.query"
-    let rev_prefix = format!("{}.", expr);
-    if pat.starts_with(&rev_prefix) {
         return true;
     }
 

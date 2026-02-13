@@ -150,6 +150,13 @@ pub struct AuditSnapshot {
     pub pattern_count: usize,
     pub category_scores: HashMap<String, f64>,
     pub timestamp: u64,
+    /// Root path of the scan that produced this snapshot.
+    /// Used to prevent false degradation alerts when comparing scans with different scopes.
+    #[serde(default)]
+    pub root_path: Option<String>,
+    /// Total files in the scan that produced this snapshot.
+    #[serde(default)]
+    pub total_files: Option<usize>,
 }
 
 /// Input data for audit processing.
