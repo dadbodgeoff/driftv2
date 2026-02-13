@@ -154,7 +154,6 @@ export function registerBridgeCommand(program: Command): void {
       }) => {
         const napi = loadNapi();
         try {
-          // Use the ground-all snapshot to get summary, then query status for details
           const status = napi.driftBridgeStatus();
           if (!status.available) {
             process.stderr.write(
@@ -163,22 +162,21 @@ export function registerBridgeCommand(program: Command): void {
             process.exitCode = 1;
             return;
           }
-          // Query via event mappings to show what's tracked
-          const snapshot = napi.driftBridgeGroundAll();
+          // Use read-only health check — no side effects
+          const health = napi.driftBridgeHealth();
           const result = {
-            total_memories: snapshot.total_checked,
-            validated: snapshot.validated,
-            partial: snapshot.partial,
-            weak: snapshot.weak,
-            invalidated: snapshot.invalidated,
-            not_groundable: snapshot.not_groundable,
-            insufficient_data: snapshot.insufficient_data,
-            avg_score: snapshot.avg_grounding_score,
+            bridge_status: status.available ? 'active' : 'inactive',
+            license_tier: status.license_tier,
+            grounding_enabled: status.grounding_enabled,
+            health_status: health.status,
+            ready: health.ready,
+            subsystems: health.subsystem_checks.length,
             filter: {
               type: opts.type ?? 'all',
               verdict: opts.verdict ?? 'all',
               limit: parseInt(opts.limit, 10),
             },
+            hint: 'Run `drift bridge ground` to trigger grounding, or `drift bridge history <memoryId>` for per-memory details.',
           };
           process.stdout.write(formatOutput(result, opts.format));
         } catch (err) {
@@ -450,12 +448,14 @@ export function registerBridgeCommand(program: Command): void {
         const result = napi.driftBridgeEventMappings();
         let mappings = result.mappings;
         if (opts.tier) {
-          // tier filtering is informational — show events available at this tier
+          const tierLower = opts.tier.toLowerCase();
           mappings = mappings.filter(
             (m: { event_type: string; memory_type: string | null; description: string }) =>
-              m.description.toLowerCase().includes(opts.tier!.toLowerCase()) ||
-              true, // show all but could be refined with license check
+              m.description.toLowerCase().includes(tierLower),
           );
+          if (mappings.length === 0) {
+            process.stderr.write(`No event mappings match tier '${opts.tier}'.\n`);
+          }
         }
         if (opts.format === 'json') {
           process.stdout.write(formatOutput(result, 'json'));

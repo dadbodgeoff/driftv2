@@ -5,6 +5,7 @@
 import type { Command } from 'commander';
 import { loadNapi } from '../napi.js';
 import { formatOutput, type OutputFormat } from '../output/index.js';
+import { parseNapiJson } from '../output/parse-napi-json.js';
 
 const VALID_CATEGORIES = [
   'add_feature', 'fix_bug', 'refactor', 'migrate_framework', 'add_test',
@@ -27,7 +28,8 @@ export function registerSimulateCommand(program: Command): void {
           process.exitCode = 2;
           return;
         }
-        const result = await napi.driftSimulate(opts.category, task, '{}');
+        const raw = await napi.driftSimulate(opts.category, task, '{}');
+        const result = parseNapiJson(raw);
         if (!opts.quiet) {
           process.stdout.write(formatOutput(result, opts.format));
         }

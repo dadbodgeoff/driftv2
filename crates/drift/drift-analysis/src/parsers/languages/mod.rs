@@ -43,7 +43,16 @@ pub fn parse_with_language_and_tree(
     ts_language: tree_sitter::Language,
 ) -> Result<(ParseResult, tree_sitter::Tree), ParseError> {
     let start = Instant::now();
-    let file_str = path.to_string_lossy().to_string();
+    let file_str = {
+        let raw = path.to_string_lossy().to_string();
+        // Normalize: collapse `/./` segments and strip leading `./` so that
+        // the same physical file always produces the same ParseResult.file key.
+        let mut s = raw.replace("/./", "/");
+        while s.starts_with("./") {
+            s = s[2..].to_string();
+        }
+        s
+    };
     let content_hash = hash_content(source);
 
     // Parse with tree-sitter

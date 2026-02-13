@@ -141,7 +141,7 @@ export function registerCloudCommand(program: Command): void {
           readRows: async (table: string, db: string, afterCursor?: number) => {
             try {
               if (typeof napiAny.driftCloudReadRows !== 'function') return [];
-              return napiAny.driftCloudReadRows(projectRoot, table, db, afterCursor ?? 0) as Record<string, unknown>[];
+              return napiAny.driftCloudReadRows(table, db, afterCursor ?? 0) as Record<string, unknown>[];
             } catch {
               return [];
             }
@@ -149,7 +149,7 @@ export function registerCloudCommand(program: Command): void {
           getMaxCursor: async (db: string) => {
             try {
               if (typeof napiAny.driftCloudMaxCursor !== 'function') return 0;
-              return napiAny.driftCloudMaxCursor(projectRoot, db) as number;
+              return napiAny.driftCloudMaxCursor(db) as number;
             } catch {
               return 0;
             }

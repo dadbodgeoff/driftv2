@@ -28,7 +28,12 @@
     "build": "npm run build:napi && npm run build:cortex-napi && npm run build:ts",
     "typecheck": "npm run typecheck --workspaces --if-present",
     "test": "npm run test --workspaces --if-present",
-    "clean": "npm run clean --workspaces --if-present"
+    "clean": "npm run clean --workspaces --if-present",
+    "scan": "node packages/drift-cli/dist/index.js scan",
+    "scan:all": "node packages/drift-cli/dist/index.js analyze --scan",
+    "patterns": "node packages/drift-cli/dist/index.js patterns",
+    "status": "node packages/drift-cli/dist/index.js status",
+    "drift": "node packages/drift-cli/dist/index.js"
   },
   "engines": {
     "node": ">=18"

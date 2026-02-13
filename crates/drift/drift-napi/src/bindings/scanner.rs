@@ -270,6 +270,23 @@ fn language_from_name(name: &str) -> Option<Language> {
 // ---- Storage persistence ----
 
 /// Persist scan results to drift.db via the batch writer.
+/// Normalize a file path for consistent storage.
+///
+/// Strips leading `./` prefixes and collapses `/./` segments that arise when
+/// the walker root is `"."` or when `Path::join` combines an absolute root
+/// with a `./`-prefixed relative path.  This ensures that the same physical
+/// file always maps to a single canonical key in `file_metadata`, which in
+/// turn prevents duplicate entries in every downstream table that derives
+/// keys from file paths (call graph, impact scores, taint flows, etc.).
+fn normalize_path(raw: &str) -> String {
+    let mut s = raw.replace("/./", "/");
+    // Strip leading "./" (may appear multiple times: "././foo")
+    while s.starts_with("./") {
+        s = s[2..].to_string();
+    }
+    s
+}
+
 /// Converts ScanEntry records to file_metadata rows and handles deletions.
 fn persist_scan_diff(
     rt: &crate::runtime::DriftRuntime,
@@ -281,7 +298,7 @@ fn persist_scan_diff(
         .entries
         .values()
         .map(|entry| BatchFileMetadataRow {
-            path: entry.path.to_string_lossy().to_string(),
+            path: normalize_path(&entry.path.to_string_lossy()),
             language: entry.language.as_ref().map(|l| l.to_string()),
             file_size: entry.file_size as i64,
             content_hash: entry.content_hash.to_le_bytes().to_vec(),
@@ -311,7 +328,7 @@ fn persist_scan_diff(
         let paths: Vec<String> = diff
             .removed
             .iter()
-            .map(|p| p.to_string_lossy().to_string())
+            .map(|p| normalize_path(&p.to_string_lossy()))
             .collect();
         rt.storage
             .send_batch(BatchCommand::DeleteFileMetadata(paths))

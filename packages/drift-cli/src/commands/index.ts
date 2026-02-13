@@ -1,5 +1,5 @@
 /**
- * Command registration — registers all 29 CLI commands.
+ * Command registration — registers all 31 CLI commands.
  */
 
 import type { Command } from 'commander';

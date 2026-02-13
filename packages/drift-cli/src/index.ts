@@ -59,23 +59,25 @@ async function main(): Promise<void> {
 
   const program = createProgram();
 
+  // Global pre-action hook: check --require-native after parsing, before any command runs
+  program.hook('preAction', () => {
+    const globalOpts = program.opts();
+    if (globalOpts.requireNative && isNapiStub()) {
+      process.stderr.write(
+        'Error: --require-native specified but native binary is unavailable. ' +
+        'Install platform-specific binary or run `napi build`.\n',
+      );
+      process.exitCode = 2;
+      throw new Error('Native binary required but unavailable');
+    }
+  });
+
   if (!isSetup) {
     try {
       napi.driftInitialize(undefined, resolveProjectRoot());
     } catch {
       // Non-fatal — may already be initialized or not available yet
     }
-  }
-
-  // Check --require-native before executing any command
-  const opts = program.opts();
-  if (opts.requireNative && isNapiStub()) {
-    process.stderr.write(
-      'Error: --require-native specified but native binary is unavailable. ' +
-      'Install platform-specific binary or run `napi build`.\n',
-    );
-    process.exitCode = 2;
-    return;
   }
 
   try {
